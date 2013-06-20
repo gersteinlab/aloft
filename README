@@ -1,0 +1,175 @@
+
+###############################################################################
+
+ALoFT - Automated Loss of Function Tool
+Version 3.3
+Revised 4/15/2013
+
+New Revision by Jeremy 5/30/2013
+Revision by Mayur 6/20/2013
+
+###############################################################################
+
+I. Program Description
+ALoFT takes as input an VCF (variant call format) file, runs it through the 
+variant annotation tool (VAT) components snpMapper and indelMapper, and runs 
+the sorted VAT output through NMD_predictor_v3.3.py, which calculates many 
+other variant-specific features that give functional, evolutionary, probable 
+mismapping, and other information.  NMD predictor only calculates these 
+parameters for frameshift indels, loss-of-function (LoF) SNPs, and for SNPs 
+located in splice sites.
+
+
+II. Input Files (Required):
+
+1) VCF file containing unannotated variants, passed in using the --vcf option.
+Alternatively, an annotated VCF file output by a separate manual run of VAT 
+should be passed in with the --vat option. (See options section below).
+
+2) Reference files. For complete list, see section below regarding options and 
+default values.
+
+
+III. Output Files (may be overridden, see ?? Options):
+
+1) output/vat_output.vcf
+Created/overwritten only if a VCF is passed in using the --vcf option.  This 
+intermediate file is then run through NMD_predictor_v3.3.py to produce the 
+following three files.
+
+2) output/output.vcf
+VCF file created based on the output from VAT.  Includes all information 
+output by VAT, plus a SUBSET of features calculated by NMD_predictor_v3.3.py.
+
+3) output/tabbed_output_lof
+Tab-delimited file containing the subset of VAT output associated with LoF 
+SNPs and frameshift indels.  All information from the VAT file is included, 
+plus ALL features calculated by NMD_predictor_v3.3.py for LoF variants.  
+Each variant is output on multiple rows, one for each combination of alternate 
+allele and affected transcript.
+
+4) output/tabbed_output_splice
+Tab-delimited file containing the subset of VAT output associated with splice 
+site SNPs.  All information from the VAT file is included, plus ALL features 
+calculated by NMD_predictor_v3.3.py for splice site SNPs.  Each variant is 
+output on multiple rows, one for each combination of alternate allele and 
+affected transcript.
+
+
+IV. Usage
+ALoFT can be invoked as follows:
+/path/to/python2.7/python  /path/to/NMD_predictor.py  [--option1=arg1] [--option2=arg2]...
+
+Example:
+/path/to/python2.7/python /path/to/NMD_predictor.py --vcf=vcf_file.vcf
+OR
+/path/to/python2.7/python /path/to/NMD_predictor.py --vat=vat_file.vcf
+
+
+V. Options
+NMD_predictor.py recognizes the following options (default values given):
+
+--vcf=""
+Specifies path to VCF input file.  Set to empty string by default.  If none 
+specified, NMD_predictor will try to skip VAT and run directly on the file 
+given to the --vat option. This or --vat option is needed for proper execution.
+
+--annotation_interval=data/gencode.v16.pc.interval
+Specifies path to genome annotation interval file. The interval file is
+extracted for a Gencode file using the gencode2interval utility included in
+VAT. The interval format is specified in VAT documentation: 
+http://info.gersteinlab.org/VAT#Interval.
+
+--annotation_sequence=data/gencode.v16.pc.fa
+Specifies path to annotation sequence file in FASTA format. The fasta file
+is extracted from the interval file by the VAT utility interval2sequences.
+
+--vat=output/vat_output.vcf
+Specifies path to VAT output file.  If input VCF file is given with --vcf 
+option, VAT will be run on the input VCF file and written to the file given 
+to the --vat option.
+
+--tabbed_output_lof=output/tabbed_output_lof
+Specifies path to tabbed output file of NMD_predictor containing LoF variants
+
+--tabbed_output_splice=output/tabbed_output_splice
+Specifies path to tabbed output file of NMD_predictor containing splice site 
+SNPs.
+
+--vcf_output=output/output.vcf
+Specifies path to VCF file containing VAT output, plus additional calculated 
+features.
+
+--elements=data/elements/
+Specifies path to directory containing GERP element information.  Files must 
+be named hg19_chr*_elems.txt, where * is 1-22/X/Y.
+
+--annotation=data/gencode.v16.annotation.gtf
+Specifies path to GENCODE genome annotation file.
+
+--rates=data/bases/
+Specifies path to directory containing GERP score information.  Files must be 
+named chr*.maf.rates, where * is 1-22/X/Y.
+
+--gerp_cache=gerp_cache/
+Specifies path to directory containing cache of GERP score information.  
+Directory will be created if it doesn't already exist.
+
+--ancestor=data/homo_sapiens_ancestor_GRCh37_e71/
+Specifies path to directory containing ancestral chromosome files.  Files must 
+be named homo_sapiens_ancestor_*.fa, where * is 1-22/X/Y.
+
+--segdup=data/hg19-segdup.txt
+Specifies path to file containing genome segmental duplication regions.
+
+--thousandG=data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.gencode16.SNPS.vat.vcf
+Specifies path to file containing 1000Genomes variant data.
+
+--exomes=data/ESP6500/
+Specifies path to directory containing ESP6500 SNP data.  Files must be named ESP6500.chr*.snps.vcf, where * is 1-22/X/Y.
+
+--ensembl_table=data/ens67_gtpcgtpolymorphic.txt
+Specifies path to file containing mappings between Ensembl gene and protein 
+IDs.
+
+--protein_features=prot_features/
+Specifies path to directory containing protein domain information.  Files must be named chr*.prot-features-ens70.txt, where * is 1-22/X/Y.
+
+--transmembrane=tm_ens70/
+Specifies
+
+
+VI. Notes
+The main components are NMD_predictor.py and vat_run.py.  vat_run.py must be 
+present in the same directory or in the PYTHONPATH of the Python installation.
+
+NMD_predictor_v3.3.py: Contains the main body of code.  If a VCF file is not 
+passed in, Reads information from all relevant input files into memory, and 
+
+vat_run.py: Contains run_vat(), function called by NMD_predictor.py to run 
+VAT. 
+
+
+VII. System Requirements
+- VAT installed, available at http://info.gersteinlab.org/VAT.  snpMapper and 
+indelMapper must be in shell PATH.
+- Python 2.7
+- NetworkX Python library (v. 1.7 or higher) in PYTHONPATH of Python 
+installation
+
+VIII. ALoFT Features
+For all variants:
+Partial/full - Full if all transcripts of the affected gene are affected, 
+partial otherwise
+Transcript length - Length of affected transcript in nucleotides
+Longest transcript - YES if transcript is the longest transcript affected by 
+variant, NO otherwise
+Shortest path to recessive gene - Minimum length of a shortest path to a 
+recessive gene in protein interaction network
+
+For premature stop-causing SNPs/indels only:
+
+For splice SNPs only:
+
+VIIII. Adjustable Parameters
+    NMD threshold = 50
