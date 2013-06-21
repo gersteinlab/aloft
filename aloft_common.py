@@ -38,7 +38,7 @@ def getGerpScore(start, length):
 	return sum([gerprate.floatInList(start+rateindex) for rateindex in range(length)]) / length
 
 #binary search to find GERP element
-def findGERPelement(elements, start, end):
+def findGERPelementIndex(elements, start, end):
 	low = 0
 	high = len(elements) - 1
 	while low<=high:
@@ -50,5 +50,5 @@ def findGERPelement(elements, start, end):
 		else:
 			break
 	if low <= high:
-		return elements[mid]
-	return None
+		return mid
+	return -1
