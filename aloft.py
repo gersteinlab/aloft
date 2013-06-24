@@ -480,11 +480,9 @@ for i in chrs:
 #del GERPrates
 del GERPelements
 
-print "Reading disopred information..."
-
-def getDisopredDataFromLine(line, disopredSequencesPath):
+def getDisopredDataFromLine(line, disopredSequencesPath, variantType):
     newData = "."
-    if "prematureStop" in line:
+    if variantType in line:
         prematureStopIndex = line.index('prematureStop')
         lineComponents = line[prematureStopIndex:].split(":")
         transcriptID = lineComponents[3]
@@ -1071,7 +1069,7 @@ while line!="":
         else:
             ancestral = "Neither"
 
-        disopredData = getDisopredDataFromLine(line, disopredSequencesPath)
+        disopredData = getDisopredDataFromLine(line, disopredSequencesPath, 'prematureStop')
         
         ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
         lineinfo = {'AA':'AA='+ancesdata[counter],\
