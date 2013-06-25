@@ -403,74 +403,20 @@ for i in chrs:
             GERPrejectiondata.append(".")
         else:
             GERPelementdata.append(`GERPelements[mid]`)
-            #find intersection between exons and elements and retrieve the rejection scores
-            foundPrematureStop = False
+
+            rejectedElements = []
             if 'prematureStop' in line:
                 prematureStopIndex = line.index('prematureStop')
                 lineComponents = line[prematureStopIndex-2:].split(":")
                 direction = lineComponents[0]
                 transcript = lineComponents[4]
 
-                if transcript in codingExonIntervals[chr_num]:
-                    prematureStopExonIndex = 0
-                    for block in codingExonIntervals[chr_num][transcript]:
-                        if block[0] <= start and block[1] >= start:
-                            #print "Found prematureStop %d in exon (%d, %d)" % (start, block[0], block[1])
-                            foundPrematureStop = True
-                            break
-                        prematureStopExonIndex += 1
+                rejectedElements = getRejectionScoreData(codingExonIntervals, GERPelements, mid, chr_num, start, transcript, direction)
 
-                    if foundPrematureStop:
-                        rejectedElements = []
-                        exons = codingExonIntervals[chr_num][transcript]
-                        if direction == '+':
-                            truncatedExons = exons[prematureStopExonIndex:]
-                        elif direction == '-':
-                            truncatedExons = exons[0:prematureStopExonIndex+1]
-
-                        elementIndex = mid
-
-                        #Make a list of elements that may be relevant to the truncated exons
-                        relevantElements = []
-                        while elementIndex >= 0 and elementIndex < len(GERPelements) and ((direction == '-' and GERPelements[elementIndex][1] >= truncatedExons[0][0]) or (direction == '+' and GERPelements[elementIndex][0] <= truncatedExons[-1][1])):
-                            relevantElements.append(GERPelements[elementIndex])
-                            if direction == '+':
-                                elementIndex += 1
-                            elif direction == '-':
-                                elementIndex -= 1
-
-                        #find all truncated exons and elements that intersect
-                        for truncatedExon in truncatedExons:
-                            for relevantElement in relevantElements:
-                                #check if they overlap in any way
-                                if truncatedExon[0] <= relevantElement[1] and truncatedExon[1] >= relevantElement[0]:
-                                    distanceCovered = 0
-                                    exonLength = truncatedExon[1] - truncatedExon[0] + 1
-
-                                    #see if element completly contains exon
-                                    if relevantElement[0] <= truncatedExon[0] and relevantElement[1] >= truncatedExon[1]:
-                                        distanceCovered = exonLength
-                                    #if exon completely contains element
-                                    elif truncatedExon[0] <= relevantElement[0] and truncatedExon[1] >= relevantElement[1]:
-                                        distanceCovered = (relevantElement[0] - truncatedExon[0] + 1) + (truncatedExon[1] - relevantElement[1] + 1)
-                                    #otherwise find the partial overlap
-                                    elif relevantElement[0] > truncatedExon[0]:
-                                        distanceCovered = truncatedExon[1] - relevantElement[0] + 1
-                                    elif relevantElement[1] < truncatedExon[1]:
-                                        distanceCovered = relevantElement[1] - truncatedExon[0] + 1
-
-                                    #append exon number (1 based), rejection score, distance element is covered inside exon, percentage element is inside exon
-                                    rejectedElements.append((exons.index(truncatedExon)+1, relevantElement[2], distanceCovered, exonLength, 100.0 * distanceCovered / exonLength))
-
-                        #print "Found elements: %d" % (len(rejectedElements))
-                        if len(rejectedElements) > 0:
-                            GERPrejectiondata.append(",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements]))
-                        else:
-                            GERPrejectiondata.append(".")
-
-            if not foundPrematureStop:
+            if len(rejectedElements) > 0:
+                GERPrejectiondata.append(",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements]))
+            else:
                 GERPrejectiondata.append(".")
-
         
         line=infile.readline()
     f.close()
@@ -479,47 +425,6 @@ for i in chrs:
 
 #del GERPrates
 del GERPelements
-
-def getDisopredDataFromLine(line, disopredSequencesPath, variantType):
-    newData = "."
-    if variantType in line:
-        prematureStopIndex = line.index('prematureStop')
-        lineComponents = line[prematureStopIndex:].split(":")
-        transcriptID = lineComponents[3]
-        prematureStopPosition = int(lineComponents[4].split("_")[2])
-
-        try:
-            disoFilePath = os.path.join(disopredSequencesPath, "%s.diso" % (transcriptID))
-            disoFile = open(disoFilePath)
-            #this file is in a terrible format, skip first 5 lines
-            for _ in range(5):
-                disoFile.readline()
-
-            disorderedResidues = 0
-            residueCount = 0
-
-            disorderedResiduesAfterPrematureStop = 0
-            residueCountAfterPrematureStop = 0
-
-            for disoLine in disoFile:
-                if disoLine.strip():
-                    disoLineComponents = [component for component in re.split(r'[\t ]', disoLine.strip()) if component]
-                    residueNumber = int(disoLineComponents[0])
-                    if disoLineComponents[2] == '*':
-                        disorderedResidues += 1
-                        if residueNumber >= prematureStopPosition:
-                            disorderedResiduesAfterPrematureStop += 1
-                    
-                    residueCount += 1
-                    if residueNumber >= prematureStopPosition:
-                        residueCountAfterPrematureStop += 1
-            
-            newData = "/".join([str(disorderedResidues), str(residueCount), str(disorderedResiduesAfterPrematureStop), str(residueCountAfterPrematureStop), "%.2f" % (100.0 * disorderedResidues / residueCount), "%.2f" % (100.0 * disorderedResiduesAfterPrematureStop / residueCountAfterPrematureStop), str(prematureStopPosition)])
-        except:
-            #print "Skipping transcript %s" % (transcriptID)
-            pass
-
-    return newData
 
 segdups={}
 segdupmax={}
@@ -1069,7 +974,7 @@ while line!="":
         else:
             ancestral = "Neither"
 
-        disopredData = getDisopredDataFromLine(line, disopredSequencesPath, 'prematureStop')
+        disopredData = getDisopredDataFromLine(disopredSequencesPath, line)
         
         ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
         lineinfo = {'AA':'AA='+ancesdata[counter],\
