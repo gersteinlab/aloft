@@ -1,0 +1,15 @@
+ALOFT TODO:
+
+Segdups - merge redundant blocks
+Name change NMD_predictor -> aloft._v1_0.py
+Split ALOFT code into modules based on feature type
+Remove the 'sort' dependency for vat input/output
+Running VAT from within ALOFT script is not parsing indels correctly
+Output files in <basename>.aloft.vcf format which would simplify things for users
+y/n VAT option -> I cannot run this with batch script -> remove this feature
+Progress and cleaner status updates to stdout
+Update all data
+Segdup data is blank
+PTM output - fewer columns, display positions instead of gene ids
+Clear dependencies
+Passing in VCF or VAT files is tedious, have one query
