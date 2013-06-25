@@ -92,12 +92,9 @@ if options.vcf_path == '': # try to skip VAT
         print "A VCF file was not supplied by the --vcf option"
         sys.exit(1)
     else:
-        input = raw_input('A VCF file has not been passed in. Do you want to skip the VAT step, and run NMD on %s (y/n)? (Note: the VAT file must be sorted numerically.)\n' % (options.vat_path))
-        if input.startswith("y") or input.startswith("Y") or input.startswith("1"):
-            shouldSkipVAT = True
-        else:
-            print "Exiting..."
-            sys.exit(1)
+        print "\nNo VCF file has been passed in with the --vcf option."
+        print "Running ALoFT on %s" % (options.vat_path) + "\n"
+        shouldSkipVAT = True
 
 if not shouldSkipVAT: #run VAT
     if not os.path.exists(options.vcf_path):
