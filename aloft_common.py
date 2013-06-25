@@ -2,7 +2,7 @@ import gerprate
 import os
 import re
 
-def getRejectionScoreData(codingExonIntervals, GERPelements, GERPelementIndex, chromosome, start, transcript, direction):
+def getRejectionElementIntersectionData(codingExonIntervals, GERPelements, GERPelementIndex, chromosome, start, transcript, direction):
 	rejectedElements = []
 	if transcript in codingExonIntervals[chromosome]:
 		stopExonIndex = 0

@@ -411,7 +411,7 @@ for i in chrs:
                 direction = lineComponents[0]
                 transcript = lineComponents[4]
 
-                rejectedElements = getRejectionScoreData(codingExonIntervals, GERPelements, mid, chr_num, start, transcript, direction)
+                rejectedElements = getRejectionElementIntersectionData(codingExonIntervals, GERPelements, mid, chr_num, start, transcript, direction)
 
             if len(rejectedElements) > 0:
                 GERPrejectiondata.append(",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements]))
