@@ -354,12 +354,6 @@ for i in chrs:
     if line.split('\t')[0].split('chr')[-1]!=i:
         print 'no indels on chromosome ' + i
         continue
-    #try:
-    #    ratefile=open(GERPratepath+'/chr'+i+'.maf.rates')
-    #except:
-    #    print GERPratepath+'/chr'+i+'.maf.rates could not be opened.'
-    #    print 'Exiting program.'
-    #    sys.exit(1)
     try:
         elementfile=open(os.path.join(GERPelementpath, 'hg19_chr'+i+'_elems.txt'))
     except:
@@ -367,9 +361,6 @@ for i in chrs:
         print 'Exiting program.'
         sys.exit(1)
     print 'Reading GERP information for chromosome '+i+'...'
-    #GERPrates=array.array('f',[0])
-    #for rateline in ratefile:
-    #    GERPrates.append(float(rateline.split('\t')[1]))
     startTime = datetime.datetime.now()
     buildGerpRates(GERPratepath, GERPratecachepath, i)
     
