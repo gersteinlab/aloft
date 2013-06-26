@@ -302,21 +302,23 @@ chrs = [`i` for i in range(1, 23)]
 chrs.append('X')
 chrs.append('Y')
 
-## Coordinates for chromosomes are 1-based.
-ancestor={}
-for i in chrs:
-    try:
-        f=open(os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa'))
-    except:
-        print os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa') + ' could not be opened.'
-        print 'Exiting program.'
-        sys.exit(1)
-    print 'Reading ancestral chromosome '+i+'...'
-    f.readline()    ##first >**** line
-    ancestor[i]='0'+''.join(line.strip() for line in f)
-    f.close()
+def getAncestors(ancespath):
+    ## Coordinates for chromosomes are 1-based.
+    ancestor={}
+    for i in chrs:
+        try:
+            f=open(os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa'))
+        except:
+            print os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa') + ' could not be opened.'
+            print 'Exiting program.'
+            sys.exit(1)
+        print 'Reading ancestral chromosome '+i+'...'
+        f.readline()    ##first >**** line
+        ancestor[i]='0'+''.join(line.strip() for line in f)
+        f.close()
+    return ancestor
 
-def parseances(line):
+def parseances(ancestor, line):
     if line.startswith("#") or line=="\n":
         return ""
     data = line.split('\t')
@@ -326,9 +328,9 @@ def parseances(line):
 
 ##list of ancestral alleles for each line in input file,
 ##"" if metadata line, '.' if none available
-ancesdata = [parseances(line) for line in infile]
-
-del ancestor
+ancestors = getAncestors(ancespath)
+ancesdata = [parseances(ancestors, line) for line in infile]
+del ancestors
 
 #Load exon intervals from .interval file, used later for intersecting with gerp elements
 codingExonIntervals = getCodingExonIntervals(options.annotation_interval_path)
