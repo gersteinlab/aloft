@@ -899,7 +899,7 @@ LOFparams = ["shortest path to recessive gene", "recessive neighbors",\
                 "causes NMD?", "5' flanking splice site",\
                 "3' flanking splice site", "canonical?",\
                 "# failed filters", "filters failed",\
-                "ancestral allele", "GERP score", "GERP element", "GERP rejection", "Disopred data",\
+                "ancestral allele", "GERP score", "GERP element", "GERP rejection", "Disorder prediction",\
                 "segmental duplications", "PFAM", "PFAMtruncated",\
                 "SCOP", "SCOPtruncated", "SM", "SMtruncated",\
                 "Tmhmm", "Tmhmmtruncated", "Sigp", "Sigptruncated",\
@@ -921,7 +921,7 @@ spliceparams = ["shortest path to recessive gene", "recessive neighbors",\
                 "SNP in canonical site?", "other splice site canonical?",\
                 "SNP location", "alt donor", "alt acceptor",\
                 "intron length", "# failed filters", "filters failed",\
-                "GERP score", "GERP element", "GERP rejection", "Disopred data",\
+                "GERP score", "GERP element", "GERP rejection", "Disorder prediction",\
                 "segmental duplications", "PFAM", "PFAMtruncated",\
                 "SCOP", "SCOPtruncated", "SM", "SMtruncated",\
                 "Tmhmm", "Tmhmmtruncated", "Sigp", "Sigptruncated",\
@@ -979,15 +979,15 @@ while line!="":
                     'GERPscore':'GERPscore='+GERPratedata[counter],\
                     'GERPelement':'GERPelement='+GERPelementdata[counter],\
                     'GERPrejection':'GERPrejection='+GERPrejectiondata[counter],\
-                    'Disopreddata':'Disopreddata='+disopredData,\
+                    'Disorderprediction':'Disorderprediction='+disopredData,\
                     'SegDup':'SegDup='+`segdupdata[counter].count('(')`}
-        infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'Disopreddata', 'SegDup']
+        infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'Disorderprediction', 'SegDup']
 
         outdata["ancestral allele"] = ancesdata[counter]
         outdata["GERP score"] = GERPratedata[counter]
         outdata["GERP element"] = GERPelementdata[counter]
         outdata["GERP rejection"] = GERPrejectiondata[counter]
-        outdata["Disopred data"] = disopredData
+        outdata["Disorder prediction"] = disopredData
         outdata["segmental duplications"] = segdupdata[counter]
         outdata["PFAM"] = "N/A"
         outdata["PFAMtruncated"] = "N/A"
