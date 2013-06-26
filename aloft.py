@@ -988,7 +988,7 @@ while line!="":
         outdata["GERP element"] = GERPelementdata[counter]
         outdata["GERP rejection"] = GERPrejectiondata[counter]
         outdata["Disorder prediction"] = disopredData
-        outdata["segmental duplications"] = segdupdata[counter]
+        outdata["segmental duplications"] = '.' if segdupdata[counter].count('(') == '0' else segdupdata[counter]
         outdata["PFAM"] = "N/A"
         outdata["PFAMtruncated"] = "N/A"
         outdata["SCOP"] = "N/A"
