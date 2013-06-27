@@ -335,86 +335,87 @@ del ancestors
 #Load exon intervals from .interval file, used later for intersecting with gerp elements
 codingExonIntervals = getCodingExonIntervals(options.annotation_interval_path)
 
-## Coordinates are 1-based.
-## All GERP intervals include endpoints
-GERPratedata=[]
-GERPelementdata=[]
+def getGERPData(infile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, codingExonIntervals):
+    ## Coordinates are 1-based.
+    ## All GERP intervals include endpoints
+    GERPratedata=[]
+    GERPelementdata=[]
+    GERPrejectiondata = []
 
-GERPrejectiondata = []
-
-infile.seek(0)
-line = infile.readline()
-while line.startswith("#") or line=="\n":
-    GERPratedata.append('')
-    GERPelementdata.append('')
-    GERPrejectiondata.append('')
-    line=infile.readline()
-
-for i in chrs:
-    if line.split('\t')[0].split('chr')[-1]!=i:
-        print 'no indels on chromosome ' + i
-        continue
-    try:
-        elementfile=open(os.path.join(GERPelementpath, 'hg19_chr'+i+'_elems.txt'))
-    except:
-        print os.path.join(GERPelementpath, 'hg19_chr'+i+'_elems.txt') + ' could not be opened.'
-        print 'Exiting program.'
-        sys.exit(1)
-    print 'Reading GERP information for chromosome '+i+'...'
-    startTime = datetime.datetime.now()
-    buildGerpRates(GERPratepath, GERPratecachepath, i)
-    
-    print str((datetime.datetime.now() - startTime).seconds) + " seconds."
-    
-    GERPelements = getGERPelements(elementfile)
-
-    print 'Calculating GERP scores for chromosome '+i+'...'
-    startTime = datetime.datetime.now()
-    while line.split('\t')[0].split('chr')[-1]==i:
-        data = line.split('\t')
-        chr_num = data[0].split('chr')[-1]
-        start = int(data[1])
-        length = len(data[3])
-        end = start + length-1  ##inclusive endpoint
-        #GERPratedata.append(`sum(GERPrates[start:start+length])/length`)
-        GERPratedata.append(str(getGerpScore(start, length)))
-        ##do binary search to see if contained in any GERP element
-        low = 0; high = len(GERPelements)-1
-        while low<=high:
-            mid = (low+high)/2
-            if start>GERPelements[mid][1]:
-                low = mid+1
-            elif end<GERPelements[mid][0]:
-                high = mid-1
-            else:
-                break
-        if low>high:
-            GERPelementdata.append(".")
-            GERPrejectiondata.append(".")
-        else:
-            GERPelementdata.append(`GERPelements[mid]`)
-
-            rejectedElements = []
-            if 'prematureStop' in line:
-                prematureStopIndex = line.index('prematureStop')
-                lineComponents = line[prematureStopIndex-2:].split(":")
-                direction = lineComponents[0]
-                transcript = lineComponents[4]
-
-                rejectedElements = getRejectionElementIntersectionData(codingExonIntervals, GERPelements, mid, chr_num, start, transcript, direction)
-
-            if len(rejectedElements) > 0:
-                GERPrejectiondata.append(",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements]))
-            else:
-                GERPrejectiondata.append(".")
-        
+    infile.seek(0)
+    line = infile.readline()
+    while line.startswith("#") or line=="\n":
+        GERPratedata.append('')
+        GERPelementdata.append('')
+        GERPrejectiondata.append('')
         line=infile.readline()
-    f.close()
-    gerprate.freeMemory()
-    print str((datetime.datetime.now() - startTime).seconds) + " seconds."
 
-#del GERPrates
-del GERPelements
+    for i in chrs:
+        if line.split('\t')[0].split('chr')[-1]!=i:
+            print 'no indels on chromosome ' + i
+            continue
+        try:
+            elementfile=open(os.path.join(GERPelementpath, 'hg19_chr'+i+'_elems.txt'))
+        except:
+            print os.path.join(GERPelementpath, 'hg19_chr'+i+'_elems.txt') + ' could not be opened.'
+            print 'Exiting program.'
+            sys.exit(1)
+        print 'Reading GERP information for chromosome '+i+'...'
+        startTime = datetime.datetime.now()
+        buildGerpRates(GERPratepath, GERPratecachepath, i)
+        
+        print str((datetime.datetime.now() - startTime).seconds) + " seconds."
+        
+        GERPelements = getGERPelements(elementfile)
+
+        print 'Calculating GERP scores for chromosome '+i+'...'
+        startTime = datetime.datetime.now()
+        while line.split('\t')[0].split('chr')[-1]==i:
+            data = line.split('\t')
+            chr_num = data[0].split('chr')[-1]
+            start = int(data[1])
+            length = len(data[3])
+            end = start + length-1  ##inclusive endpoint
+            #old line of code left in here for ease of understanding what getGerpScore() is doing
+            #GERPratedata.append(`sum(GERPrates[start:start+length])/length`)
+            GERPratedata.append(str(getGerpScore(start, length)))
+            ##do binary search to see if contained in any GERP element
+            low = 0; high = len(GERPelements)-1
+            while low<=high:
+                mid = (low+high)/2
+                if start>GERPelements[mid][1]:
+                    low = mid+1
+                elif end<GERPelements[mid][0]:
+                    high = mid-1
+                else:
+                    break
+            if low>high:
+                GERPelementdata.append(".")
+                GERPrejectiondata.append(".")
+            else:
+                GERPelementdata.append(`GERPelements[mid]`)
+
+                rejectedElements = []
+                if 'prematureStop' in line:
+                    prematureStopIndex = line.index('prematureStop')
+                    lineComponents = line[prematureStopIndex-2:].split(":")
+                    direction = lineComponents[0]
+                    transcript = lineComponents[4]
+
+                    rejectedElements = getRejectionElementIntersectionData(codingExonIntervals, GERPelements, mid, chr_num, start, transcript, direction)
+
+                if len(rejectedElements) > 0:
+                    GERPrejectiondata.append(",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements]))
+                else:
+                    GERPrejectiondata.append(".")
+            
+            line=infile.readline()
+        gerprate.freeMemory()
+        print str((datetime.datetime.now() - startTime).seconds) + " seconds."
+
+    return GERPratedata, GERPelementdata, GERPrejectiondata
+
+GERPratedata, GERPelementdata, GERPrejectiondata = getGERPData(infile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, codingExonIntervals)
 
 segdups={}
 segdupmax={}
