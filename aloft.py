@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys, os, re, string, array, datetime, gerprate
 import networkx as nx
 from optparse import OptionParser

@@ -1,24 +1,14 @@
+#!/usr/bin/env python
 #You can just run VAT. Usage is <input_vcf> <vat_output> <annotation_interval_input> <annotation_sequence_input> This script will take care of sorting the input_vcf file numerically.
 
 import os, sys
 from subprocess import Popen, PIPE
 import re
-
-def tryint(s):
-	try:
-		return int(s)
-	except:
-		return s
-
-def alphanum_key(s):
-	return [ tryint(c) for c in re.split('([0-9]+)', s) ]
-
-def sort_nicely(l):
-	l.sort(key=alphanum_key)
+from vcf_sort import *
 
 def run_vat(arguments):
-	#inputPath = '/net/gerstein/sb238/ftw/finnish/Finns.nogeno.vcf.gz'
-	# or a .vcf
+	#example as input path: '/net/gerstein/sb238/ftw/finnish/Finns.nogeno.vcf.gz'
+	# or a .vcf is fine too
 	print 'Parsing VCF file...'
 	inputPath = arguments[1]
 	vatOutputPath = arguments[2]
