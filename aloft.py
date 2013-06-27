@@ -379,21 +379,12 @@ def getGERPData(infile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, 
             #old line of code left in here for ease of understanding what getGerpScore() is doing
             #GERPratedata.append(`sum(GERPrates[start:start+length])/length`)
             GERPratedata.append(str(getGerpScore(start, length)))
-            ##do binary search to see if contained in any GERP element
-            low = 0; high = len(GERPelements)-1
-            while low<=high:
-                mid = (low+high)/2
-                if start>GERPelements[mid][1]:
-                    low = mid+1
-                elif end<GERPelements[mid][0]:
-                    high = mid-1
-                else:
-                    break
-            if low>high:
+            elementIndex = findGERPelementIndex(GERPelements, start, end)
+            if elementIndex == -1:
                 GERPelementdata.append(".")
                 GERPrejectiondata.append(".")
             else:
-                GERPelementdata.append(`GERPelements[mid]`)
+                GERPelementdata.append(str(GERPelements[elementIndex]))
 
                 rejectedElements = []
                 if 'prematureStop' in line:
@@ -402,7 +393,7 @@ def getGERPData(infile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, 
                     direction = lineComponents[0]
                     transcript = lineComponents[4]
 
-                    rejectedElements = getRejectionElementIntersectionData(codingExonIntervals, GERPelements, mid, chr_num, start, transcript, direction)
+                    rejectedElements = getRejectionElementIntersectionData(codingExonIntervals, GERPelements, elementIndex, chr_num, start, transcript, direction)
 
                 if len(rejectedElements) > 0:
                     GERPrejectiondata.append(",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements]))
