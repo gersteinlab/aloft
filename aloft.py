@@ -9,58 +9,6 @@ from sequencing import *
 from aloft_common import *
 import argparse
 
-print "Starting at: " + datetime.datetime.now().strftime("%H:%M:%S")
-
-##NMD threshold (premature STOP to last exon-exon junction)
-dist = 50
-
-#Parse command line arguments
-parser = argparse.ArgumentParser(description='Run aloft predictions. You must at least provide a VCF (via --vcf) or VAT (via --vat) input file. If you provide a VCF file, it will be ran through VAT and then through aloft. If you provide a VAT file instead, it must be sorted numerically (use vcf_sort.py for this).', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-parser.add_argument('--vcf', help='Path to VCF input file. This can be a compressed .gz file. If not specified, then --vat must be specified.')
-parser.add_argument('--vat', help='Path to VAT input file. If not specified, then --vcf must be specified. This file must be sorted numerically.')
-
-parser.add_argument('--output', help='Path to output directory; directory is created if it does not exist', default='aloft_output/')
-
-parser.add_argument('--gerp_cache', help='Output to directory for gerp cache files; directory is created if it does not exist', default='gerp_cache/')
-
-parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/ens67_gtpcgtpolymorphic.txt')
-parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens70.txt files', default='data/prot-features/')
-parser.add_argument('--thousandG', help='Path to 1000G file', default='data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.gencode16.SNPS.vat.vcf')
-parser.add_argument('--haplo_score', help='Path to haploinsufficiency disease scores', default='data/imputed.hi.scores')
-parser.add_argument('--ppi', help='Path to protein-protein interaction network file', default='data/BIOGRID-ORGANISM-Homo_sapiens-3.2.95.tab.txt')
-parser.add_argument('--dNdS', help='Path to dNdS file', default='data/dNdS_avgs.txt')
-parser.add_argument('--annotation_interval', help='Path to annotation interval file for VAT', default='data/gencode.v16.pc.interval')
-parser.add_argument('--paralogs', help='Path to paralogs file', default='data/within_species_geneparalogs.ens70')
-parser.add_argument('--transmembrane', help='Path to directory containing transmembrane chr*.tmsigpcoilslc.ens70.txt', default='data/tm_ens70/')
-parser.add_argument('--LOF_score', help='Path to LOF disease scores', default='data/prob_recessive_disease_scores.txt')
-parser.add_argument('--rates', help='Path to directory containing chr*.maf.rates files', default='data/bases/')
-parser.add_argument('--genome', help='Path to directory containing chr*.fa files', default='data/genome/')
-parser.add_argument('--ancestor', help='Path to directory containing homo_sapiens_ancestor_*.fa files', default='data/homo_sapiens_ancestor_GRCh37_e71/')
-parser.add_argument('--netSNP_score', help='Path to netSNP disease scores', default='data/Supplementary_Table8.20Jul2012.txt')
-parser.add_argument('--elements', help='Path to directory containing hg19_chr*_elems.txt files', default='data/elements/')
-parser.add_argument('--dominant_genes', help='Path to list of dominant genes', default='data/dominantonly.list')
-parser.add_argument('--segdup', help='Path to segdup annotation file', default='data/hg19-segdup.txt')
-parser.add_argument('--annotation', help='Path to .gtf annotation file', default='data/gencode.v16.annotation.gtf')
-parser.add_argument('--exomes', help='Path to directory containing ESP6500.chr*.snps.vcf files', default='data/ESP6500/')
-parser.add_argument('--pseudogenes', help='Path to pseudogenes file', default='data/gencode.v7.pgene.parents')
-parser.add_argument('--phosphorylation', help='Path to directory containing ptm.phosphorylation.chr*.txt files', default='data/ptm')
-parser.add_argument('--disopred_sequences', help='Path to disorder prediction sequences', default='data/disopred_sequences')
-parser.add_argument('--recessive_genes', help='Path to list of recessive genes', default='data/science_lofpaper_omim_recessive_filtered.list')
-parser.add_argument('--annotation_sequence', help='Path to annotation sequence file for VAT', default='data/gencode.v16.pc.fa')
-
-args = parser.parse_args()
-
-if not args.vcf and not args.vat:
-    parser.print_help()
-    print "Error: Neither a VCF or VAT file was specified. You must supply one of these as your input file"
-    sys.exit(1)
-
-if args.vcf and args.vat:
-    parser.print_help()
-    print "Error: Both a VCF or VAT file were specified. You must supply only one of these as your input file, but not both"
-    sys.exit(1)
-
 def abortIfPathDoesNotExist(path, shouldShowHelp=False):
     if path is not None and not os.path.exists(path):
         if shouldShowHelp:
@@ -86,66 +34,6 @@ def abortIfCannotWriteFile(filepath):
         sys.exit(1)
     return newFile
 
-abortIfPathDoesNotExist(args.vat)
-abortIfPathDoesNotExist(args.vcf)
-
-abortIfCannotCreateDirectory(args.output)
-abortIfCannotCreateDirectory(args.gerp_cache)
-
-#Try to see if we can detect and open all input files
-for arg, path in vars(args).items():
-    if path not in [args.vat, args.vcf, args.output, args.gerp_cache]:
-        abortIfPathDoesNotExist(path, True)
-        if not os.path.isdir(path):
-            try:
-                f = open(path)
-                f.close()
-            except:
-                print "Error: --%s: %s cannot be opened (insufficient read privileges?)" % (arg, path)
-                sys.exit(1)
-
-if args.vcf:
-    #run VAT
-    vatPath = os.path.join(args.output, os.path.basename(args.vcf) + ".vat")
-    print "Running VAT on %s" % (args.vcf) + "\n"
-    run_vat([sys.argv[0], args.vcf, vatPath, args.annotation_interval, args.annotation_sequence])
-else:
-    vatPath = args.vat
-
-print "Running ALoFT on %s" % (vatPath) + "\n"
-
-try:
-    infile = open(vatPath)
-except:
-    print "Error: Failed to read %s" % (vatPath)
-    sys.exit(1)
-
-tabbedOutputLofPath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_lof")
-tabbedOutputSplicePath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_splice")
-vcfOutputPath = os.path.join(args.output, os.path.basename(vatPath) + ".output.vcf")
-
-o_lof = abortIfCannotWriteFile(tabbedOutputLofPath)
-o_splice = abortIfCannotWriteFile(tabbedOutputSplicePath)
-o2 = abortIfCannotWriteFile(vcfOutputPath)
-
-#We do not need to set up try/except clause here because we already checked if this was possible when parsing the command line arguments above
-annotfile = open(args.annotation)
-segdupfile=open(args.segdup)
-thousandGInputFile = open(args.thousandG)
-ppifile=open(args.ppi)
-rgenesfile=open(args.recessive_genes)
-dgenesfile=open(args.dominant_genes)
-haploscorefile=open(args.haplo_score)
-LOFscorefile=open(args.LOF_score)
-netSNPscorefile=open(args.netSNP_score)
-pseudogenesfile=open(args.pseudogenes)
-paralogsfile=open(args.paralogs)
-dNdSfile=open(args.dNdS)
-
-chrs = [`i` for i in range(1, 23)]
-chrs.append('X')
-chrs.append('Y')
-
 def getAncestors(ancespath):
     ## Coordinates for chromosomes are 1-based.
     ancestor={}
@@ -170,29 +58,20 @@ def parseances(ancestor, line):
     start = int(data[1])
     return ancestor[chr_num][start:start+len(data[3])].upper()
 
-##list of ancestral alleles for each line in input file,
-##"" if metadata line, '.' if none available
-ancestors = getAncestors(args.ancestor)
-ancesdata = [parseances(ancestors, line) for line in infile]
-del ancestors
-
-#Load exon intervals from .interval file, used later for intersecting with gerp elements
-codingExonIntervals = getCodingExonIntervals(args.annotation_interval)
-
-def getGERPData(infile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, codingExonIntervals):
+def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, codingExonIntervals):
     ## Coordinates are 1-based.
     ## All GERP intervals include endpoints
     GERPratedata=[]
     GERPelementdata=[]
     GERPrejectiondata = []
 
-    infile.seek(0)
-    line = infile.readline()
+    vatFile.seek(0)
+    line = vatFile.readline()
     while line.startswith("#") or line=="\n":
         GERPratedata.append('')
         GERPelementdata.append('')
         GERPrejectiondata.append('')
-        line=infile.readline()
+        line=vatFile.readline()
 
     for i in chrs:
         if line.split('\t')[0].split('chr')[-1]!=i:
@@ -242,191 +121,87 @@ def getGERPData(infile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, 
                 else:
                     GERPrejectiondata.append(".")
             
-            line=infile.readline()
+            line=vatFile.readline()
         gerprate.freeMemory()
         print str((datetime.datetime.now() - startTime).seconds) + " seconds."
 
     return GERPratedata, GERPelementdata, GERPrejectiondata
 
-GERPratedata, GERPelementdata, GERPrejectiondata = getGERPData(infile, chrs, args.elements, args.rates, args.gerp_cache, codingExonIntervals)
-
-segdups={}
-segdupmax={}
-for i in chrs:
-    segdups[i] = []
-    segdupmax[i] = []
-print "Reading segdup information..."
-line = segdupfile.readline()
-while line.startswith("#") or line=="\n":
-    line=segdupfile.readline()
-while line!="":
-    data = line.split('\t')
-    chr_num = data[0].split('chr')[-1]
-    if '_' in chr_num:
-        line = segdupfile.readline()
-        continue
-    segdups[chr_num].append((int(data[1]),int(data[2])))
+def getSegDupData(vatFile, segdupfile, chrs):
+    segdups={}
+    segdupmax={}
+    for i in chrs:
+        segdups[i] = []
+        segdupmax[i] = []
+    print "Reading segdup information..."
     line = segdupfile.readline()
-for i in chrs:
-    segdups[i] = sorted(segdups[i])
-    maxsofar = 0
-    for interval in segdups[i]:
-        maxsofar = max(interval[1], maxsofar)
-        segdupmax[i].append(maxsofar)
-segdupdata=[]
-infile.seek(0)
-line = infile.readline()
-while line.startswith("#") or line=="\n":
-    segdupdata.append('')
-    line=infile.readline()
-print 'Calculating segdup overlaps...'
-while line!="":
-    data = line.split('\t')
-    chr_num = data[0].split('chr')[-1]
-    start = int(data[1])
-    length = len(data[3])
-    end = start + length-1  ##inclusive endpoint
+    while line.startswith("#") or line=="\n":
+        line=segdupfile.readline()
+    while line!="":
+        data = line.split('\t')
+        chr_num = data[0].split('chr')[-1]
+        if '_' in chr_num:
+            line = segdupfile.readline()
+            continue
+        segdups[chr_num].append((int(data[1]),int(data[2])))
+        line = segdupfile.readline()
+    for i in chrs:
+        segdups[i] = sorted(segdups[i])
+        maxsofar = 0
+        for interval in segdups[i]:
+            maxsofar = max(interval[1], maxsofar)
+            segdupmax[i].append(maxsofar)
+    segdupdata=[]
+    vatFile.seek(0)
+    line = vatFile.readline()
+    while line.startswith("#") or line=="\n":
+        segdupdata.append('')
+        line=vatFile.readline()
+    print 'Calculating segdup overlaps...'
+    while line!="":
+        data = line.split('\t')
+        chr_num = data[0].split('chr')[-1]
+        start = int(data[1])
+        length = len(data[3])
+        end = start + length-1  ##inclusive endpoint
 
-    ##find right endpoint of interval search 
-    low = 0; high = len(segdups[chr_num])-1
-    while low<=high:
-        mid = (low+high)/2
-        if end<segdups[chr_num][mid][0]:
-            high = mid-1
-        elif mid == len(segdups[chr_num])-1 or end<segdups[chr_num][mid+1][0]:
-            break
-        else:
-            low = mid+1
-    right = mid
+        ##find right endpoint of interval search 
+        low = 0; high = len(segdups[chr_num])-1
+        while low<=high:
+            mid = (low+high)/2
+            if end<segdups[chr_num][mid][0]:
+                high = mid-1
+            elif mid == len(segdups[chr_num])-1 or end<segdups[chr_num][mid+1][0]:
+                break
+            else:
+                low = mid+1
+        right = mid
+            
+        ##find left endpoint of interval search
+        low = 0; high = len(segdups[chr_num])-1
+        while low<=high:
+            mid = (low+high)/2
+            if start>segdups[chr_num][mid][1] and start>segdupmax[chr_num][mid]:
+                low = mid+1
+            elif mid==0:
+                break
+            elif start>segdups[chr_num][mid-1][1] and start>segdupmax[chr_num][mid-1]:
+                break
+            else:
+                high = mid-1
+        left = mid
         
-    ##find left endpoint of interval search
-    low = 0; high = len(segdups[chr_num])-1
-    while low<=high:
-        mid = (low+high)/2
-        if start>segdups[chr_num][mid][1] and start>segdupmax[chr_num][mid]:
-            low = mid+1
-        elif mid==0:
-            break
-        elif start>segdups[chr_num][mid-1][1] and start>segdupmax[chr_num][mid-1]:
-            break
-        else:
-            high = mid-1
-    left = mid
-    
-    overlaps = []
-    for interval in segdups[chr_num][left:right+1]:
-        ##compare bigger of left enpoints to smaller of right endpoints
-        if max(start, interval[0]) <= min(end, interval[1]):
-            overlaps.append(interval)
-    segdupdata.append(`overlaps`)
+        overlaps = []
+        for interval in segdups[chr_num][left:right+1]:
+            ##compare bigger of left enpoints to smaller of right endpoints
+            if max(start, interval[0]) <= min(end, interval[1]):
+                overlaps.append(interval)
+        segdupdata.append(`overlaps`)
 
-    line = infile.readline()
+        line = vatFile.readline()
 
+    return segdupdata
 
-## Coordinates for chromosomes are 1-based.
-c={}
-for i in chrs:
-    try:
-        f=open(os.path.join(args.genome, 'chr'+i+'.fa'))
-    except:
-        print os.path.join(args.genome, 'chr'+i+'.fa') + ' could not be opened.'
-        print 'Exiting program.'
-        sys.exit(1)
-    print 'Reading chromosome '+i+'...'
-    f.readline()    ##first >chr* line
-    c[i]='0'+''.join(line.strip() for line in f)
-    f.close()
-
-CDS={}; exon={}; stop_codon={}  ##{chr_num: {transcript: [(a,b),(c,d)..] } }
-transcript_strand={}            ##{transcript_id:+ or -}
-for chr_num in chrs:
-    CDS[chr_num]={}
-    exon[chr_num]={}
-    stop_codon[chr_num]={}
-CDS['M']={}
-exon['M']={}
-stop_codon['M']={}
-
-## Coordinates for annotation are 1-based and intervals include BOTH endpoints
-print 'Building CDS and exon dictionaries...'
-startTime = datetime.datetime.now()
-
-##count number of lines preceding actual annotation data
-counter = 0
-annotfile.seek(0)
-for line in annotfile:
-    if len(line)<3:
-        counter+=1
-        continue
-    if line.startswith("#"):    ##all preceding lines begin with #
-        counter+=1
-    else:
-        annotfile.seek(0)
-        break
-for i in range(0,counter):
-    annotfile.readline()
-
-##begin going through actual annotation data
-oldtr = ""  ##last seen transcript
-oldchr = "" ##chr num of last seen transcript
-tlines = [] ##all split CDS lines in oldtr
-for line in annotfile:
-    data = line.strip().split('\t')
-    chr_num=data[0].split('chr')[-1]
-    annottype = data[2]
-    
-    if annottype!='exon' and annottype!='transcript' and annottype!='CDS' and annottype!='stop_codon':
-        continue
-    if annottype=='transcript':
-        transcript = data[8].split(';')[1].split('"')[1]
-        transcript_strand[transcript]=data[6]
-        if oldtr!="":
-            if len(tlines)>0:
-                if transcript_strand[oldtr]=='+':
-                    oldsort = sorted(tlines, key=lambda s: int(s[3]))
-                    first = oldsort[0]
-                    CDS[oldchr][oldtr].append((int(first[3])+int(first[7]), int(first[4])))
-                    for CDSline in oldsort[1:]:
-                        CDS[oldchr][oldtr].append((int(CDSline[3]),int(CDSline[4])))
-                else:
-                    oldsort = sorted(tlines, key=lambda s: int(s[3]), reverse=True)
-                    first = oldsort[0]
-                    CDS[oldchr][oldtr].append((int(first[3]), int(first[4])-int(first[7])))
-                    for CDSline in oldsort[1:]:
-                        CDS[oldchr][oldtr].append((int(CDSline[3]),int(CDSline[4])))
-        oldtr = transcript
-        oldchr = chr_num
-        tlines=[]
-        exon[chr_num][transcript] = []
-        CDS[chr_num][transcript] = []
-    else:  ## then is either exon or CDS or stop codon
-        begin = int(data[3])
-        end = int(data[4])
-        if data[2]=='exon':  
-            exon[chr_num][transcript].append((begin, end))  ##
-        elif data[2]=='CDS':
-            tlines.append(data)  ##append data for reanalysis (mRNA_start_NF cases)
-        else:  ##stop codon
-            stop_codon[chr_num][transcript] = (begin,end)
-if len(tlines)>0:
-    if transcript_strand[oldtr]=='+':
-        oldsort = sorted(tlines, key=lambda s: int(s[3]))
-        first = oldsort[0]
-        CDS[oldchr][oldtr].append((int(first[3])+int(first[7]), int(first[4])))
-        for CDSline in oldsort[1:]:
-            CDS[oldchr][oldtr].append((int(CDSline[3]),int(CDSline[4])))
-    else:
-        oldsort = sorted(tlines, key=lambda s: int(s[3]), reverse=True)
-        first = oldsort[0]
-        CDS[oldchr][oldtr].append((int(first[3]), int(first[4])-int(first[7])))
-        for CDSline in oldsort[1:]:
-            CDS[oldchr][oldtr].append((int(CDSline[3]),int(CDSline[4])))
-
-annotfile.close()
-
-print str((datetime.datetime.now() - startTime).seconds) + " seconds."
-
-print 'Begin ALoFT Calculations and Write-Out (this may take a while)...'
 def calculateExomeCoordinate(component):
     values = component.split("=")[1].split(",")
     if (int(values[0]) + int(values[1])) == 0:
@@ -564,6 +339,235 @@ def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, doma
         inputFile.close()
 
     return chromosomesPFam
+
+print "Starting at: " + datetime.datetime.now().strftime("%H:%M:%S")
+
+##NMD threshold (premature STOP to last exon-exon junction)
+dist = 50
+
+#Parse command line arguments
+parser = argparse.ArgumentParser(description='Run aloft predictions. You must at least provide a VCF (via --vcf) or VAT (via --vat) input file. If you provide a VCF file, it will be ran through VAT and then through aloft. If you provide a VAT file instead, it must be sorted numerically (use vcf_sort.py for this).', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+parser.add_argument('--vcf', help='Path to VCF input file. This can be a compressed .gz file. If not specified, then --vat must be specified.')
+parser.add_argument('--vat', help='Path to VAT input file. If not specified, then --vcf must be specified. This file must be sorted numerically.')
+
+parser.add_argument('--output', help='Path to output directory; directory is created if it does not exist', default='aloft_output/')
+
+parser.add_argument('--gerp_cache', help='Output to directory for gerp cache files; directory is created if it does not exist', default='gerp_cache/')
+
+parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/ens67_gtpcgtpolymorphic.txt')
+parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens70.txt files', default='data/prot-features/')
+parser.add_argument('--thousandG', help='Path to 1000G file', default='data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.gencode16.SNPS.vat.vcf')
+parser.add_argument('--haplo_score', help='Path to haploinsufficiency disease scores', default='data/imputed.hi.scores')
+parser.add_argument('--ppi', help='Path to protein-protein interaction network file', default='data/BIOGRID-ORGANISM-Homo_sapiens-3.2.95.tab.txt')
+parser.add_argument('--dNdS', help='Path to dNdS file', default='data/dNdS_avgs.txt')
+parser.add_argument('--annotation_interval', help='Path to annotation interval file for VAT', default='data/gencode.v16.pc.interval')
+parser.add_argument('--paralogs', help='Path to paralogs file', default='data/within_species_geneparalogs.ens70')
+parser.add_argument('--transmembrane', help='Path to directory containing transmembrane chr*.tmsigpcoilslc.ens70.txt', default='data/tm_ens70/')
+parser.add_argument('--LOF_score', help='Path to LOF disease scores', default='data/prob_recessive_disease_scores.txt')
+parser.add_argument('--rates', help='Path to directory containing chr*.maf.rates files', default='data/bases/')
+parser.add_argument('--genome', help='Path to directory containing chr*.fa files', default='data/genome/')
+parser.add_argument('--ancestor', help='Path to directory containing homo_sapiens_ancestor_*.fa files', default='data/homo_sapiens_ancestor_GRCh37_e71/')
+parser.add_argument('--netSNP_score', help='Path to netSNP disease scores', default='data/Supplementary_Table8.20Jul2012.txt')
+parser.add_argument('--elements', help='Path to directory containing hg19_chr*_elems.txt files', default='data/elements/')
+parser.add_argument('--dominant_genes', help='Path to list of dominant genes', default='data/dominantonly.list')
+parser.add_argument('--segdup', help='Path to segdup annotation file', default='data/hg19-segdup.txt')
+parser.add_argument('--annotation', help='Path to .gtf annotation file', default='data/gencode.v16.annotation.gtf')
+parser.add_argument('--exomes', help='Path to directory containing ESP6500.chr*.snps.vcf files', default='data/ESP6500/')
+parser.add_argument('--pseudogenes', help='Path to pseudogenes file', default='data/gencode.v7.pgene.parents')
+parser.add_argument('--phosphorylation', help='Path to directory containing ptm.phosphorylation.chr*.txt files', default='data/ptm')
+parser.add_argument('--disopred_sequences', help='Path to disorder prediction sequences', default='data/disopred_sequences')
+parser.add_argument('--recessive_genes', help='Path to list of recessive genes', default='data/science_lofpaper_omim_recessive_filtered.list')
+parser.add_argument('--annotation_sequence', help='Path to annotation sequence file for VAT', default='data/gencode.v16.pc.fa')
+
+args = parser.parse_args()
+
+if not args.vcf and not args.vat:
+    parser.print_help()
+    print "Error: Neither a VCF or VAT file was specified. You must supply one of these as your input file"
+    sys.exit(1)
+
+if args.vcf and args.vat:
+    parser.print_help()
+    print "Error: Both a VCF or VAT file were specified. You must supply only one of these as your input file, but not both"
+    sys.exit(1)
+
+abortIfPathDoesNotExist(args.vat)
+abortIfPathDoesNotExist(args.vcf)
+
+abortIfCannotCreateDirectory(args.output)
+abortIfCannotCreateDirectory(args.gerp_cache)
+
+#Try to see if we can detect and open all input files
+for arg, path in vars(args).items():
+    if path not in [args.vat, args.vcf, args.output, args.gerp_cache]:
+        abortIfPathDoesNotExist(path, True)
+        if not os.path.isdir(path):
+            try:
+                f = open(path)
+                f.close()
+            except:
+                print "Error: --%s: %s cannot be opened (insufficient read privileges?)" % (arg, path)
+                sys.exit(1)
+
+if args.vcf:
+    #run VAT
+    vatPath = os.path.join(args.output, os.path.basename(args.vcf) + ".vat")
+    print "Running VAT on %s" % (args.vcf) + "\n"
+    run_vat([sys.argv[0], args.vcf, vatPath, args.annotation_interval, args.annotation_sequence])
+else:
+    vatPath = args.vat
+
+print "Running ALoFT on %s" % (vatPath) + "\n"
+
+try:
+    vatFile = open(vatPath)
+except:
+    print "Error: Failed to read %s" % (vatPath)
+    sys.exit(1)
+
+tabbedOutputLofPath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_lof")
+tabbedOutputSplicePath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_splice")
+vcfOutputPath = os.path.join(args.output, os.path.basename(vatPath) + ".output.vcf")
+
+lofOutputFile = abortIfCannotWriteFile(tabbedOutputLofPath)
+spliceOutputFile = abortIfCannotWriteFile(tabbedOutputSplicePath)
+vcfOutputFile = abortIfCannotWriteFile(vcfOutputPath)
+
+#We do not need to set up try/except clause here because we already checked if this was possible when parsing the command line arguments above
+annotfile = open(args.annotation)
+segdupfile=open(args.segdup)
+thousandGInputFile = open(args.thousandG)
+ppifile=open(args.ppi)
+rgenesfile=open(args.recessive_genes)
+dgenesfile=open(args.dominant_genes)
+haploscorefile=open(args.haplo_score)
+LOFscorefile=open(args.LOF_score)
+netSNPscorefile=open(args.netSNP_score)
+pseudogenesfile=open(args.pseudogenes)
+paralogsfile=open(args.paralogs)
+dNdSfile=open(args.dNdS)
+
+chrs = [`i` for i in range(1, 23)]
+chrs.append('X')
+chrs.append('Y')
+
+##list of ancestral alleles for each line in input file,
+##"" if metadata line, '.' if none available
+ancestors = getAncestors(args.ancestor)
+ancesdata = [parseances(ancestors, line) for line in vatFile]
+del ancestors
+
+#Load exon intervals from .interval file, used later for intersecting with gerp elements
+codingExonIntervals = getCodingExonIntervals(args.annotation_interval)
+
+GERPratedata, GERPelementdata, GERPrejectiondata = getGERPData(vatFile, chrs, args.elements, args.rates, args.gerp_cache, codingExonIntervals)
+segdupdata = getSegDupData(vatFile, segdupfile, chrs)
+
+## Coordinates for chromosomes are 1-based.
+c={}
+for i in chrs:
+    try:
+        f=open(os.path.join(args.genome, 'chr'+i+'.fa'))
+    except:
+        print os.path.join(args.genome, 'chr'+i+'.fa') + ' could not be opened.'
+        print 'Exiting program.'
+        sys.exit(1)
+    print 'Reading chromosome '+i+'...'
+    f.readline()    ##first >chr* line
+    c[i]='0'+''.join(line.strip() for line in f)
+    f.close()
+
+CDS={}; exon={}; stop_codon={}  ##{chr_num: {transcript: [(a,b),(c,d)..] } }
+transcript_strand={}            ##{transcript_id:+ or -}
+for chr_num in chrs:
+    CDS[chr_num]={}
+    exon[chr_num]={}
+    stop_codon[chr_num]={}
+CDS['M']={}
+exon['M']={}
+stop_codon['M']={}
+
+## Coordinates for annotation are 1-based and intervals include BOTH endpoints
+print 'Building CDS and exon dictionaries...'
+startTime = datetime.datetime.now()
+
+##count number of lines preceding actual annotation data
+counter = 0
+annotfile.seek(0)
+for line in annotfile:
+    if len(line)<3:
+        counter+=1
+        continue
+    if line.startswith("#"):    ##all preceding lines begin with #
+        counter+=1
+    else:
+        annotfile.seek(0)
+        break
+for i in range(0,counter):
+    annotfile.readline()
+
+##begin going through actual annotation data
+oldtr = ""  ##last seen transcript
+oldchr = "" ##chr num of last seen transcript
+tlines = [] ##all split CDS lines in oldtr
+for line in annotfile:
+    data = line.strip().split('\t')
+    chr_num=data[0].split('chr')[-1]
+    annottype = data[2]
+    
+    if annottype!='exon' and annottype!='transcript' and annottype!='CDS' and annottype!='stop_codon':
+        continue
+    if annottype=='transcript':
+        transcript = data[8].split(';')[1].split('"')[1]
+        transcript_strand[transcript]=data[6]
+        if oldtr!="":
+            if len(tlines)>0:
+                if transcript_strand[oldtr]=='+':
+                    oldsort = sorted(tlines, key=lambda s: int(s[3]))
+                    first = oldsort[0]
+                    CDS[oldchr][oldtr].append((int(first[3])+int(first[7]), int(first[4])))
+                    for CDSline in oldsort[1:]:
+                        CDS[oldchr][oldtr].append((int(CDSline[3]),int(CDSline[4])))
+                else:
+                    oldsort = sorted(tlines, key=lambda s: int(s[3]), reverse=True)
+                    first = oldsort[0]
+                    CDS[oldchr][oldtr].append((int(first[3]), int(first[4])-int(first[7])))
+                    for CDSline in oldsort[1:]:
+                        CDS[oldchr][oldtr].append((int(CDSline[3]),int(CDSline[4])))
+        oldtr = transcript
+        oldchr = chr_num
+        tlines=[]
+        exon[chr_num][transcript] = []
+        CDS[chr_num][transcript] = []
+    else:  ## then is either exon or CDS or stop codon
+        begin = int(data[3])
+        end = int(data[4])
+        if data[2]=='exon':  
+            exon[chr_num][transcript].append((begin, end))  ##
+        elif data[2]=='CDS':
+            tlines.append(data)  ##append data for reanalysis (mRNA_start_NF cases)
+        else:  ##stop codon
+            stop_codon[chr_num][transcript] = (begin,end)
+if len(tlines)>0:
+    if transcript_strand[oldtr]=='+':
+        oldsort = sorted(tlines, key=lambda s: int(s[3]))
+        first = oldsort[0]
+        CDS[oldchr][oldtr].append((int(first[3])+int(first[7]), int(first[4])))
+        for CDSline in oldsort[1:]:
+            CDS[oldchr][oldtr].append((int(CDSline[3]),int(CDSline[4])))
+    else:
+        oldsort = sorted(tlines, key=lambda s: int(s[3]), reverse=True)
+        first = oldsort[0]
+        CDS[oldchr][oldtr].append((int(first[3]), int(first[4])-int(first[7])))
+        for CDSline in oldsort[1:]:
+            CDS[oldchr][oldtr].append((int(CDSline[3]),int(CDSline[4])))
+
+annotfile.close()
+
+print str((datetime.datetime.now() - startTime).seconds) + " seconds."
+
+print 'Begin ALoFT Calculations and Write-Out (this may take a while)...'
         
 transcriptToProteinHash = getTranscriptToProteinHash(args.ensembl_table)
 
@@ -766,22 +770,22 @@ spliceparams = ["shortest path to recessive gene", "recessive neighbors",\
                 "dN/dS (macaque)", "dN/dS (mouse)"]
 outdata = {i : "" for i in set(basicparams) | set(LOFparams) | set(spliceparams)}
 
-o_lof.write('chr\tpos\trsID\tref\talt\tscore\tPASS?\tdetails\t')
-o_lof.write('\t'.join(i for i in basicparams)+'\t')
-o_lof.write('\t'.join(i for i in LOFparams)+'\n')
+lofOutputFile.write('chr\tpos\trsID\tref\talt\tscore\tPASS?\tdetails\t')
+lofOutputFile.write('\t'.join(i for i in basicparams)+'\t')
+lofOutputFile.write('\t'.join(i for i in LOFparams)+'\n')
 
-o_splice.write('chr\tpos\trsID\tref\talt\tscore\tPASS?\tdetails\t')
-o_splice.write('\t'.join(i for i in basicparams)+'\t')
-o_splice.write('\t'.join(i for i in spliceparams)+'\n')
+spliceOutputFile.write('chr\tpos\trsID\tref\talt\tscore\tPASS?\tdetails\t')
+spliceOutputFile.write('\t'.join(i for i in basicparams)+'\t')
+spliceOutputFile.write('\t'.join(i for i in spliceparams)+'\n')
 
 ##scan through VCF file metadata
 counter = 0
-infile.seek(0)
-line = infile.readline()
+vatFile.seek(0)
+line = vatFile.readline()
 while line=="\n" or line.startswith("#"):
-    o2.write(line)
+    vcfOutputFile.write(line)
     counter+=1
-    line = infile.readline()
+    line = vatFile.readline()
 
 while line!="":
     data = line.strip().split('\t')
@@ -1030,8 +1034,8 @@ while line!="":
                     tabOutputLineStripped = line.strip()
                     ancestralInsertionIndex = tabOutputLineStripped.find(';', tabOutputLineStripped.find('AA='))
 ##########################################################
-                    o_splice.write(tabOutputLineStripped[0:ancestralInsertionIndex] + ';' + lineinfo['Ancestral'] + tabOutputLineStripped[ancestralInsertionIndex:])
-                    o_splice.write('\t'+ '\t'.join(outdata[i] for i in basicparams))
+                    spliceOutputFile.write(tabOutputLineStripped[0:ancestralInsertionIndex] + ';' + lineinfo['Ancestral'] + tabOutputLineStripped[ancestralInsertionIndex:])
+                    spliceOutputFile.write('\t'+ '\t'.join(outdata[i] for i in basicparams))
 #########################################################
 
                     l = sorted(CDS[chr_num][transcript], reverse= not ispositivestr)
@@ -1049,13 +1053,13 @@ while line!="":
                             break
 #########################################################
                     if not found:
-                        o_splice.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
-                        o_splice.write("\tCDS match not found: pos="+`start`+' transcript='+transcript+'\n')
+                        spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
+                        spliceOutputFile.write("\tCDS match not found: pos="+`start`+' transcript='+transcript+'\n')
                         continue
                     if ispositivestr:
                         if (end==0 and i==0) or (end==1 and i==len(l)-1):
-                            o_splice.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
-                            o_splice.write("\tno donor/acceptor pair: pos="+`start`+' transcript='+transcript+'\n')
+                            spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
+                            spliceOutputFile.write("\tno donor/acceptor pair: pos="+`start`+' transcript='+transcript+'\n')
 #########################################################
                             continue
                         if end==0:
@@ -1077,8 +1081,8 @@ while line!="":
                     else:   ##not ispositivestr
                         if (end==1 and i==0) or (end==0 and i==len(l)-1):
 #########################################################
-                            o_splice.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
-                            o_splice.write("\tno donor/acceptor pair: pos="+`start`+' transcript='+transcript+'\n')
+                            spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
+                            spliceOutputFile.write("\tno donor/acceptor pair: pos="+`start`+' transcript='+transcript+'\n')
 #########################################################
                             continue
                         if end==0:
@@ -1143,7 +1147,7 @@ while line!="":
                     outdata["filters failed"] = ','.join(failed_filters)
 					
 ########################################################
-                    o_splice.write("\t"+"\t".join(outdata[i] for i in spliceparams)+"\n")
+                    spliceOutputFile.write("\t"+"\t".join(outdata[i] for i in spliceparams)+"\n")
 #########################################################
                     splicevariants[-1]+=':'+':'.join([donor+'/'+acceptor,\
                                                       isCanonical, otherCanonical,\
@@ -1260,8 +1264,8 @@ while line!="":
                     tabOutputLineStripped = line.strip()
                     ancestralInsertionIndex = tabOutputLineStripped.find(';', tabOutputLineStripped.find('AA='))
 #########################################################
-                    o_lof.write(tabOutputLineStripped[0:ancestralInsertionIndex] + ';' + lineinfo['Ancestral'] + tabOutputLineStripped[ancestralInsertionIndex:])
-                    o_lof.write('\t'+'\t'.join(outdata[i] for i in basicparams))
+                    lofOutputFile.write(tabOutputLineStripped[0:ancestralInsertionIndex] + ';' + lineinfo['Ancestral'] + tabOutputLineStripped[ancestralInsertionIndex:])
+                    lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in basicparams))
 #########################################################
                     
                     l = sorted(CDS[chr_num][transcript])
@@ -1345,7 +1349,7 @@ while line!="":
                     if CDSpos==-1 or exonpos==-1:   ##start position of indel was not in ANY intervals
                         outdata["causes NMD?"] = "no exons or no CDS containing start of indel"
 #########################################################
-                        o_lof.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
+                        lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
 #########################################################
                         continue
 
@@ -1376,13 +1380,13 @@ while line!="":
                     if flag1==0:
                         outdata["causes NMD?"] = "no CDS regions completely containing variant"
 #########################################################
-                        o_lof.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
+                        lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
 #########################################################
                         continue
                     if flag2==0:
                         outdata["causes NMD?"] = "no exon regions completely containing variant"
 #########################################################
-                        o_lof.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
+                        lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
 #########################################################
                         continue
                         
@@ -1407,7 +1411,7 @@ while line!="":
                     except:
                         outdata["causes NMD?"] = "No stop codon found in alt_aa"
 #########################################################
-                        o_lof.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
+                        lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
 #########################################################
                         continue
 
@@ -1484,13 +1488,13 @@ while line!="":
                     outdata["stop position in CDS"] = `lofPosition`
                     
 #########################################################
-                    o_lof.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
+                    lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
 #########################################################
                         
                     LOFvariants[-1]+=':'+':'.join([splice1+'/'+splice2, `newCDSpos`, `lofPosition`, nextATG,\
                                                    NMD, incrcodingpos]) + pfamDescription
 
-        o2.write('\t'.join(data[k] for k in range(0,7))+'\t')
+        vcfOutputFile.write('\t'.join(data[k] for k in range(0,7))+'\t')
         allvariants = []
         for variant in LOFvariants:
             allvariants.append(variant)
@@ -1499,14 +1503,14 @@ while line!="":
         for variant in othervariants:
             allvariants.append(variant)
         lineinfo['VA']+=','.join(allvariants) 
-        o2.write(';'.join(lineinfo[infotype] for infotype in infotypes)+'\n')
+        vcfOutputFile.write(';'.join(lineinfo[infotype] for infotype in infotypes)+'\n')
     
-    line=infile.readline()
+    line=vatFile.readline()
     counter+=1
 
-o2.close()
-o_lof.close()
-o_splice.close()
-infile.close()
+vcfOutputFile.close()
+lofOutputFile.close()
+spliceOutputFile.close()
+vatFile.close()
 
 print "Finished at: " + datetime.datetime.now().strftime("%H:%M:%S")
