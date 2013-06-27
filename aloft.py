@@ -9,8 +9,6 @@ import argparse
 
 print "Starting at: " + datetime.datetime.now().strftime("%H:%M:%S")
 
-stdin=sys.stdin
-
 ##NMD threshold (premature STOP to last exon-exon junction)
 dist = 50
 
