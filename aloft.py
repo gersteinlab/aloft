@@ -376,8 +376,6 @@ def getGERPData(infile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, 
             start = int(data[1])
             length = len(data[3])
             end = start + length-1  ##inclusive endpoint
-            #old line of code left in here for ease of understanding what getGerpScore() is doing
-            #GERPratedata.append(`sum(GERPrates[start:start+length])/length`)
             GERPratedata.append(str(getGerpScore(start, length)))
             elementIndex = findGERPelementIndex(GERPelements, start, end)
             if elementIndex == -1:
