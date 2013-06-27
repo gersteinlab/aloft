@@ -138,6 +138,7 @@ def buildGerpRates(GERPratepath, GERPratecachepath, chromosome):
 		print "Exiting program."
 		sys.exit(1)
 
+#equivalent to old code "sum(GERPrates[start:start+length])/length"
 def getGerpScore(start, length):
 	return sum([gerprate.floatInList(start+rateindex) for rateindex in range(length)]) / length
 
