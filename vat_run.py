@@ -99,9 +99,8 @@ def run_vat(arguments):
 	indelInputFile = open(TEMP_INDEL_PATH, "r")
 	
 	print "Running snpMapper..."
-	#snpMapperPipe = Popen(['/net/gerstein/sb238/vat/bin/snpMapper', '/net/gerstein/sb238/MNP/gencode12.CCDSinclusive.interval', '/net/gerstein/sb238/MNP/gencode12.CCDSinclusive.fa'], stdout=PIPE, stdin=snpInputFile)
 	try:
-		snpMapperPipe = Popen(['/net/gerstein/sb238/vat/bin/snpMapper', annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=snpInputFile)
+		snpMapperPipe = Popen(['snpMapper', annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=snpInputFile)
 	except:
 		print "ERROR: Failed to open snpMapper. Is snpMapper in your PATH?"
 		sys.exit(1)
@@ -124,9 +123,8 @@ def run_vat(arguments):
 	os.remove(TEMP_SNP_PATH)
 	
 	print "Running indelMapper..."
-	#indelMapperPipe = Popen(['/net/gerstein/sb238/vat/bin/indelMapper', '/net/gerstein/sb238/MNP/gencode12.CCDSinclusive.interval', '/net/gerstein/sb238/MNP/gencode12.CCDSinclusive.fa'], stdout=PIPE, stdin=indelInputFile)
 	try:
-		indelMapperPipe = Popen(['/net/gerstein/sb238/vat/bin/indelMapper', annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=indelInputFile)
+		indelMapperPipe = Popen(['indelMapper', annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=indelInputFile)
 	except:
 		print "ERROR: Failed to open indelMapper. Is indelMapper in your PATH?"
 		sys.exit(1)
