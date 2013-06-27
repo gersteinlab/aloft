@@ -13,7 +13,7 @@ print "Starting at: " + datetime.datetime.now().strftime("%H:%M:%S")
 dist = 50
 
 #Parse command line arguments
-parser = argparse.ArgumentParser(description='Run aloft predictions.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser = argparse.ArgumentParser(description='Run aloft predictions. You must at least provide a VCF (via --vcf) or VAT (via --vat) input file.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('--vcf', help='Path to VCF input file. This can be a compressed .gz file. If not specified, then --vat must be specified.')
 parser.add_argument('--vat', help='Path to VAT input file. If not specified, then --vcf must be specified. This file must be sorted.')
