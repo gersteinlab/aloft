@@ -3,9 +3,9 @@ import networkx as nx
 from optparse import OptionParser
 from subprocess import Popen, PIPE
 from vat_run import *
-import collections
 from sequencing import *
 from aloft_common import *
+import argparse
 
 print "Starting at: " + datetime.datetime.now().strftime("%H:%M:%S")
 
@@ -14,289 +14,133 @@ stdin=sys.stdin
 ##NMD threshold (premature STOP to last exon-exon junction)
 dist = 50
 
-#Build command line arguments options
-parser = OptionParser()
+#Parse command line arguments
+parser = argparse.ArgumentParser(description='Run aloft predictions.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-#Add options and default values-
-options = collections.OrderedDict([('vcf', ''),\
-                                   ('annotation_interval', 'data/gencode.v16.pc.interval'),\
-                                   ('annotation_sequence', 'data/gencode.v16.pc.fa'),\
-                                   ('vat', 'output/vat_output.vcf'),\
-                                   ('tabbed_output_lof', 'output/tabbed_output_lof'),\
-                                   ('tabbed_output_splice', 'output/tabbed_output_splice'),\
-                                   ('vcf_output', 'output/output.vcf'),\
-                                   ('elements', 'data/elements/'),\
-                                   ('annotation', 'data/gencode.v16.annotation.gtf'),\
-                                   ('rates', 'data/bases/'),\
-                                   ('gerp_cache', 'gerp_cache/'),\
-                                   ('genome', 'data/genome/'),\
-                                   ('ancestor', 'data/homo_sapiens_ancestor_GRCh37_e71/'),\
-                                   ('segdup', 'data/hg19-segdup.txt'),\
-                                   ('thousandG', 'data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.gencode16.SNPS.vat.vcf'),\
-                                   ('exomes', 'data/ESP6500/'),\
-                                   ('ensembl_table', 'data/ens67_gtpcgtpolymorphic.txt'),\
-                                   ('protein_features', 'data/prot-features/'),\
-                                   ('transmembrane', 'data/tm_ens70/'),\
-                                   ('ppi', 'data/BIOGRID-ORGANISM-Homo_sapiens-3.2.95.tab.txt'),\
-                                   ('recessive_genes', 'data/science_lofpaper_omim_recessive_filtered.list'),\
-                                   ('dominant_genes', 'data/dominantonly.list'),\
-                                   ('haplo_score', 'data/imputed.hi.scores'),\
-                                   ('LOF_score', 'data/prob_recessive_disease_scores.txt'),\
-                                   ('netSNP_score', 'data/Supplementary_Table8.20Jul2012.txt'),\
-                                   ('pseudogenes', 'data/gencode.v7.pgene.parents'),\
-                                   ('paralogs', 'data/within_species_geneparalogs.ens70'),\
-                                   ('dNdS', 'data/dNdS_avgs.txt'),\
-                                   ('disopred_sequences', 'data/disopred_sequences'),
-                                   ('phosphorylation', 'data/phosphorylation')])
+parser.add_argument('--vcf', help='Path to VCF input file. This can be a compressed .gz file. If not specified, then --vat must be specified.')
+parser.add_argument('--vat', help='Path to VAT input file. If not specified, then --vcf must be specified. This file must be sorted.')
 
-help = {'vcf' : 'Path to vcf input file. This can be a compressed .gz file',\
-        'annotation_interval' : 'Path to annotation interval file for VAT (default is %s)' % (options['annotation_interval']),\
-        'annotation_sequence' : 'Path to annotation sequence file for VAT (default is %s)' % (options['annotation_sequence']),\
-        'vat' : 'Path to VAT output file. (default is %s)' % (options['vat']),\
-        'tabbed_output_lof' : 'Path to tab-delimited output file for lof (default is %s)' % (options['tabbed_output_lof']),\
-        'tabbed_output_splice' : 'Path to tab-delimited output file for splice (default is %s)' % (options['tabbed_output_splice']),\
-        'vcf_output' : 'Path to VCF output file (default is %s)' % (options['vcf_output']),\
-        'elements' : 'Path to directory containing hg19_chr*_elems.txt files (default is %s)' % (options['elements']),\
-        'annotation' : 'Path to .gtf annotation file (default is %s)' % (options['annotation']),\
-        'rates' : 'Path to directory containing chr*.maf.rates files (default is %s)' % (options['rates']),\
-        'gerp_cache' : 'Output to directory for gerp cache files (default is %s, directory is created if it does not exist)' % (options['gerp_cache']),\
-        'genome' : 'Path to directory containing chr*.fa files (default is %s)' % (options['genome']),\
-        'ancestor' : 'Path to directory containing homo_sapiens_ancestor_*.fa files (default is %s)' % (options['ancestor']),\
-        'segdup' : 'Path to segdup annotation file (default is %s)' % (options['segdup']),\
-        'thousandG' : 'Path to 1000G file (default is %s)' % (options['thousandG']),\
-        'exomes' : 'Path to directory containing ESP6500.chr*.snps.vcf files (default is %s)' % (options['exomes']),\
-        'ensembl_table' : 'Path to transcript to protein lookup table file (default is %s)' % (options['ensembl_table']),\
-        'protein_features' : 'Path to directory containing chr*.prot-features-ens70.txt files (default is %s)' % (options['protein_features']),\
-        'transmembrane': 'Path to directory containing transmembrane chr*.tmsigpcoilslc.ens70.txt (default is %s)' % (options['transmembrane']),\
-        'ppi' : 'Path to protein-protein interaction network file (default is %s)' % (options['ppi']),\
-        'recessive_genes' : 'Path to list of recessive genes (default is %s)' % (options['recessive_genes']),\
-        'dominant_genes' : 'Path to list of dominant genes (default is %s)' % (options['dominant_genes']),\
-        'haplo_score' : 'Path to haploinsufficiency disease scores (default is %s)' % (options['haplo_score']),\
-        'LOF_score' : 'Path to LOF disease scores (default is %s)' % (options['LOF_score']),\
-        'netSNP_score' : 'Path to netSNP disease scores (default is %s)' % (options['netSNP_score']),\
-        'pseudogenes' : 'Path to pseudogenes file (default is %s)' % (options['pseudogenes']),\
-        'paralogs' : 'Path to paralogs file (default is %s)' % (options['paralogs']),\
-        'dNdS' : 'Path to dNdS file (default is %s)' % (options['dNdS']),\
-        'disopred_sequences' : 'Path to disopred sequences (default is %s)' % (options['disopred_sequences']),\
-        'phosphorylation' : 'Path to directory containing ptm.phosphorylation.chr*.txt files (default is %s)' % (options['phosphorylation'])}
+parser.add_argument('--output', help='Path to output directory; directory is created if it does not exist', default='aloft_output/')
 
-for key, value in options.iteritems():
-    parser.add_option('', '--'+key, action='store', type='string', dest=key+'_path', default=value, help=help[key])
+parser.add_argument('--gerp_cache', help='Output to directory for gerp cache files; directory is created if it does not exist', default='gerp_cache/')
 
-(options, args) = parser.parse_args()
+parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/ens67_gtpcgtpolymorphic.txt')
+parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens70.txt files', default='data/prot-features/')
+parser.add_argument('--thousandG', help='Path to 1000G file', default='data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.gencode16.SNPS.vat.vcf')
+parser.add_argument('--haplo_score', help='Path to haploinsufficiency disease scores', default='data/imputed.hi.scores')
+parser.add_argument('--ppi', help='Path to protein-protein interaction network file', default='data/BIOGRID-ORGANISM-Homo_sapiens-3.2.95.tab.txt')
+parser.add_argument('--dNdS', help='Path to dNdS file', default='data/dNdS_avgs.txt')
+parser.add_argument('--annotation_interval', help='Path to annotation interval file for VAT', default='data/gencode.v16.pc.interval')
+parser.add_argument('--paralogs', help='Path to paralogs file', default='data/within_species_geneparalogs.ens70')
+parser.add_argument('--transmembrane', help='Path to directory containing transmembrane chr*.tmsigpcoilslc.ens70.txt', default='data/tm_ens70/')
+parser.add_argument('--LOF_score', help='Path to LOF disease scores', default='data/prob_recessive_disease_scores.txt')
+parser.add_argument('--rates', help='Path to directory containing chr*.maf.rates files', default='data/bases/')
+parser.add_argument('--genome', help='Path to directory containing chr*.fa files', default='data/genome/')
+parser.add_argument('--ancestor', help='Path to directory containing homo_sapiens_ancestor_*.fa files', default='data/homo_sapiens_ancestor_GRCh37_e71/')
+parser.add_argument('--netSNP_score', help='Path to netSNP disease scores', default='data/Supplementary_Table8.20Jul2012.txt')
+parser.add_argument('--elements', help='Path to directory containing hg19_chr*_elems.txt files', default='data/elements/')
+parser.add_argument('--dominant_genes', help='Path to list of dominant genes', default='data/dominantonly.list')
+parser.add_argument('--segdup', help='Path to segdup annotation file', default='data/hg19-segdup.txt')
+parser.add_argument('--annotation', help='Path to .gtf annotation file', default='data/gencode.v16.annotation.gtf')
+parser.add_argument('--exomes', help='Path to directory containing ESP6500.chr*.snps.vcf files', default='data/ESP6500/')
+parser.add_argument('--pseudogenes', help='Path to pseudogenes file', default='data/gencode.v7.pgene.parents')
+parser.add_argument('--phosphorylation', help='Path to directory containing ptm.phosphorylation.chr*.txt files', default='data/ptm')
+parser.add_argument('--disopred_sequences', help='Path to disorder prediction sequences', default='data/disopred_sequences')
+parser.add_argument('--recessive_genes', help='Path to list of recessive genes', default='data/science_lofpaper_omim_recessive_filtered.list')
+parser.add_argument('--annotation_sequence', help='Path to annotation sequence file for VAT', default='data/gencode.v16.pc.fa')
 
-shouldSkipVAT = False
-if options.vcf_path == '': # try to skip VAT
-    if not os.path.exists(options.vat_path):
-        parser.print_help()
-        print "A VCF file was not supplied by the --vcf option"
-        sys.exit(1)
-    else:
-        print "\nNo VCF file has been passed in with the --vcf option."
-        print "Running ALoFT on %s" % (options.vat_path) + "\n"
-        shouldSkipVAT = True
+args = parser.parse_args()
 
-if not shouldSkipVAT: #run VAT
-    if not os.path.exists(options.vcf_path):
-        parser.print_help()
-        print "VCF file %s not found!" % (options.vcf_path)
+if not args.vcf and not args.vat:
+    parser.print_help()
+    print "Error: Neither a VCF or VAT file was specified. You must supply one of these as your input file"
+    sys.exit(1)
+
+if args.vcf and args.vat:
+    parser.print_help()
+    print "Error: Both a VCF or VAT file were specified. You must supply only one of these as your input file, but not both"
+    sys.exit(1)
+
+def abortIfPathDoesNotExist(path, shouldShowHelp=False):
+    if path is not None and not os.path.exists(path):
+        if shouldShowHelp:
+            parser.print_help()
+        print "Error: %s does not exist." % (path)
         sys.exit(1)
 
-    if not os.path.exists(options.annotation_interval_path):
-        parser.print_help()
-        print "Annotation interval file %s not found!" % (options.annotation_interval_path)
-        sys.exit(1)
+def abortIfCannotCreateDirectory(directory):
+    if not os.path.exists(directory):
+        try:
+            os.mkdir(directory)
+        except:
+            parser.print_help()
+            print "Error: Failed to create directory %s" % (directory)
+            sys.exit(1)
 
-    if not os.path.exists(options.annotation_sequence_path):
-        parser.print_help()
-        print "Annotation sequence file %s not found!" % (options.annotation_sequence_path)
-        sys.exit(1)
-
-    run_vat([sys.argv[0], options.vcf_path, options.vat_path, options.annotation_interval_path, options.annotation_sequence_path])
-
-try:
-    infile=open(options.vat_path)
-except:
-    parser.print_help()
-    print options.vat_path + ' could not be opened.'
-    #print 'Exiting program.'
-    sys.exit(1)
-
-try:
-    o_lof=open(options.tabbed_output_lof_path, 'w')
-except:
-    parser.print_help()
-    print options.tabbed_output_lof_path + ' could not be opened.'
-    #print 'Exiting program.'
-    sys.exit(1)
-
-try:
-    o_splice=open(options.tabbed_output_splice_path, 'w')
-except:
-    parser.print_help()
-    print options.tabbed_output_splice_path + ' could not be opened.'
-    #print 'Exiting program.'
-    sys.exit(1)
-
-try:
-    o2=open(options.vcf_output_path, 'w')
-except:
-    parser.print_help()
-    print options.vcf_output_path + ' could not be opened.'
-    #print 'Exiting program.'
-    sys.exit(1)
-
-genomepath = options.genome_path
-
-try:
-    annotfile=open(options.annotation_path)
-except:
-    parser.print_help()
-    print options.annotation_path + ' could not be opened.'
-    #print 'Exiting program.'
-    sys.exit(1)
-
-ancespath = options.ancestor_path
-
-GERPratepath = options.rates_path
-
-#this is for caching gerp score files for optimization
-GERPratecachepath = options.gerp_cache_path
-if not os.path.exists(GERPratecachepath):
-    #try to create the directory
+def abortIfCannotWriteFile(filepath):
     try:
-        os.mkdir(GERPratecachepath)
+        newFile=open(filepath, 'w')
     except:
         parser.print_help()
-        print "ERROR: Failed to create gerp cache directory at %s" % (GERPratecachepath)
+        print filepath+ ' could not be written to.'
         sys.exit(1)
+    return newFile
 
-GERPelementpath = options.elements_path
+abortIfPathDoesNotExist(args.vat)
+abortIfPathDoesNotExist(args.vcf)
 
-segduppath = options.segdup_path
+abortIfCannotCreateDirectory(args.output)
+abortIfCannotCreateDirectory(args.gerp_cache)
+
+#Try to see if we can detect and open all input files
+for arg, path in vars(args).items():
+    if path not in [args.vat, args.vcf, args.output, args.gerp_cache]:
+        abortIfPathDoesNotExist(path, True)
+        if not os.path.isdir(path):
+            try:
+                f = open(path)
+                f.close()
+            except:
+                print "Error: --%s: %s cannot be opened (insufficient read privileges?)" % (arg, path)
+                sys.exit(1)
+
+if args.vcf:
+    #run VAT
+    vatPath = os.path.join(args.output, os.path.basename(args.vcf) + ".vat")
+    print "Running VAT on %s" % (args.vcf) + "\n"
+    run_vat([sys.argv[0], args.vcf, vatPath, args.annotation_interval, args.annotation_sequence])
+else:
+    vatPath = args.vat
+
+print "Running ALoFT on %s" % (vatPath) + "\n"
+
 try:
-    segdupfile=open(segduppath)
+    infile = open(vatPath)
 except:
-    parser.print_help()
-    print segduppath+' could not be opened.'
-    #print 'Exiting program.'
+    print "Error: Failed to read %s" % (vatPath)
     sys.exit(1)
 
-thousandGPath = options.thousandG_path
-try:
-    thousandGInputFile = open(thousandGPath)
-except:
-    parser.print_help()
-    print thousandGPath + " could not be opened."
-    sys.exit(1)
+tabbedOutputLofPath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_lof")
+tabbedOutputSplicePath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_splice")
+vcfOutputPath = os.path.join(args.output, os.path.basename(vatPath) + ".output.vcf")
 
-exomeDirectory = options.exomes_path
-if not os.path.exists(exomeDirectory):
-    parser.print_help()
-    print exomeDirectory + " directory could not be found"
-    sys.exit(1)
+o_lof = abortIfCannotWriteFile(tabbedOutputLofPath)
+o_splice = abortIfCannotWriteFile(tabbedOutputSplicePath)
+o2 = abortIfCannotWriteFile(vcfOutputPath)
 
-transcriptToProteinFilePath = options.ensembl_table_path
-if not os.path.exists(transcriptToProteinFilePath):
-    parser.print_help()
-    print transcriptToProteinFilePath + " could not be found"
-    sys.exit(1)
-
-proteinfeaturesDirectory = options.protein_features_path
-if not os.path.exists(proteinfeaturesDirectory):
-    parser.print_help()
-    print proteinfeaturesDirectory + " could not be found"
-    sys.exit(1)
-
-transmembraneDirectory = options.transmembrane_path
-if not os.path.exists(transmembraneDirectory):
-    parser.print_help()
-    print transmembraneDirectory + " could not be found"
-    sys.exit(1)
-
-phosphorylationDirectory = options.phosphorylation_path
-if not os.path.exists(phosphorylationDirectory):
-    parser.print_help()
-    print phosphorylationDirectory + " could not be found"
-    sys.exit(1)
-
-ppipath = options.ppi_path
-try:
-    ppifile=open(ppipath)
-except:
-    parser.print_help()
-    print ppipath+' could not be opened.'
-    sys.exit(1)
-
-rgenespath = options.recessive_genes_path
-try:
-    rgenesfile=open(rgenespath)
-except:
-    parser.print_help()
-    print rgenespath+' could not be opened.'
-    sys.exit(1)
-
-dgenespath = options.dominant_genes_path
-try:
-    dgenesfile=open(dgenespath)
-except:
-    parser.print_help()
-    print dgenespath+' could not be opened.'
-    sys.exit(1)
-
-haploscorepath = options.haplo_score_path
-try:
-    haploscorefile=open(haploscorepath)
-except:
-    parser.print_help()
-    print haploscorepath+' could not be opened.'
-    sys.exit(1)
-
-LOFscorepath = options.LOF_score_path
-try:
-    LOFscorefile=open(LOFscorepath)
-except:
-    parser.print_help()
-    print LOFscorepath+' could not be opened.'
-    sys.exit(1)
-
-netSNPscorepath = options.netSNP_score_path
-try:
-    netSNPscorefile=open(netSNPscorepath)
-except:
-    parser.print_help()
-    print netSNPscorepath+' could not be opened.'
-    sys.exit(1)
-
-pseudogenespath = options.pseudogenes_path
-try:
-    pseudogenesfile=open(pseudogenespath)
-except:
-    parser.print_help()
-    print pseudogenespath+' could not be opened.'
-    sys.exit(1)
-
-paralogspath = options.paralogs_path
-try:
-    paralogsfile=open(paralogspath)
-except:
-    parser.print_help()
-    print paralogspath+' could not be opened.'
-    sys.exit(1)
-
-dNdSpath = options.dNdS_path
-try:
-    dNdSfile=open(dNdSpath)
-except:
-    parser.print_help()
-    print dNdSpath+' could not be opened.'
-    sys.exit(1)
-
-disopredSequencesPath = options.disopred_sequences_path
-if not os.path.exists(disopredSequencesPath):
-    parser.print_help()
-    print disopredSequencesPath+' could not be found.'
-    sys.exit(1)
+#We do not need to set up try/except clause here because we already checked if this was possible when parsing the command line arguments above
+annotfile = open(args.annotation)
+segdupfile=open(args.segdup)
+thousandGInputFile = open(args.thousandG)
+ppifile=open(args.ppi)
+rgenesfile=open(args.recessive_genes)
+dgenesfile=open(args.dominant_genes)
+haploscorefile=open(args.haplo_score)
+LOFscorefile=open(args.LOF_score)
+netSNPscorefile=open(args.netSNP_score)
+pseudogenesfile=open(args.pseudogenes)
+paralogsfile=open(args.paralogs)
+dNdSfile=open(args.dNdS)
 
 chrs = [`i` for i in range(1, 23)]
 chrs.append('X')
@@ -328,12 +172,12 @@ def parseances(ancestor, line):
 
 ##list of ancestral alleles for each line in input file,
 ##"" if metadata line, '.' if none available
-ancestors = getAncestors(ancespath)
+ancestors = getAncestors(args.ancestor)
 ancesdata = [parseances(ancestors, line) for line in infile]
 del ancestors
 
 #Load exon intervals from .interval file, used later for intersecting with gerp elements
-codingExonIntervals = getCodingExonIntervals(options.annotation_interval_path)
+codingExonIntervals = getCodingExonIntervals(args.annotation_interval)
 
 def getGERPData(infile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, codingExonIntervals):
     ## Coordinates are 1-based.
@@ -355,9 +199,9 @@ def getGERPData(infile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, 
             print 'no indels on chromosome ' + i
             continue
         try:
-            elementfile=open(os.path.join(GERPelementpath, 'hg19_chr'+i+'_elems.txt'))
+            elementfile=open(os.path.join(args.elements, 'hg19_chr'+i+'_elems.txt'))
         except:
-            print os.path.join(GERPelementpath, 'hg19_chr'+i+'_elems.txt') + ' could not be opened.'
+            print os.path.join(args.elements, 'hg19_chr'+i+'_elems.txt') + ' could not be opened.'
             print 'Exiting program.'
             sys.exit(1)
         print 'Reading GERP information for chromosome '+i+'...'
@@ -404,7 +248,7 @@ def getGERPData(infile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, 
 
     return GERPratedata, GERPelementdata, GERPrejectiondata
 
-GERPratedata, GERPelementdata, GERPrejectiondata = getGERPData(infile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, codingExonIntervals)
+GERPratedata, GERPelementdata, GERPrejectiondata = getGERPData(infile, chrs, args.elements, args.rates, args.gerp_cache, codingExonIntervals)
 
 segdups={}
 segdupmax={}
@@ -483,9 +327,9 @@ while line!="":
 c={}
 for i in chrs:
     try:
-        f=open(os.path.join(genomepath, 'chr'+i+'.fa'))
+        f=open(os.path.join(args.genome, 'chr'+i+'.fa'))
     except:
-        print os.path.join(genomepath, 'chr'+i+'.fa') + ' could not be opened.'
+        print os.path.join(args.genome, 'chr'+i+'.fa') + ' could not be opened.'
         print 'Exiting program.'
         sys.exit(1)
     print 'Reading chromosome '+i+'...'
@@ -721,10 +565,10 @@ def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, doma
 
     return chromosomesPFam
         
-transcriptToProteinHash = getTranscriptToProteinHash(transcriptToProteinFilePath)
+transcriptToProteinHash = getTranscriptToProteinHash(args.ensembl_table)
 
 ##{'1':{'ENSP...':'PF...\t4-25\t(ENSP...)'}, '2':{...}, ...}
-chromosomesPFam = dict(getChromosomesPfamTable(chrs, proteinfeaturesDirectory, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items() + getChromosomesPfamTable(chrs, phosphorylationDirectory, r"ptm.phosphosite.chr%s.txt", ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"], 3).items() + getChromosomesPfamTable(chrs, transmembraneDirectory, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items())
+chromosomesPFam = dict(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items() + getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"], 3).items() + getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items())
 
 exomesChromsomeInfo = {}
 
@@ -954,7 +798,7 @@ while line!="":
         else:
             ancestral = "Neither"
 
-        disopredData = getDisopredDataFromLine(disopredSequencesPath, line)
+        disopredData = getDisopredDataFromLine(args.disopred_sequences, line)
         
         ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
         lineinfo = {'AA':'AA='+ancesdata[counter],\
@@ -1034,7 +878,7 @@ while line!="":
         #Adding ESP6500 (exome) fields
         if not exomesChromsomeInfo.has_key(chr_num):
             exomesChromsomeInfo = {chr_num : {}}
-            exomePath = os.path.join(exomeDirectory, 'ESP6500.chr%s.snps.vcf' % (chr_num)) 
+            exomePath = os.path.join(args.exomes, 'ESP6500.chr%s.snps.vcf' % (chr_num)) 
             try:
                 exomeInputFile = open(exomePath, "r")
             except:
