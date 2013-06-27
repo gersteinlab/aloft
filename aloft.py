@@ -16,7 +16,7 @@ dist = 50
 parser = argparse.ArgumentParser(description='Run aloft predictions. You must at least provide a VCF (via --vcf) or VAT (via --vat) input file.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('--vcf', help='Path to VCF input file. This can be a compressed .gz file. If not specified, then --vat must be specified.')
-parser.add_argument('--vat', help='Path to VAT input file. If not specified, then --vcf must be specified. This file must be sorted.')
+parser.add_argument('--vat', help='Path to VAT input file. If not specified, then --vcf must be specified. This file must be sorted numerically.')
 
 parser.add_argument('--output', help='Path to output directory; directory is created if it does not exist', default='aloft_output/')
 
