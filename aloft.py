@@ -412,9 +412,10 @@ def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, doma
 
     return chromosomesPFam
 
-def getCDSAndExonDictionaries(genomePath, annotationPath, chrs):
+def getGenomeSequences(genomePath, chrs):
     ## Coordinates for chromosomes are 1-based.
-    c={}
+    #mapping to chromosome -> sequences in genomePath
+    genomeSequences={}
     for i in chrs:
         try:
             f=open(os.path.join(genomePath, 'chr'+i+'.fa'))
@@ -424,9 +425,11 @@ def getCDSAndExonDictionaries(genomePath, annotationPath, chrs):
             sys.exit(1)
         print 'Reading chromosome '+i+'...'
         f.readline()    ##first >chr* line
-        c[i]='0'+''.join(line.strip() for line in f)
+        genomeSequences[i]='0'+''.join(line.strip() for line in f)
         f.close()
+    return genomeSequences
 
+def getCDSAndExonDictionaries(annotationPath, chrs):
     CDS={}; exon={}; stop_codon={}  ##{chr_num: {transcript: [(a,b),(c,d)..] } }
     transcript_strand={}            ##{transcript_id:+ or -}
     for chr_num in chrs:
@@ -510,7 +513,7 @@ def getCDSAndExonDictionaries(genomePath, annotationPath, chrs):
 
     annotfile.close()
 
-    return c, transcript_strand, CDS, exon, stop_codon
+    return transcript_strand, CDS, exon, stop_codon
 
 def get1000GChromosomeInfo(thousandGPath):
     thousandGChromosomeInfo = {}
@@ -637,7 +640,8 @@ if __name__ == "__main__":
     print 'Building CDS and exon dictionaries...'
     startTime = datetime.datetime.now()
     
-    c, transcript_strand, CDS, exon, stop_codon = getCDSAndExonDictionaries(args.genome, args.annotation, chrs)
+    genomeSequences = getGenomeSequences(args.genome, chrs)
+    transcript_strand, CDS, exon, stop_codon = getCDSAndExonDictionaries(args.annotation, chrs)
     
     print str((datetime.datetime.now() - startTime).seconds) + " seconds."
     
@@ -1027,16 +1031,16 @@ if __name__ == "__main__":
     #########################################################
                                 continue
                             if end==0:
-                                acceptor = c[chr_num][l[i][0]-2:l[i][0]].upper()
+                                acceptor = genomeSequences[chr_num][l[i][0]-2:l[i][0]].upper()
                                 if start==l[i][0]-2:
                                     new = (1, subst+acceptor[1])
                                 else:
                                     new = (1, acceptor[0]+subst)
-                                donor = c[chr_num][l[i-1][1]+1:l[i-1][1]+3].upper()
+                                donor = genomeSequences[chr_num][l[i-1][1]+1:l[i-1][1]+3].upper()
                                 intronlength = l[i][0]-l[i-1][1]-1
                             elif end==1:
-                                acceptor = c[chr_num][l[i+1][0]-2:l[i+1][0]].upper()
-                                donor = c[chr_num][l[i][1]+1:l[i][1]+3].upper()
+                                acceptor = genomeSequences[chr_num][l[i+1][0]-2:l[i+1][0]].upper()
+                                donor = genomeSequences[chr_num][l[i][1]+1:l[i][1]+3].upper()
                                 if start==l[i][1]+1:
                                     new = (0, subst+donor[1])
                                 else:
@@ -1050,16 +1054,16 @@ if __name__ == "__main__":
     #########################################################
                                 continue
                             if end==0:
-                                donor = c[chr_num][l[i][0]-2:l[i][0]].upper()
-                                acceptor = c[chr_num][l[i+1][1]+1:l[i+1][1]+3].upper()
+                                donor = genomeSequences[chr_num][l[i][0]-2:l[i][0]].upper()
+                                acceptor = genomeSequences[chr_num][l[i+1][1]+1:l[i+1][1]+3].upper()
                                 if start==l[i][0]-2:
                                     new = (0, subst+donor[1])
                                 else:
                                     new = (0, donor[0]+subst)
                                 intronlength = l[i][0]-l[i+1][1]-1
                             elif end==1:
-                                donor = c[chr_num][l[i-1][0]-2:l[i-1][0]].upper()
-                                acceptor = c[chr_num][l[i][1]+1:l[i][1]+3].upper()
+                                donor = genomeSequences[chr_num][l[i-1][0]-2:l[i-1][0]].upper()
+                                acceptor = genomeSequences[chr_num][l[i][1]+1:l[i][1]+3].upper()
                                 if start==l[i][1]+1:
                                     new = (1, subst+acceptor[1])
                                 else:
@@ -1237,7 +1241,7 @@ if __name__ == "__main__":
                         if len(l)==0:
                             continue
                         outdata["is single coding exon?"] = "YES" if len(l)==1 else "NO"
-                        m = sorted(exon[chr_num][transcript])   ## m is number of exons
+                        numberOfExonsHash = sorted(exon[chr_num][transcript])
                         CDSseq = ''; exonseq = ''
                         CDSprec = []; exonprec = []             ## prec holds # preceding nucleotides
                         ispositivestr = transcript_strand[transcript]=='+'
@@ -1247,10 +1251,10 @@ if __name__ == "__main__":
                         for j in range(0,len(l)):
                             if ispositivestr:
                                 i=j
-                                CDSseq+=c[chr_num][l[i][0]:l[i][1]+1].upper()
+                                CDSseq+=genomeSequences[chr_num][l[i][0]:l[i][1]+1].upper()
                             else:
                                 i=len(l)-j-1
-                                CDSseq+=compstr(c[chr_num][l[i][0]:l[i][1]+1].upper())
+                                CDSseq+=compstr(genomeSequences[chr_num][l[i][0]:l[i][1]+1].upper())
                             CDSprec.append(tot)              ## stores in index i
                             tot += l[i][1]+1-l[i][0]
                         ## add on STOP sequence if annotated
@@ -1259,29 +1263,29 @@ if __name__ == "__main__":
                         except:
                             s=(2,0)
                         if ispositivestr:
-                            CDSseq+=c[chr_num][s[0]:s[1]+1].upper()
+                            CDSseq+=genomeSequences[chr_num][s[0]:s[1]+1].upper()
                         else:
-                            CDSseq+=compstr(c[chr_num][s[0]:s[1]+1].upper())
+                            CDSseq+=compstr(genomeSequences[chr_num][s[0]:s[1]+1].upper())
                         
                         tot = 0
-                        for j in range(0,len(m)):
+                        for j in range(0,len(numberOfExonsHash)):
                             if ispositivestr:
                                 i=j
-                                exonseq+=c[chr_num][m[i][0]:m[i][1]+1].upper()
+                                exonseq+=genomeSequences[chr_num][numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper()
                             else:
-                                i=len(m)-j-1
-                                exonseq+=compstr(c[chr_num][m[i][0]:m[i][1]+1].upper())
+                                i=len(numberOfExonsHash)-j-1
+                                exonseq+=compstr(genomeSequences[chr_num][numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper())
                             exonprec.append(tot)            ## stores in index i
-                            tot += m[i][1]+1-m[i][0]
+                            tot += numberOfExonsHash[i][1]+1-numberOfExonsHash[i][0]
     
                         ##build coding exons IN ORDER OF TRANSLATION, i.e. start->stop
                         coding_exons = []           ## flag coding exons (corresponds to exonpos)
                         CDS2ex = {}                 ## maps CDSpos to exonpos    
-                        for i in range(0,len(m)):   ## i = exonpos
-                            k = i if ispositivestr else len(m)-i-1  ## k = exonindex
+                        for i in range(0,len(numberOfExonsHash)):   ## i = exonpos
+                            k = i if ispositivestr else len(numberOfExonsHash)-i-1  ## k = exonindex
                             coding_exons.append(0)
                             for j in range(0,len(l)):   ## j = CDSindex
-                                if l[j][0]>=m[k][0] and l[j][1]<=m[k][1]:
+                                if l[j][0]>=numberOfExonsHash[k][0] and l[j][1]<=numberOfExonsHash[k][1]:
                                     coding_exons[i] = 1
                                     j2 = j if ispositivestr else len(l)-j-1     ## j2 = CDSpos
                                     CDS2ex[j2]=i
@@ -1289,7 +1293,7 @@ if __name__ == "__main__":
                                     
                         ncodingexons = sum(coding_exons)    ## number of coding exons
                         try:
-                            UTR=len(m)-(coding_exons.index(1)+ncodingexons) ## number of 3'UTR exons
+                            UTR=len(numberOfExonsHash)-(coding_exons.index(1)+ncodingexons) ## number of 3'UTR exons
                         except:     ## no coding exons
                             UTR=0
     
@@ -1305,10 +1309,10 @@ if __name__ == "__main__":
                                 break
                         
                         exonpos=-1       ## this gives the exonpos also 0-based
-                        for i in range(0,len(m)):
-                            if start>=m[i][0] and start<=m[i][1]:
-                                exonpos = i if ispositivestr else len(m)-i-1
-                            if start>=m[i][0] and end<=m[i][1]:
+                        for i in range(0,len(numberOfExonsHash)):
+                            if start>=numberOfExonsHash[i][0] and start<=numberOfExonsHash[i][1]:
+                                exonpos = i if ispositivestr else len(numberOfExonsHash)-i-1
+                            if start>=numberOfExonsHash[i][0] and end<=numberOfExonsHash[i][1]:
                                 flag2 = 1   ##indel is completely contained in exon
                                 break
                         if CDSpos==-1 or exonpos==-1:   ##start position of indel was not in ANY intervals
@@ -1318,7 +1322,7 @@ if __name__ == "__main__":
     #########################################################
                             continue
     
-                        exonindex= exonpos if ispositivestr else len(m)-exonpos-1
+                        exonindex= exonpos if ispositivestr else len(numberOfExonsHash)-exonpos-1
                         CDSindex= CDSpos if ispositivestr else len(l)-CDSpos-1
     
                         codingpos = exonpos-coding_exons.index(1)      ## this gives coding exon position 0-based
@@ -1328,10 +1332,10 @@ if __name__ == "__main__":
                             ## 1-based position of indel in CDS coordinates
                             newCDSpos = CDSprec[CDSpos] + start - l[CDSindex][0] + 1
                             ## 1-based position of indel in exon coordinates
-                            newexonpos = exonprec[exonpos] + start - m[exonindex][0] + 1
+                            newexonpos = exonprec[exonpos] + start - numberOfExonsHash[exonindex][0] + 1
                         else:
                             newCDSpos = CDSprec[CDSpos] + l[CDSindex][1] - start + 1
-                            newexonpos = exonprec[exonpos] + m[exonindex][1] - start + 1
+                            newexonpos = exonprec[exonpos] + numberOfExonsHash[exonindex][1] - start + 1
                         ## # of exon nucleotides before e-e junction
                         if newexonpos-1<exonprec[-1]:       ##indel being before last e-e junction shifts e-e position
                             juncpos = exonprec[-1]+diff     ##WRONG IF START POSITION IS LAST NUCLEOTIDE BEFORE E-E AND
@@ -1341,7 +1345,7 @@ if __name__ == "__main__":
                         outdata["indel position in CDS"] = `newCDSpos`
                         
                         lastindex = -1 if ispositivestr else 0
-                        indeltoend = exonprec[-1]+m[lastindex][1]-m[lastindex][0]+1 + diff - (newexonpos-1) ##CHECK THIS EXTRA +1
+                        indeltoend = exonprec[-1]+numberOfExonsHash[lastindex][1]-numberOfExonsHash[lastindex][0]+1 + diff - (newexonpos-1) ##CHECK THIS EXTRA +1
                         if flag1==0:
                             outdata["causes NMD?"] = "no CDS regions completely containing variant"
     #########################################################
@@ -1387,18 +1391,18 @@ if __name__ == "__main__":
                         if CDSpos==len(l)-1 or (stopCDS>=CDSprec[CDSpos] and stopCDS<CDSprec[CDSpos+1]+diff):
                             increxon = exonpos
                             if ispositivestr:
-                                stopexon = exonprec[exonpos]+l[CDSpos][0]-m[exonpos][0]+stopCDS-CDSprec[CDSpos]
+                                stopexon = exonprec[exonpos]+l[CDSpos][0]-numberOfExonsHash[exonpos][0]+stopCDS-CDSprec[CDSpos]
                             else:
-                                stopexon = exonprec[exonpos]+m[exonindex][1]-l[CDSindex][1]+stopCDS-CDSprec[CDSpos]
+                                stopexon = exonprec[exonpos]+numberOfExonsHash[exonindex][1]-l[CDSindex][1]+stopCDS-CDSprec[CDSpos]
                         else:
                             incrCDS = CDSpos
                             while incrCDS<len(l):
                                 increxon = CDS2ex[incrCDS]
                                 if incrCDS==len(l)-1 or (stopCDS>=CDSprec[incrCDS]+diff and stopCDS<CDSprec[incrCDS+1]+diff):
                                     if ispositivestr:
-                                        stopexon = exonprec[increxon]+l[incrCDS][0]-m[increxon][0]+stopCDS-(CDSprec[incrCDS]+diff)
+                                        stopexon = exonprec[increxon]+l[incrCDS][0]-numberOfExonsHash[increxon][0]+stopCDS-(CDSprec[incrCDS]+diff)
                                     else:
-                                        stopexon = exonprec[increxon]+m[len(m)-increxon-1][1]-l[len(l)-incrCDS-1][1]+stopCDS-(CDSprec[incrCDS]+diff)
+                                        stopexon = exonprec[increxon]+numberOfExonsHash[len(numberOfExonsHash)-increxon-1][1]-l[len(l)-incrCDS-1][1]+stopCDS-(CDSprec[incrCDS]+diff)
                                     break
                                 incrCDS+=1
                         incrcoding = sum(coding_exons[:increxon])   ##incrcoding is the coding exon position where new stop occurs
@@ -1415,7 +1419,7 @@ if __name__ == "__main__":
                         ## end of transcript is denoted as end of last exon.
     
                         ##number of nucleotides in all exons
-                        transcriptend = exonprec[-1]+m[lastindex][1]-m[lastindex][0]+1 + diff    ## in exon coordinates
+                        transcriptend = exonprec[-1]+numberOfExonsHash[lastindex][1]-numberOfExonsHash[lastindex][0]+1 + diff    ## in exon coordinates
                         stoptoend = transcriptend - stopexon
                         stoptojunc = juncpos - stopexon
                         indeltoend = transcriptend - (newexonpos-1)
@@ -1423,22 +1427,22 @@ if __name__ == "__main__":
                         outdata["causes NMD?"] = NMD
     
                         ##exon index where new stop occurs
-                        increxonindex = increxon if ispositivestr else len(m)-increxon-1
+                        increxonindex = increxon if ispositivestr else len(numberOfExonsHash)-increxon-1
     
                         if increxon==0:
                             splice1='.'     ## 5' flanking splice site (acceptor)
                         else:
                             if ispositivestr:
-                                splice1=c[chr_num][m[increxonindex][0]-2:m[increxonindex][0]].upper()
+                                splice1=genomeSequences[chr_num][numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper()
                             else:
-                                splice1=compstr(c[chr_num][m[increxonindex][1]+1:m[increxonindex][1]+3].upper())                
-                        if increxon==len(m)-1:
+                                splice1=compstr(genomeSequences[chr_num][numberOfExonsHash[increxonindex][1]+1:numberOfExonsHash[increxonindex][1]+3].upper())                
+                        if increxon==len(numberOfExonsHash)-1:
                             splice2='.'     ## 3' flanking splice site (donor)
                         else:
                             if ispositivestr:
-                                splice2=c[chr_num][m[increxon][1]+1:m[increxon][1]+3].upper()
+                                splice2=genomeSequences[chr_num][numberOfExonsHash[increxon][1]+1:numberOfExonsHash[increxon][1]+3].upper()
                             else:
-                                splice2=compstr(c[chr_num][m[increxonindex][0]-2:m[increxonindex][0]].upper())
+                                splice2=compstr(genomeSequences[chr_num][numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper())
                             
                         canonical = (splice1=='AG' or splice1=='.') and (splice2=='GT' or splice2=='.')
                         canonical = 'YES' if canonical else 'NO'
