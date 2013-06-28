@@ -621,9 +621,7 @@ if __name__ == "__main__":
     spliceOutputFile = abortIfCannotWriteFile(tabbedOutputSplicePath)
     vcfOutputFile = abortIfCannotWriteFile(vcfOutputPath)
     
-    chrs = [`i` for i in range(1, 23)]
-    chrs.append('X')
-    chrs.append('Y')
+    chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
     
     ##list of ancestral alleles for each line in input file,
     ##"" if metadata line, '.' if none available
