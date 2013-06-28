@@ -273,12 +273,6 @@ def getSegDupData(vatFile, segdupPath, chrs):
     segdupfile.close()
     return segdupdata
 
-def calculateExomeCoordinate(component):
-    values = component.split("=")[1].split(",")
-    if (int(values[0]) + int(values[1])) == 0:
-        return 0.0
-    return int(values[0]) * 1.0 / (int(values[0]) + int(values[1]))
-
 #Returns a Pfam vcf-formatted description, and a verbose description
 #The vcf-formatted description is in format Pfam_ID:domain_length:max_domain_percent_lost:number_pfams_in_domain:number_pfams_in_truncation
 #The verbose description returned is a) a series of concatenated Pfam_ID:domain_length:percent_lost, and a series of concatenated domain_id_lost:domain_length 
@@ -592,6 +586,45 @@ def getdNdSData(dNdSPath):
     dNdSfile.close()
     return dNdSmacaque, dNdSmouse
 
+def calculateExomeCoordinate(component):
+    values = component.split("=")[1].split(",")
+    if (int(values[0]) + int(values[1])) == 0:
+        return 0.0
+    return int(values[0]) * 1.0 / (int(values[0]) + int(values[1]))
+
+def getESP6500ExomeChromosomeInfo(exomesPath, chromosomes):
+    exomesChromosomeInfo = {}
+    for chromosome in chromosomes:
+        exomesChromosomeInfo[chromosome] = {}
+        exomePath = os.path.join(exomesPath, 'ESP6500.chr%s.snps.vcf' % (chromosome)) 
+        try:
+            exomeInputFile = open(exomePath)
+        except:
+            print "Couldn't read " + exomePath
+            print "Skipping..."
+            exomeInputFile = None
+        
+        if exomeInputFile:
+            for exomeLine in exomeInputFile:
+                if not exomeLine.startswith("#"):
+                    exomeLineComponents = exomeLine.split("\t")
+                    
+                    x = "NA"
+                    y = "NA"
+                    z = "NA"
+                    for component in exomeLineComponents[7].split(";"):
+                        if component.startswith('EA_AC='):
+                            x = "%.4f" % (calculateExomeCoordinate(component))
+                        elif component.startswith('AA_AC='):
+                            y = "%.4f" % (calculateExomeCoordinate(component))
+                        elif component.startswith('TAC='):
+                            z = "%.4f" % (calculateExomeCoordinate(component))
+                            
+                    exomesChromosomeInfo[chromosome][int(exomeLineComponents[1])] = ("%s,%s,%s" % (x, y, z))
+            
+            exomeInputFile.close()
+    return exomesChromosomeInfo
+
 if __name__ == "__main__":
     print "Starting at: " + datetime.datetime.now().strftime("%H:%M:%S")
 
@@ -650,15 +683,12 @@ if __name__ == "__main__":
     ##{'1':{'ENSP...':'PF...\t4-25\t(ENSP...)'}, '2':{...}, ...}
     chromosomesPFam = dict(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items() + getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"], 3).items() + getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items())
 
-    exomesChromsomeInfo = {}
+    #Scan ESP6500 (exome) fields
+    exomesChromosomeInfo = getESP6500ExomeChromosomeInfo(args.exomes, chrs)
 
     #Scan 1000G file
     print "Scanning 1000G file"
-    startTime = datetime.datetime.now()
-    
     thousandGChromosomeInfo = get1000GChromosomeInfo(args.thousandG)
-    
-    print str((datetime.datetime.now() - startTime).seconds) + " seconds."
     
     print "Reading PPI network"
     ppi = getPPINetwork(args.ppi)
@@ -811,42 +841,11 @@ if __name__ == "__main__":
             for tagIndex in range(len(thousandGTags)):
                 lineinfo[thousandGTags[tagIndex]] = thousandGComponents[tagIndex]
             
-            #Adding ESP6500 (exome) fields
-            if not exomesChromsomeInfo.has_key(chr_num):
-                exomesChromsomeInfo = {chr_num : {}}
-                exomePath = os.path.join(args.exomes, 'ESP6500.chr%s.snps.vcf' % (chr_num)) 
-                try:
-                    exomeInputFile = open(exomePath, "r")
-                except:
-                    print "Couldn't read " + exomePath
-                    print "Skipping..."
-                    exomeInputFile = None
-                
-                if exomeInputFile:
-                    for exomeLine in exomeInputFile:
-                        if not exomeLine.startswith("#"):
-                            exomeLineComponents = exomeLine.split("\t")
-                            
-                            x = "NA"
-                            y = "NA"
-                            z = "NA"
-                            for component in exomeLineComponents[7].split(";"):
-                                if component.startswith('EA_AC='):
-                                    x = "%.4f" % (calculateExomeCoordinate(component))
-                                elif component.startswith('AA_AC='):
-                                    y = "%.4f" % (calculateExomeCoordinate(component))
-                                elif component.startswith('TAC='):
-                                    z = "%.4f" % (calculateExomeCoordinate(component))
-                                    
-                            exomesChromsomeInfo[chr_num][int(exomeLineComponents[1])] = ("%s,%s,%s" % (x, y, z))
-                    
-                    exomeInputFile.close()
-            
             #Add exomes info to output
             infotypes += ['ESP6500', 'ESP6500_AAF']
-            if exomesChromsomeInfo[chr_num].has_key(start):
+            if start in exomesChromosomeInfo[chr_num]:
                 lineinfo['ESP6500'] = 'ESP6500=Yes'
-                lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=' + exomesChromsomeInfo[chr_num][start]
+                lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=' + exomesChromosomeInfo[chr_num][start]
             else:
                 lineinfo['ESP6500'] = 'ESP6500=No'
                 lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=NA,NA,NA'
