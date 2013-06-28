@@ -189,63 +189,6 @@ static PyObject *buildList(PyObject *self, PyObject *args)
     return Py_BuildValue("");
 }
 
-/*
-static PyObject *buildList(PyObject *self, PyObject *args)
-{
-    PyObject *result = NULL;
-    
-    freeList(self);
-    
-    const char *filepath = NULL;
-    if (PyArg_ParseTuple(args, "s", &filepath))
-    {
-        FILE *file = fopen(filepath, "r");
-        if (file)
-        {
-            unsigned int listMaxCount = 1000000000;
-            
-            list = malloc(sizeof(float) * listMaxCount);
-            if (!list)
-            {
-                printf("Could not allocate enough memory.\n");
-                return result;
-            }
-            
-            // start at index 1 to match line numbers
-            list[0] = 0.0;
-            unsigned int listIndex = 1;
-            
-            char buffer[256];
-            while (fgets(buffer, sizeof(buffer), file))
-            {
-                char *str = buffer;
-                while (*str != '\t')
-                {
-                    str++;
-                }
-                str++;
-                
-                if (listIndex >= listMaxCount)
-                {
-                    listMaxCount *= 2;
-                    list = realloc(list, sizeof(float) * listMaxCount);
-                }
-                
-                list[listIndex] = atof(str);
-                listIndex++;
-            }
-            
-            fclose(file);
-            // have to return something
-            result = Py_BuildValue("");
-        }
-    }
-    
-    return result;
-}
-*/
-
-
 static PyObject *floatInList(PyObject *self, PyObject *args)
 {
     PyObject *result = NULL;
