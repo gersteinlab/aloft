@@ -625,6 +625,29 @@ def getESP6500ExomeChromosomeInfo(exomesPath, chromosomes):
             exomeInputFile.close()
     return exomesChromosomeInfo
 
+def parsePPI(ppi, gene_name, dgenes, rgenes):
+    dominantdist = 0
+    for i in dgenes:
+        if i!=gene_name and i in ppi and nx.has_path(ppi, gene_name, i):
+            if dominantdist==0:
+                dominantdist = nx.shortest_path_length(ppi, gene_name, i)
+            else:
+                dominantdist = min(dominantdist, nx.shortest_path_length(ppi, gene_name, i))
+    
+    numberOfDominantNeighbors = sum(1 for i in dgenes if i in ppi.neighbors(gene_name))
+    
+    recessdist = 0
+    for i in rgenes:
+        if  i!=gene_name and i in ppi and nx.has_path(ppi, gene_name, i):
+            if recessdist==0:
+                recessdist = nx.shortest_path_length(ppi, gene_name, i)
+            else:
+                recessdist = min(recessdist, nx.shortest_path_length(ppi, gene_name, i))
+    
+    numberOfRecessiveNeighbors = sum(1 for i in rgenes if i in ppi.neighbors(gene_name))
+
+    return dominantdist, numberOfDominantNeighbors, recessdist, numberOfRecessiveNeighbors
+
 if __name__ == "__main__":
     print "Starting at: " + datetime.datetime.now().strftime("%H:%M:%S")
 
@@ -897,37 +920,12 @@ if __name__ == "__main__":
     
                 ##calculate distance to recessive genes
                 gene_name = outdata["gene"]
-    
-                if False and gene_name in ppi:
-                    #startTime = datetime.datetime.now()
-    
-                    dominantdist = 0
-                    for i in dgenes:
-                        if i!=gene_name and i in ppi and nx.has_path(ppi, gene_name, i):
-                            if dominantdist==0:
-                                dominantdist = nx.shortest_path_length(ppi, gene_name, i)
-                            else:
-                                dominantdist = min(dominantdist, nx.shortest_path_length(ppi, gene_name, i))
-                    if dominantdist == 0: ##gene_name is contained in a minor component of the PPI
-                        dominantdist = 'N/A'
-                    outdata["shortest path to dominant gene"] = str(dominantdist)
-                    numberOfDominantNeighbors = sum(1 for i in dgenes if i in ppi.neighbors(gene_name))
+                if False and gene_name in ppi: #since this code takes too long, going to comment it out
+                    dominantdist, numberOfDominantNeighbors, recessdist, numberOfRecessiveNeighbors = parsePPI(ppi, gene_name, dgenes, rgenes)
+                    outdata["shortest path to dominant gene"] = 'N/A' if dominantdist == 0 else str(dominantdist)
                     outdata["dominant neighbors"] = str(numberOfDominantNeighbors)
-    
-                    recessdist = 0
-                    for i in rgenes:
-                        if  i!=gene_name and i in ppi and nx.has_path(ppi, gene_name, i):
-                            if recessdist==0:
-                                recessdist = nx.shortest_path_length(ppi, gene_name, i)
-                            else:
-                                recessdist = min(recessdist, nx.shortest_path_length(ppi, gene_name, i))
-                    if recessdist == 0: ##gene_name is contained in a minor component of the PPI
-                        recessdist = 'N/A'
-                    outdata["shortest path to recessive gene"] = str(recessdist)
-                    numberOfRecessiveNeighbors = sum(1 for i in rgenes if i in ppi.neighbors(gene_name))
+                    outdata["shortest path to recessive gene"] = 'N/A' if recessdist == 0 else str(recessdist)
                     outdata["recessive neighbors"] = str(numberOfRecessiveNeighbors)
-    
-                    #print str((datetime.datetime.now() - startTime).microseconds / 1000000.0) + " ppi seconds."
                 else:
                     outdata["shortest path to recessive gene"] = 'N/A'
                     outdata["recessive neighbors"] = 'N/A'
