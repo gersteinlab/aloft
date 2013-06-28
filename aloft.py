@@ -1128,7 +1128,7 @@ if __name__ == "__main__":
                                 newDescriptions = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, paramKey)
                                 vcfPfamDescriptions[paramKey] = newDescriptions[0]
                                 outdata[paramKey] = newDescriptions[1][0]
-                                outdata[pfamParamsWithTruncations.index(paramKey)+1] = newDescriptions[0][1]
+                                outdata[pfamParamsWithTruncations.index(paramKey)+1] = newDescriptions[1][1]
                         else:
                             for paramKey in pfamParams:
                                 vcfPfamDescriptions[paramKey] = 'N/A'
