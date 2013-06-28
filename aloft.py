@@ -1378,7 +1378,7 @@ if __name__ == "__main__":
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
     #########################################################
                             
-                        LOFvariants[-1]+=':'+':'.join([splice1+'/'+splice2, `newCDSpos`, `lofPosition`, nextATG, NMD, incrcodingpos]) + vcfPfamDescriptions["PF"]
+                        LOFvariants[-1]+=':'+':'.join([splice1+'/'+splice2, `newCDSpos`, `lofPosition`, nextATG, NMD, incrcodingpos]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
     
             vcfOutputFile.write('\t'.join(data[k] for k in range(0,7))+'\t')
             allvariants = []
