@@ -795,8 +795,8 @@ if __name__ == "__main__":
                     
                     newComponent = "1000GPhase1_" + info
                     thousandGComponentIndex = -1
-                    for findIndex in xrange(len(thousandGTags)):
-                        if infotype == "_".join(thousandGTags[findIndex].split("_")[1:]):
+                    for findIndex in range(len(thousandGTags)):
+                        if infotype == "_range".join(thousandGTags[findIndex].split("_")[1:]):
                             thousandGComponentIndex = findIndex
                             break
                     
@@ -810,7 +810,7 @@ if __name__ == "__main__":
                 lineinfo['1000GPhase1'] = '1000GPhase1=No'
             
             #Add 1000G entries to output
-            for tagIndex in xrange(len(thousandGTags)):
+            for tagIndex in range(len(thousandGTags)):
                 lineinfo[thousandGTags[tagIndex]] = thousandGComponents[tagIndex]
             
             #Adding ESP6500 (exome) fields
