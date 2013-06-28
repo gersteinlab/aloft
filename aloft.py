@@ -788,34 +788,6 @@ if __name__ == "__main__":
             outdata["GERP rejection"] = GERPrejectiondata[counter]
             outdata["Disorder prediction"] = disopredData
             outdata["segmental duplications"] = '.' if segdupdata[counter].count('(') == '0' else segdupdata[counter]
-            outdata["PFAM"] = "N/A"
-            outdata["PFAMtruncated"] = "N/A"
-            outdata["SCOP"] = "N/A"
-            outdata["SCOPtruncated"] = "N/A"
-            outdata["SM"] = "N/A"
-            outdata["SMtruncated"] = "N/A"
-            outdata["Tmhmm"] = "N/A"
-            outdata["Tmhmmtruncated"] = "N/A"
-            outdata["Sigp"] = "N/A"
-            outdata["Sigptruncated"] = "N/A"
-            outdata["ACETYLATION"] = "N/A"
-            outdata["ACETYLATIONtruncated"] = "N/A"
-            outdata["DI_METHYLATION"] = "N/A"
-            outdata["DI_METHYLATIONtruncated"] = "N/A"
-            outdata['METHYLATION'] = "N/A"
-            outdata['METHYLATIONtruncated']
-            outdata['MONO-METHYLATION'] = "N/A"
-            outdata['MONO-METHYLATIONtruncated'] = "N/A"
-            outdata['O-GlcNAc'] = "N/A"
-            outdata['O-GlcNActruncated'] = "N/A"
-            outdata['PHOSPHORYLATION'] = "N/A"
-            outdata['PHOSPHORYLATIONtruncated'] = "N/A"
-            outdata['SUMOYLATION'] = "N/A"
-            outdata['SUMOYLATIONtruncated'] = "N/A"
-            outdata['TRI-METHYLATION'] = "N/A"
-            outdata['TRI-METHYLATIONtruncated'] = "N/A"
-            outdata['UBIQUITINATION'] = "N/A"
-            outdata['UBIQUITINATIONtruncated'] = "N/A"
     
             #Adding 1000G fields
             thousandGTags = ['1000GPhase1_AF', '1000GPhase1_ASN_AF', '1000GPhase1_AFR_AF', '1000GPhase1_EUR_AF']
