@@ -689,6 +689,12 @@ if __name__ == "__main__":
     print "Reading dNdS data"
     dNdSmacaque, dNdSmouse = getdNdSData(args.dNdS)
 
+    #params for PF, SSF, SM, etc
+    #this variable could use a better name since it's not just PFAM, but not sure what to call it
+    pfamParams = ["PF", "SSF", "SM", "Tmhmm", "Sigp", "ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc","PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"]
+
+    pfamParamsWithTruncations = sum([[param, param + "truncated"] for param in pfamParams], []) #using sum to flatten the list
+
     ##list of output parameters for LOF and splice variants
     basicparams = ["gene", "gene_id", "partial/full", "transcript", "transcript length", "longest transcript?"]
     LOFparams = ["shortest path to recessive gene", "recessive neighbors",\
@@ -699,14 +705,8 @@ if __name__ == "__main__":
                 "3' flanking splice site", "canonical?",\
                 "# failed filters", "filters failed",\
                 "ancestral allele", "GERP score", "GERP element", "GERP rejection", "Disorder prediction",\
-                "segmental duplications", "PFAM", "PFAMtruncated",\
-                "SCOP", "SCOPtruncated", "SM", "SMtruncated",\
-                "Tmhmm", "Tmhmmtruncated", "Sigp", "Sigptruncated",\
-                "ACETYLATION", "ACETYLATIONtruncated", "DI-METHYLATION", "DI-METHYLATIONtruncated",\
-                "METHYLATION", "METHYLATIONtruncated", "MONO-METHYLATION", "MONO-METHYLATIONtruncated",\
-                "O-GlcNAc", "O-GlcNActruncated","PHOSPHORYLATION", "PHOSPHORYLATIONtruncated", "SUMOYLATION", "SUMOYLATIONtruncated",\
-                "TRI-METHYLATION", "TRI-METHYLATIONtruncated", "UBIQUITINATION", "UBIQUITINATIONtruncated",\
-                "1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
+                "segmental duplications"] + pfamParamsWithTruncations +\
+                ["1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
                 "haploinsufficiency disease score",\
@@ -721,14 +721,8 @@ if __name__ == "__main__":
                 "SNP location", "alt donor", "alt acceptor",\
                 "intron length", "# failed filters", "filters failed",\
                 "GERP score", "GERP element", "GERP rejection", "Disorder prediction",\
-                "segmental duplications", "PFAM", "PFAMtruncated",\
-                "SCOP", "SCOPtruncated", "SM", "SMtruncated",\
-                "Tmhmm", "Tmhmmtruncated", "Sigp", "Sigptruncated",\
-                "ACETYLATION", "ACETYLATIONtruncated", "DI-METHYLATION", "DI-METHYLATIONtruncated",\
-                "METHYLATION", "METHYLATIONtruncated", "MONO-METHYLATION", "MONO-METHYLATIONtruncated",\
-                "O-GlcNAc", "O-GlcNActruncated","PHOSPHORYLATION", "PHOSPHORYLATIONtruncated", "SUMOYLATION", "SUMOYLATIONtruncated",\
-                "TRI-METHYLATION", "TRI-METHYLATIONtruncated", "UBIQUITINATION", "UBIQUITINATIONtruncated",\
-                "1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
+                "segmental duplications"] + pfamParamsWithTruncations +\
+                ["1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
                 "haploinsufficiency disease score",\
@@ -1127,70 +1121,22 @@ if __name__ == "__main__":
                             failed_filters.append('heavily_duplicated')
                         outdata["# failed filters"] = `filters_failed`
                         outdata["filters failed"] = ','.join(failed_filters)
-     
+
+                        vcfPfamDescriptions = {}
                         if "prematureStop" in variant:
                             transcriptID = transcript.split(".")[0]
                             stopPosition = int(entry[2].split('_')[2])
 
-                            pfamDescription, pfamTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "PF")
-                            SCOPDescription, SCOPTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "SSF")
-                            SMDescription, SMTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "SM")
-                            TmhmmDescription, TmhmmTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition,  chromosomesPFam, "Tmhmm")
-                            SigpDescription, SigpTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "Sigp")
-                            ACETYLATIONDescription, ACETYLATIONTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition,  chromosomesPFam, "ACETYLATION")
-
-                            DI_METHYLATIONDescription, DI_METHYLATIONTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "DI-METHYLATION")
-                            METHYLATIONDescription, METHYLATIONTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "METHYLATION")
-                            MONO_METHYLATIONDescription, MONO_METHYLATIONTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "MONO-METHYLATION")
-                            O_GlcNAcDescription, O_GlcNAcTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "O-GlcNAc")
-                            PHOSPHORYLATIONDescription, PHOSPHORYLATIONTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "PHOSPHORYLATION")
-                            SUMOYLATIONDescription, SUMOYLATIONTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "SUMOYLATION")
-                            TRI_METHYLATIONDescription, TRI_METHYLATIONTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "TRI-METHYLATION")
-                            UBIQUITINATIONDescription, UBIQUITINATIONTabbedDescription = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, "UBIQUITINATION")
+                            for paramKey in pfamParams:
+                                newDescriptions = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, paramKey)
+                                vcfPfamDescriptions[paramKey] = newDescriptions[0]
+                                outdata[paramKey] = newDescriptions[1][0]
+                                outdata[pfamParamsWithTruncations.index(paramKey)+1] = newDescriptions[0][1]
                         else:
-                            pfamDescription, pfamTabbedDescription = '', ['N/A', 'N/A']
-                            SCOPDescription, SCOPTabbedDescription = '', ['N/A', 'N/A']
-                            SMDescription, SMTabbedDescription = '', ['N/A', 'N/A']
-                            TmhmmDescription, TmhmmTabbedDescription = '', ['N/A', 'N/A']
-                            SigpDescription, SigpTabbedDescription = '', ['N/A', 'N/A']
-                            ACETYLATIONDescription, ACETYLATIONTabbedDescription = '', ['N/A', 'N/A']
-                            DI_METHYLATIONDescription, DI_METHYLATIONTabbedDescription = '', ['N/A', 'N/A']
-                            METHYLATIONDescription, METHYLATIONTabbedDescription = '', ['N/A', 'N/A']
-                            MONO_METHYLATIONDescription, MONO_METHYLATIONTabbedDescription = '', ['N/A', 'N/A']
-                            O_GlcNAcDescription, O_GlcNAcTabbedDescription = '', ['N/A', 'N/A']
-                            PHOSPHORYLATIONDescription, PHOSPHORYLATIONTabbedDescription = '', ['N/A', 'N/A']
-                            SUMOYLATIONDescription, SUMOYLATIONTabbedDescription = '', ['N/A', 'N/A']
-                            TRI_METHYLATIONDescription, TRI_METHYLATIONTabbedDescription = '', ['N/A', 'N/A']
-                            UBIQUITINATIONDescription, UBIQUITINATIONTabbedDescription = '', ['N/A', 'N/A']
-    
-                        outdata["PFAM"] = pfamTabbedDescription[0]
-                        outdata["PFAMtruncated"] = pfamTabbedDescription[1]
-                        outdata["SCOP"] = SCOPTabbedDescription[0]
-                        outdata["SCOPtruncated"] = SCOPTabbedDescription[1]
-                        outdata["SM"] = SMTabbedDescription[0]
-                        outdata["SMtruncated"] = SMTabbedDescription[1]
-                        outdata["Tmhmm"] = TmhmmTabbedDescription[0]
-                        outdata["Tmhmmtruncated"] = TmhmmTabbedDescription[1]
-                        outdata["Sigp"] = SigpTabbedDescription[0]
-                        outdata["Sigptruncated"] = SigpTabbedDescription[1]
-                        outdata["ACETYLATION"] = ACETYLATIONTabbedDescription[0]
-                        outdata["ACETYLATIONtruncated"] = ACETYLATIONTabbedDescription[1]
-                        outdata["DI-METHYLATION"] = DI_METHYLATIONTabbedDescription[0]
-                        outdata["DI-METHYLATIONtruncated"] = DI_METHYLATIONTabbedDescription[1]
-                        outdata["METHYLATION"] = METHYLATIONTabbedDescription[0]
-                        outdata["METHYLATIONtruncated"] = METHYLATIONTabbedDescription[1]
-                        outdata["MONO-METHYLATION"] = MONO_METHYLATIONTabbedDescription[0]
-                        outdata["MONO-METHYLATIONtruncated"] = MONO_METHYLATIONTabbedDescription[1]
-                        outdata["O-GlcNAc"] = O_GlcNAcTabbedDescription[0]
-                        outdata["O-GlcNActruncated"] = O_GlcNAcTabbedDescription[1]
-                        outdata["PHOSPHORYLATION"] = PHOSPHORYLATIONTabbedDescription[0]
-                        outdata["PHOSPHORYLATIONtruncated"] = PHOSPHORYLATIONTabbedDescription[1]
-                        outdata["SUMOYLATION"] = SUMOYLATIONTabbedDescription[0]
-                        outdata["SUMOYLATIONtruncated"] = SUMOYLATIONTabbedDescription[1]
-                        outdata["TRI-METHYLATION"] = TRI_METHYLATIONTabbedDescription[0]
-                        outdata["TRI-METHYLATIONtruncated"] = TRI_METHYLATIONTabbedDescription[1]
-                        outdata["UBIQUITINATION"] = UBIQUITINATIONTabbedDescription[0]
-                        outdata["UBIQUITINATIONtruncated"] = UBIQUITINATIONTabbedDescription[1]
+                            for paramKey in pfamParams:
+                                vcfPfamDescriptions[paramKey] = 'N/A'
+                                outdata[paramKey] = 'N/A'
+                                outdata[pfamParamsWithTruncations.index(paramKey)+1] = 'N/A'
     
                         outdata["indel position in CDS"] = "N/A"
                         outdata["stop position in CDS"] = "N/A"
@@ -1432,7 +1378,7 @@ if __name__ == "__main__":
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
     #########################################################
                             
-                        LOFvariants[-1]+=':'+':'.join([splice1+'/'+splice2, `newCDSpos`, `lofPosition`, nextATG, NMD, incrcodingpos]) + pfamDescription
+                        LOFvariants[-1]+=':'+':'.join([splice1+'/'+splice2, `newCDSpos`, `lofPosition`, nextATG, NMD, incrcodingpos]) + vcfPfamDescriptions["PF"]
     
             vcfOutputFile.write('\t'.join(data[k] for k in range(0,7))+'\t')
             allvariants = []
