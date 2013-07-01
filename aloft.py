@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, os, re, string, array, datetime, gerprate
+import sys, os, re, string, array, datetime
 import networkx as nx
 from optparse import OptionParser
 from subprocess import Popen, PIPE
@@ -154,7 +154,7 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
             sys.exit(1)
         print 'Reading GERP information for chromosome '+i+'...'
         startTime = datetime.datetime.now()
-        buildGerpRates(GERPratepath, GERPratecachepath, i)
+        gerpCacheFile = buildGerpRates(GERPratepath, GERPratecachepath, i)
         
         print str((datetime.datetime.now() - startTime).seconds) + " seconds."
         
@@ -168,7 +168,7 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
             start = int(data[1])
             length = len(data[3])
             end = start + length-1  ##inclusive endpoint
-            GERPratedata.append(str(getGerpScore(start, length)))
+            GERPratedata.append(str(getGerpScore(gerpCacheFile, start, length)))
             elementIndex = findGERPelementIndex(GERPelements, start, end)
             if elementIndex == -1:
                 GERPelementdata.append(".")
@@ -191,7 +191,6 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
                     GERPrejectiondata.append(".")
             
             line=vatFile.readline()
-        gerprate.freeMemory()
         print str((datetime.datetime.now() - startTime).seconds) + " seconds."
 
     return GERPratedata, GERPelementdata, GERPrejectiondata

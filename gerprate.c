@@ -10,8 +10,6 @@
     #include "Python.h"
 #endif
 
-static float *list = NULL;
-static FILE *cachedFile = NULL;
 static char isByteOrderLittleEndian = 0;
 
 // Returns 1 if the machine is little endian, otherwise 0 if big endian
@@ -21,40 +19,14 @@ static char isLittleEndian(void)
     return (*((unsigned char *)(&testInteger)) == 1);
 }
 
-static PyObject *freeMemory(PyObject *self)
-{
-    if (list)
-    {
-        free(list);
-        list = NULL;
-    }
-    
-    if (cachedFile)
-    {
-        fclose(cachedFile);
-        cachedFile = NULL;
-    }
-    
-    return Py_BuildValue("");
-}
-
 static PyObject *buildList(PyObject *self, PyObject *args)
 {
-    freeMemory(self);
-    
     const char *filepath = NULL;
     const char *outfilepath = NULL;
     if (!PyArg_ParseTuple(args, "ss", &filepath, &outfilepath))
     {
         printf("Failed to parse arguments\n");
         return NULL;
-    }
-    
-    cachedFile = fopen(outfilepath, "r");
-    if (cachedFile)
-    {
-        printf("Opened cache for %s\n", outfilepath);
-        return Py_BuildValue("");
     }
     
     FILE *file = fopen(filepath, "r");
@@ -66,7 +38,7 @@ static PyObject *buildList(PyObject *self, PyObject *args)
     
     unsigned int listMaxCount = 1000000000;
     
-    list = malloc(sizeof(float) * listMaxCount);
+    float *list = malloc(sizeof(float) * listMaxCount);
     if (!list)
     {
         printf("Failed to allocate enough memory for list\n");
@@ -140,7 +112,7 @@ static PyObject *buildList(PyObject *self, PyObject *args)
     strncpy(tempPath, outfilepath, strlen(outfilepath)+1);
     strcat(tempPath, "_temp");
     
-    cachedFile = fopen(tempPath, "w");
+    FILE *cachedFile = fopen(tempPath, "w");
     if (cachedFile)
     {
         if (isByteOrderLittleEndian)
@@ -148,6 +120,7 @@ static PyObject *buildList(PyObject *self, PyObject *args)
             if (fwrite(list, sizeof(float), listIndex, cachedFile) < listIndex)
             {
                 printf("Failed to write file %s\n", tempPath);
+                free(list);
                 return NULL;
             }
         }
@@ -167,73 +140,36 @@ static PyObject *buildList(PyObject *self, PyObject *args)
                 if (fwrite(&value, sizeof(float), 1, cachedFile) < 1)
                 {
                     printf("Failed to write data to file %s\n", tempPath);
+                    free(list);
                     return NULL;
                 }
             }
         }
         
         fclose(cachedFile);
-        cachedFile = NULL;
         
         if (rename(tempPath, outfilepath) < 0)
         {
             printf("Failed to move %s to %s\n", tempPath, outfilepath);
+            free(list);
             return NULL;
         }
     }
     else
     {
         printf("Writing out cached file to %s failed\n", outfilepath);
+        free(list);
+        return NULL;
     }
+
+    free(list);
     
     return Py_BuildValue("");
-}
-
-static PyObject *floatInList(PyObject *self, PyObject *args)
-{
-    PyObject *result = NULL;
-    
-    unsigned int index = 0;
-    if (PyArg_ParseTuple(args, "I", &index))
-    {
-        if (cachedFile)
-        {
-            if (fseek(cachedFile, index * sizeof(float), SEEK_SET) < 0)
-            {
-                printf("Failed to seek in cached file.\n");
-                return NULL;
-            }
-            float value = 0.0;
-            if (fread(&value, sizeof(float), 1, cachedFile) < 1)
-            {
-                printf("Failed to read value from cached file.\n");
-                return NULL;
-            }
-            if (!isByteOrderLittleEndian)
-            {
-                float value2 = value;
-                ((uint8_t *)&value)[0] = ((uint8_t *)&value2)[3];
-                ((uint8_t *)&value)[1] = ((uint8_t *)&value2)[2];
-                ((uint8_t *)&value)[2] = ((uint8_t *)&value2)[1];
-                ((uint8_t *)&value)[3] = ((uint8_t *)&value2)[0];
-            }
-            
-            result = Py_BuildValue("f", value);
-        }
-        else
-        {
-            result = Py_BuildValue("f", list[index]);
-        }
-    }
-    
-    return result;
 }
 
 PyMethodDef gerprate_methods[] =
 {
     {"buildList", (PyCFunction)buildList, METH_VARARGS, NULL},
-    {"floatInList", (PyCFunction)floatInList, METH_VARARGS, NULL},
-    {"freeMemory", (PyCFunction)freeMemory, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL},
 };
 

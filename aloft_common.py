@@ -1,6 +1,6 @@
-import gerprate
 import os
 import re
+import struct
 
 def getRejectionElementIntersectionData(codingExonIntervals, GERPelements, GERPelementIndex, chromosome, start, transcript, direction):
 	rejectedElements = []
@@ -132,15 +132,20 @@ def buildGerpRates(GERPratepath, GERPratecachepath, chromosome):
 	cachepath = os.path.join(GERPratecachepath, chromosome+'.maf.rates_cached')
 	try:
 		#build cache file if it does not already exist using gerprate.so module
-		gerprate.buildList(ratefilepath, cachepath)
+		if not os.path.exists(cachepath):
+	 		#trying to import our module more than once won't cause any harm
+	 		import gerprate
+	 		gerprate.buildList(ratefilepath, cachepath)
+	 	return open(cachepath)
 	except:
 		print ratefilepath + " could not be opened."
 		print "Exiting program."
 		sys.exit(1)
 
-#equivalent to old code "sum(GERPrates[start:start+length])/length"
-def getGerpScore(start, length):
-	return sum([gerprate.floatInList(start+rateindex) for rateindex in range(length)]) / length
+def getGerpScore(cacheFile, start, length):
+	cacheFile.seek(start*4, 0)
+	GERPrates = struct.unpack("<%df" % (length), cacheFile.read(length*4))
+	return sum(GERPrates) / length
 
 #binary search to find GERP element
 def findGERPelementIndex(elements, start, end):
