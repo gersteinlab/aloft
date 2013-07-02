@@ -949,11 +949,10 @@ if __name__ == "__main__":
                         outdata["dN/dS (macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "N/A"
                         outdata["dN/dS (mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "N/A"
                         
-                        #Insert Ancestral after AA=
-                        tabOutputLineStripped = line.strip()
-                        ancestralInsertionIndex = tabOutputLineStripped.find(';', tabOutputLineStripped.find('AA='))
     ##########################################################
-                        spliceOutputFile.write(tabOutputLineStripped[0:ancestralInsertionIndex] + ';' + lineinfo['Ancestral'] + tabOutputLineStripped[ancestralInsertionIndex:])
+                        #Insert Ancestral
+                        ancestralInsertion = ";".join([lineinfo['Ancestral']] + data[7].split(";"))
+                        spliceOutputFile.write("\t".join(data[0:7] + [ancestralInsertion] + data[8:]))
                         spliceOutputFile.write('\t'+ '\t'.join(outdata[i] for i in basicparams))
     #########################################################
     
@@ -1131,12 +1130,11 @@ if __name__ == "__main__":
                         outdata["# pseudogenes associated to transcript"] = `numpseudogenes[transcript]` if transcript in numpseudogenes else "0"
                         outdata["dN/dS (macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "N/A"
                         outdata["dN/dS (mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "N/A"
-                            
-                        #Insert Ancestral after AA=
-                        tabOutputLineStripped = line.strip()
-                        ancestralInsertionIndex = tabOutputLineStripped.find(';', tabOutputLineStripped.find('AA='))
+                        
     #########################################################
-                        lofOutputFile.write(tabOutputLineStripped[0:ancestralInsertionIndex] + ';' + lineinfo['Ancestral'] + tabOutputLineStripped[ancestralInsertionIndex:])
+                        #Insert Ancestral
+                        ancestralInsertion = ";".join([lineinfo['Ancestral']] + data[7].split(";"))
+                        lofOutputFile.write("\t".join(data[0:7] + [ancestralInsertion] + data[8:]))
                         lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in basicparams))
     #########################################################
                         
