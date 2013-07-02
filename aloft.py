@@ -628,10 +628,7 @@ def parsePPI(ppi, gene_name, genes):
     dist = 0
     for i in genes:
         if i!=gene_name and i in ppi and nx.has_path(ppi, gene_name, i):
-            if dist==0:
-                dist = nx.shortest_path_length(ppi, gene_name, i)
-            else:
-                dist = min(dist, nx.shortest_path_length(ppi, gene_name, i))
+            dist = min(dist, nx.shortest_path_length(ppi, gene_name, i))
     
     numberOfNeighbors = sum(1 for i in genes if i in ppi.neighbors(gene_name))
     return dist, numberOfNeighbors
