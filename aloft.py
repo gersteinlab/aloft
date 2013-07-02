@@ -624,13 +624,22 @@ def getESP6500ExomeChromosomeInfo(exomesPath, chromosomes):
             exomeInputFile.close()
     return exomesChromosomeInfo
 
-def parsePPI(ppi, gene_name, genes):
-    dist = 0
-    for i in genes:
-        if i!=gene_name and i in ppi and nx.has_path(ppi, gene_name, i):
-            dist = min(dist, nx.shortest_path_length(ppi, gene_name, i))
-    
-    numberOfNeighbors = sum(1 for i in genes if i in ppi.neighbors(gene_name))
+def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
+    dist = None
+    if gene_name in ppiHash[hashKey]:
+        dist = ppiHash[hashKey][gene_name]
+    else:
+        for gene in genes:
+            if gene != gene_name and gene in ppi and nx.has_path(ppi, gene_name, gene):
+                shortestPathLength = nx.shortest_path_length(ppi, gene_name, gene)
+                if dist is None:
+                    dist = shortestPathLength
+                else:
+                    dist = min(dist, shortestPathLength)
+        if dist is not None:
+            ppiHash[hashKey][gene_name] = dist
+
+    numberOfNeighbors = sum(1 for gene in genes if gene in ppi.neighbors(gene_name))
     return dist, numberOfNeighbors
 
 if __name__ == "__main__":
@@ -724,6 +733,8 @@ if __name__ == "__main__":
     
     print "Reading dNdS data"
     dNdSmacaque, dNdSmouse = getdNdSData(args.dNdS)
+
+    ppiHash = {"dgenes" : {}, "rgenes" : {}}
 
     #params for PF, SSF, SM, etc
     #this variable could use a better name since it's not just PFAM, but not sure what to call it
@@ -903,15 +914,15 @@ if __name__ == "__main__":
                     transcripts.append(details[i:i+3])
                 longesttranscript = max([int(i[2].split('_')[0]) for i in transcripts])
     
-                ##calculate distance to recessive genes
+                ##calculate distance to dominant and recessive genes
                 gene_name = outdata["gene"]
                 if gene_name in ppi: #since this code takes too long, going to not evaluate it
-                    dominantdist, numberOfDominantNeighbors = parsePPI(ppi, gene_name, dgenes)
-                    outdata["shortest path to dominant gene"] = 'N/A' if dominantdist == 0 else str(dominantdist)
+                    dominantdist, numberOfDominantNeighbors = parsePPI(ppi, ppiHash, "dgenes", gene_name, dgenes)
+                    outdata["shortest path to dominant gene"] = 'N/A' if dominantdist is None else str(dominantdist)
                     outdata["dominant neighbors"] = str(numberOfDominantNeighbors)
 
-                    recessdist, numberOfRecessiveNeighbors = parsePPI(ppi, gene_name, rgenes)
-                    outdata["shortest path to recessive gene"] = 'N/A' if recessdist == 0 else str(recessdist)
+                    recessdist, numberOfRecessiveNeighbors = parsePPI(ppi, ppiHash, "rgenes", gene_name, rgenes)
+                    outdata["shortest path to recessive gene"] = 'N/A' if recessdist is None else str(recessdist)
                     outdata["recessive neighbors"] = str(numberOfRecessiveNeighbors)
                 else:
                     outdata["shortest path to recessive gene"] = 'N/A'
