@@ -908,7 +908,7 @@ if __name__ == "__main__":
     
                 ##calculate distance to recessive genes
                 gene_name = outdata["gene"]
-                if False and gene_name in ppi: #since this code takes too long, going to not evaluate it
+                if gene_name in ppi: #since this code takes too long, going to not evaluate it
                     dominantdist, numberOfDominantNeighbors = parsePPI(ppi, gene_name, dgenes)
                     outdata["shortest path to dominant gene"] = 'N/A' if dominantdist == 0 else str(dominantdist)
                     outdata["dominant neighbors"] = str(numberOfDominantNeighbors)
