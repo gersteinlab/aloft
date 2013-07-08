@@ -12,6 +12,9 @@ import argparse
 ##NMD threshold (premature STOP to last exon-exon junction)
 NMD_THRESHOLD = 50
 
+##Boolean to skip network calculations, since they could take a very very long time
+SHOULD_SKIP_NETWORK_CALCULATIONS = True
+
 def abortIfPathDoesNotExist(path, shouldShowHelp=False):
     if path is not None and not os.path.exists(path):
         if shouldShowHelp:
@@ -916,7 +919,7 @@ if __name__ == "__main__":
     
                 ##calculate distance to dominant and recessive genes
                 gene_name = outdata["gene"]
-                if gene_name in ppi: #since this code takes too long, going to not evaluate it
+                if not SHOULD_SKIP_NETWORK_CALCULATIONS and gene_name in ppi:
                     dominantdist, numberOfDominantNeighbors = parsePPI(ppi, ppiHash, "dgenes", gene_name, dgenes)
                     outdata["shortest path to dominant gene"] = 'N/A' if dominantdist is None else str(dominantdist)
                     outdata["dominant neighbors"] = str(numberOfDominantNeighbors)
