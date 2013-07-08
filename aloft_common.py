@@ -102,7 +102,7 @@ def getDisopredDataFromLine(disopredSequencesPath, line, transcriptID=None):
 		else:
 			newData = "/".join([str(disorderedResidues), str(residueCount), "%.2f" % (100.0 * disorderedResidues / residueCount)])
 	except IOError:
-		#print "Skipping transcript %s" % (transcriptID)
+		#print("Skipping transcript %s" % (transcriptID))
 		pass
 	
 	return newData
@@ -138,13 +138,13 @@ def buildGerpRates(GERPratepath, GERPratecachepath, chromosome):
 			programName = "./gerprate"
 			exit_status = subprocess.check_call([programName, ratefilepath, cachepath])
 			if exit_status != 0:
-				print "ERROR: Exit status for following command was nonzero: %s %s %s" % (programName, ratefilepath, cachepath)
-				print "Was aloft properly installed?"
+				print("ERROR: Exit status for following command was nonzero: %s %s %s" % (programName, ratefilepath, cachepath))
+				print("Was aloft properly installed?")
 				sys.exit(1)
 	 	return open(cachepath)
 	except:
-		print ratefilepath + " could not be opened."
-		print "Exiting program."
+		print(ratefilepath + " could not be opened.")
+		print("Exiting program.")
 		sys.exit(1)
 
 #the gerp cache files are 1-indexed

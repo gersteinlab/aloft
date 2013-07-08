@@ -9,7 +9,7 @@ from vcf_sort import *
 def run_vat(arguments):
 	#example as input path: '/net/gerstein/sb238/ftw/finnish/Finns.nogeno.vcf.gz'
 	# or a .vcf is fine too
-	print 'Parsing VCF file...'
+	print('Parsing VCF file...')
 	inputPath = arguments[1]
 	vatOutputPath = arguments[2]
 	annotationIntervalPath = arguments[3]
@@ -18,7 +18,7 @@ def run_vat(arguments):
 	try:
 		open(inputPath)
 	except:
-		print "Failed to open " + inputPath
+		print("Failed to open " + inputPath)
 		sys.exit(1)
 	
 	if inputPath.endswith(".gz"):
@@ -98,11 +98,11 @@ def run_vat(arguments):
 	snpInputFile = open(TEMP_SNP_PATH, "r")
 	indelInputFile = open(TEMP_INDEL_PATH, "r")
 	
-	print "Running snpMapper..."
+	print("Running snpMapper...")
 	try:
 		snpMapperPipe = Popen(['snpMapper', annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=snpInputFile)
 	except:
-		print "ERROR: Failed to open snpMapper. Is snpMapper in your PATH?"
+		print("ERROR: Failed to open snpMapper. Is snpMapper in your PATH?")
 		sys.exit(1)
 	
 	numSnp = 0
@@ -122,11 +122,11 @@ def run_vat(arguments):
 	
 	os.remove(TEMP_SNP_PATH)
 	
-	print "Running indelMapper..."
+	print("Running indelMapper...")
 	try:
 		indelMapperPipe = Popen(['indelMapper', annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=indelInputFile)
 	except:
-		print "ERROR: Failed to open indelMapper. Is indelMapper in your PATH?"
+		print("ERROR: Failed to open indelMapper. Is indelMapper in your PATH?")
 		sys.exit(1)
 	
 	for line in indelMapperPipe.stdout:
@@ -138,7 +138,7 @@ def run_vat(arguments):
 	
 	os.remove(TEMP_INDEL_PATH)
 	
-	print "Writing out VAT file..."
+	print("Writing out VAT file...")
 	#Sort and remove duplicate entries
 	sort_nicely(sortedLines)
 	lastLine = None
@@ -149,7 +149,7 @@ def run_vat(arguments):
 	
 	vcfOutputFile.close()
 	
-	print "There were %d snp lines and %d indel lines" % (numSnp, numIndel)
+	print("There were %d snp lines and %d indel lines" % (numSnp, numIndel))
 
 if __name__ == "__main__":
 	run_vat(sys.argv)

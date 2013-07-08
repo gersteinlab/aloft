@@ -19,7 +19,7 @@ def abortIfPathDoesNotExist(path, shouldShowHelp=False):
     if path is not None and not os.path.exists(path):
         if shouldShowHelp:
             parser.print_help()
-        print "Error: %s does not exist." % (path)
+        print("Error: %s does not exist." % (path))
         sys.exit(1)
 
 def abortIfCannotCreateDirectory(directory):
@@ -28,7 +28,7 @@ def abortIfCannotCreateDirectory(directory):
             os.mkdir(directory)
         except:
             parser.print_help()
-            print "Error: Failed to create directory %s" % (directory)
+            print("Error: Failed to create directory %s" % (directory))
             sys.exit(1)
 
 def abortIfCannotWriteFile(filepath):
@@ -36,7 +36,7 @@ def abortIfCannotWriteFile(filepath):
         newFile=open(filepath, 'w')
     except:
         parser.print_help()
-        print filepath+ ' could not be written to.'
+        print(filepath+ ' could not be written to.')
         sys.exit(1)
     return newFile
 
@@ -79,12 +79,12 @@ def parseCommandLineArguments():
 
     if not args.vcf and not args.vat:
         parser.print_help()
-        print "Error: Neither a VCF or VAT file was specified. You must supply one of these as your input file"
+        print("Error: Neither a VCF or VAT file was specified. You must supply one of these as your input file")
         sys.exit(1)
 
     if args.vcf and args.vat:
         parser.print_help()
-        print "Error: Both a VCF or VAT file were specified. You must supply only one of these as your input file, but not both"
+        print("Error: Both a VCF or VAT file were specified. You must supply only one of these as your input file, but not both")
         sys.exit(1)
 
     abortIfPathDoesNotExist(args.vat)
@@ -102,7 +102,7 @@ def parseCommandLineArguments():
                     f = open(path)
                     f.close()
                 except:
-                    print "Error: --%s: %s cannot be opened (insufficient read privileges?)" % (arg, path)
+                    print("Error: --%s: %s cannot be opened (insufficient read privileges?)" % (arg, path))
                     sys.exit(1)
     return args
 
@@ -113,10 +113,10 @@ def getAncestors(ancespath):
         try:
             f=open(os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa'))
         except:
-            print os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa') + ' could not be opened.'
-            print 'Exiting program.'
+            print(os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa') + ' could not be opened.')
+            print('Exiting program.')
             sys.exit(1)
-        print 'Reading ancestral chromosome '+i+'...'
+        print('Reading ancestral chromosome '+i+'...')
         f.readline()    ##first >**** line
         ancestor[i]='0'+''.join(line.strip() for line in f)
         f.close()
@@ -147,23 +147,23 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
 
     for i in chrs:
         if line.split('\t')[0].split('chr')[-1]!=i:
-            print 'no indels on chromosome ' + i
+            print('no indels on chromosome ' + i)
             continue
         try:
             elementfile=open(os.path.join(args.elements, 'hg19_chr'+i+'_elems.txt'))
         except:
-            print os.path.join(args.elements, 'hg19_chr'+i+'_elems.txt') + ' could not be opened.'
-            print 'Exiting program.'
+            print(os.path.join(args.elements, 'hg19_chr'+i+'_elems.txt') + ' could not be opened.')
+            print('Exiting program.')
             sys.exit(1)
-        print 'Reading GERP information for chromosome '+i+'...'
+        print('Reading GERP information for chromosome '+i+'...')
         startTime = datetime.datetime.now()
         gerpCacheFile = buildGerpRates(GERPratepath, GERPratecachepath, i)
         
-        print str((datetime.datetime.now() - startTime).seconds) + " seconds."
+        print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
         
         GERPelements = getGERPelements(elementfile)
 
-        print 'Calculating GERP scores for chromosome '+i+'...'
+        print('Calculating GERP scores for chromosome '+i+'...')
         startTime = datetime.datetime.now()
         while line.split('\t')[0].split('chr')[-1]==i:
             data = line.split('\t')
@@ -194,7 +194,7 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
                     GERPrejectiondata.append(".")
             
             line=vatFile.readline()
-        print str((datetime.datetime.now() - startTime).seconds) + " seconds."
+        print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
 
     return GERPratedata, GERPelementdata, GERPrejectiondata
 
@@ -204,7 +204,7 @@ def getSegDupData(vatFile, segdupPath, chrs):
     for i in chrs:
         segdups[i] = []
         segdupmax[i] = []
-    print "Reading segdup information..."
+    print("Reading segdup information...")
     segdupfile = open(segdupPath)
     line = segdupfile.readline()
     while line.startswith("#") or line=="\n":
@@ -229,7 +229,7 @@ def getSegDupData(vatFile, segdupPath, chrs):
     while line.startswith("#") or line=="\n":
         segdupdata.append('')
         line=vatFile.readline()
-    print 'Calculating segdup overlaps...'
+    print('Calculating segdup overlaps...')
     while line!="":
         data = line.split('\t')
         chr_num = data[0].split('chr')[-1]
@@ -268,7 +268,7 @@ def getSegDupData(vatFile, segdupPath, chrs):
             ##compare bigger of left enpoints to smaller of right endpoints
             if max(start, interval[0]) <= min(end, interval[1]):
                 overlaps.append(interval)
-        segdupdata.append(`overlaps`)
+        segdupdata.append(str(overlaps))
 
         line = vatFile.readline()
 
@@ -287,7 +287,7 @@ def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domain
 
     chromosomesPFam = chromosomesPFam[domainType]
 
-    if transcriptToProteinHash.has_key(transcriptID) and chromosomesPFam[chromosome].has_key(transcriptToProteinHash[transcriptID]):
+    if transcriptID in transcriptToProteinHash and transcriptToProteinHash[transcriptID] in chromosomesPFam[chromosome]:
         pfamComponentsList = chromosomesPFam[chromosome][transcriptToProteinHash[transcriptID]]
         domainsLost = ""
         numberOfDomainsLost = 0
@@ -351,7 +351,7 @@ def getTranscriptToProteinHash(transcriptToProteinFilePath):
     try:
         inputFile = open(transcriptToProteinFilePath, "r")
     except:
-        print "Failed to open " + transcriptToProteinFilePath
+        print("Failed to open " + transcriptToProteinFilePath)
         sys.exit(1)
 
     transcriptToProteinHash = {}
@@ -381,7 +381,7 @@ def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, doma
             pipe2 = Popen(['uniq'], stdin=pipe1.stdout, stdout=PIPE)
             inputFile = pipe2.stdout
         except:
-            print "Couldn't read " + path + " , skipping chr" + chromosome
+            print("Couldn't read " + path + " , skipping chr" + chromosome)
             continue
 
         linesToSkip = 2
@@ -399,7 +399,7 @@ def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, doma
                     continue
                 if len(components) >= 3:
                     translationID = components[2].replace('(', '').replace(')', '').strip()
-                    if chromosomesPFam[domainType][chromosome].has_key(translationID):
+                    if translationID in chromosomesPFam[domainType][chromosome]:
                         chromosomesPFam[domainType][chromosome][translationID].append(components)
                     else:
                         chromosomesPFam[domainType][chromosome][translationID] = [components]
@@ -416,10 +416,10 @@ def getGenomeSequences(genomePath, chrs):
         try:
             f=open(os.path.join(genomePath, 'chr'+i+'.fa'))
         except:
-            print os.path.join(genomePath, 'chr'+i+'.fa') + ' could not be opened.'
-            print 'Exiting program.'
+            print(os.path.join(genomePath, 'chr'+i+'.fa') + ' could not be opened.')
+            print('Exiting program.')
             sys.exit(1)
-        print 'Reading chromosome '+i+'...'
+        print('Reading chromosome '+i+'...')
         f.readline()    ##first >chr* line
         genomeSequences[i]='0'+''.join(line.strip() for line in f)
         f.close()
@@ -518,7 +518,7 @@ def get1000GChromosomeInfo(thousandGPath):
         if not thousandGLine.startswith("#"):
             thousandGLineComponents = thousandGLine.rstrip("\n").split("\t")
             thousandGChromosomeNumber = thousandGLineComponents[0].replace("chr", "")
-            if not thousandGChromosomeInfo.has_key(thousandGChromosomeNumber):
+            if not (thousandGChromosomeNumber in thousandGChromosomeInfo):
                 thousandGChromosomeInfo[thousandGChromosomeNumber] = {}
             
             thousandGChromosomeInfo[thousandGChromosomeNumber][int(thousandGLineComponents[1])] = thousandGLineComponents[7]
@@ -602,8 +602,8 @@ def getESP6500ExomeChromosomeInfo(exomesPath, chromosomes):
         try:
             exomeInputFile = open(exomePath)
         except:
-            print "Couldn't read " + exomePath
-            print "Skipping..."
+            print("Couldn't read " + exomePath)
+            print("Skipping...")
             exomeInputFile = None
         
         if exomeInputFile:
@@ -646,24 +646,24 @@ def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
     return dist, numberOfNeighbors
 
 if __name__ == "__main__":
-    print "Starting at: " + datetime.datetime.now().strftime("%H:%M:%S")
+    print("Starting at: " + datetime.datetime.now().strftime("%H:%M:%S"))
 
     args = parseCommandLineArguments()
 
     if args.vcf:
         #run VAT
         vatPath = os.path.join(args.output, os.path.basename(args.vcf) + ".vat")
-        print "Running VAT on %s" % (args.vcf) + "\n"
+        print("Running VAT on %s" % (args.vcf) + "\n")
         run_vat([sys.argv[0], args.vcf, vatPath, args.annotation_interval, args.annotation_sequence])
     else:
         vatPath = args.vat
     
-    print "Running ALoFT on %s" % (vatPath) + "\n"
+    print("Running ALoFT on %s" % (vatPath) + "\n")
     
     try:
         vatFile = open(vatPath)
     except:
-        print "Error: Failed to read %s" % (vatPath)
+        print("Error: Failed to read %s" % (vatPath))
         sys.exit(1)
     
     tabbedOutputLofPath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_lof")
@@ -688,53 +688,53 @@ if __name__ == "__main__":
     GERPratedata, GERPelementdata, GERPrejectiondata = getGERPData(vatFile, chrs, args.elements, args.rates, args.gerp_cache, codingExonIntervals)
     segdupdata = getSegDupData(vatFile, args.segdup, chrs)
     
-    print 'Building CDS and exon dictionaries...'
+    print('Building CDS and exon dictionaries...')
     startTime = datetime.datetime.now()
     
     genomeSequences = getGenomeSequences(args.genome, chrs)
     transcript_strand, CDS, exon, stop_codon = getCDSAndExonDictionaries(args.annotation, chrs)
     
-    print str((datetime.datetime.now() - startTime).seconds) + " seconds."
+    print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
     
-    print 'Begin ALoFT Calculations and Write-Out (this may take a while)...'
+    print('Begin ALoFT Calculations and Write-Out (this may take a while)...')
             
     transcriptToProteinHash = getTranscriptToProteinHash(args.ensembl_table)
 
     ##{'1':{'ENSP...':'PF...\t4-25\t(ENSP...)'}, '2':{...}, ...}
-    chromosomesPFam = dict(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items() + getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"], 3).items() + getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items())
+    chromosomesPFam = dict(list(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items()) + list(getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"], 3).items()) + list(getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items()))
 
     #Scan ESP6500 (exome) fields
     exomesChromosomeInfo = getESP6500ExomeChromosomeInfo(args.exomes, chrs)
 
     #Scan 1000G file
-    print "Scanning 1000G file"
+    print("Scanning 1000G file")
     thousandGChromosomeInfo = get1000GChromosomeInfo(args.thousandG)
     
-    print "Reading PPI network"
+    print("Reading PPI network")
     ppi = getPPINetwork(args.ppi)
     
-    print "Reading recessive genes list"
+    print("Reading recessive genes list")
     rgenes = [line.strip() for line in open(args.recessive_genes)]
     
-    print "Reading dominant genes list"
+    print("Reading dominant genes list")
     dgenes = [line.strip() for line in open(args.dominant_genes)]
     
-    print "Reading haploinsufficiency disease genes list"
+    print("Reading haploinsufficiency disease genes list")
     haploscores = getScores(args.haplo_score, 1)
     
-    print "Reading LOF disease scores"
+    print("Reading LOF disease scores")
     LOFscores = getScores(args.LOF_score, 1)
     
-    print "Reading netSNP disease scores"
+    print("Reading netSNP disease scores")
     netSNPscores = getScores(args.netSNP_score, -1)
     
-    print "Reading pseudogene data"
+    print("Reading pseudogene data")
     numpseudogenes = getPseudogeneData(args.pseudogenes)
     
-    print "Reading paralog data"
+    print("Reading paralog data")
     paralogs = getParalogData(args.paralogs)
     
-    print "Reading dNdS data"
+    print("Reading dNdS data")
     dNdSmacaque, dNdSmouse = getdNdSData(args.dNdS)
 
     ppiHash = {"dgenes" : {}, "rgenes" : {}}
@@ -823,7 +823,7 @@ if __name__ == "__main__":
                         'GERPelement':'GERPelement='+GERPelementdata[counter],\
                         'GERPrejection':'GERPrejection='+GERPrejectiondata[counter],\
                         'Disorderprediction':'Disorderprediction='+disopredData,\
-                        'SegDup':'SegDup='+`segdupdata[counter].count('(')`}
+                        'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'Disorderprediction', 'SegDup']
     
             outdata["ancestral allele"] = ancesdata[counter]
@@ -839,7 +839,7 @@ if __name__ == "__main__":
             for thousandGTag in thousandGTags:
                 thousandGComponents.append(thousandGTag + "=NA")
             
-            if thousandGChromosomeInfo.has_key(chr_num) and thousandGChromosomeInfo[chr_num].has_key(start):
+            if chr_num in thousandGChromosomeInfo and start in thousandGChromosomeInfo[chr_num]:
                 for info in thousandGChromosomeInfo[chr_num][start].split(";"):
                     infotype = info.split('=')[0]
                     
@@ -854,7 +854,7 @@ if __name__ == "__main__":
                         thousandGComponents[thousandGComponentIndex] = newComponent
             
             infotypes += ['1000GPhase1'] + thousandGTags
-            if thousandGChromosomeInfo.has_key(chr_num) and thousandGChromosomeInfo[chr_num].has_key(start):
+            if chr_num in thousandGChromosomeInfo and start in thousandGChromosomeInfo[chr_num]:
                 lineinfo['1000GPhase1'] = '1000GPhase1=Yes'
             else:
                 lineinfo['1000GPhase1'] = '1000GPhase1=No'
@@ -937,7 +937,7 @@ if __name__ == "__main__":
                 outdata["haploinsufficiency disease score"] = haploscores[gene_name.upper()] if gene_name.upper() in haploscores else "N/A"
                 outdata["LOF disease score"] = LOFscores[gene_name.upper()] if gene_name.upper() in LOFscores else "N/A"
                 outdata["netSNP disease score"] = netSNPscores[gene_name.upper()] if gene_name.upper() in netSNPscores else "N/A"
-                outdata["# paralogs associated to gene"] = `len(paralogs[outdata["gene_id"].split('.')[0]])` if outdata["gene_id"].split('.')[0] in paralogs else "0"
+                outdata["# paralogs associated to gene"] = str(len(paralogs[outdata["gene_id"].split('.')[0]])) if outdata["gene_id"].split('.')[0] in paralogs else "0"
     
                 ##number of associated pseudogenes computation goes here
     
@@ -956,7 +956,7 @@ if __name__ == "__main__":
                         outdata["longest transcript?"] = "YES" if int(outdata["transcript length"])==longesttranscript else "NO"
                         ispositivestr = transcript_strand[transcript]=='+'
     
-                        outdata["# pseudogenes associated to transcript"] = `numpseudogenes[transcript]` if transcript in numpseudogenes else "0"
+                        outdata["# pseudogenes associated to transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
                         outdata["dN/dS (macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "N/A"
                         outdata["dN/dS (mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "N/A"
                         
@@ -983,12 +983,12 @@ if __name__ == "__main__":
     #########################################################
                         if not found:
                             spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
-                            spliceOutputFile.write("\tCDS match not found: pos="+`start`+' transcript='+transcript+'\n')
+                            spliceOutputFile.write("\tCDS match not found: pos="+str(start)+' transcript='+transcript+'\n')
                             continue
                         if ispositivestr:
                             if (end==0 and i==0) or (end==1 and i==len(l)-1):
                                 spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
-                                spliceOutputFile.write("\tno donor/acceptor pair: pos="+`start`+' transcript='+transcript+'\n')
+                                spliceOutputFile.write("\tno donor/acceptor pair: pos="+str(start)+' transcript='+transcript+'\n')
     #########################################################
                                 continue
                             if end==0:
@@ -1011,7 +1011,7 @@ if __name__ == "__main__":
                             if (end==1 and i==0) or (end==0 and i==len(l)-1):
     #########################################################
                                 spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
-                                spliceOutputFile.write("\tno donor/acceptor pair: pos="+`start`+' transcript='+transcript+'\n')
+                                spliceOutputFile.write("\tno donor/acceptor pair: pos="+str(start)+' transcript='+transcript+'\n')
     #########################################################
                                 continue
                             if end==0:
@@ -1035,7 +1035,7 @@ if __name__ == "__main__":
                             new = (new[0],compstr(new[1].upper()))
                         outdata["donor"] = donor
                         outdata["acceptor"] = acceptor
-                        outdata["intron length"] = `intronlength`
+                        outdata["intron length"] = str(intronlength)
                         ##write to output
                         if new[0]==0:
                             isCanonical = 'YES' if donor=='GT' else 'NO'
@@ -1072,13 +1072,13 @@ if __name__ == "__main__":
                             filters_failed = filters_failed+1
                             failed_filters.append('heavily_duplicated')
     
-                        outdata["# failed filters"] = `filters_failed`
+                        outdata["# failed filters"] = str(filters_failed)
                         outdata["filters failed"] = ','.join(failed_filters)
     					
     ########################################################
                         spliceOutputFile.write("\t"+"\t".join(outdata[i] for i in spliceparams)+"\n")
     #########################################################
-                        splicevariants[-1]+=':'+':'.join([donor+'/'+acceptor, isCanonical, otherCanonical,`intronlength`])
+                        splicevariants[-1]+=':'+':'.join([donor+'/'+acceptor, isCanonical, otherCanonical, str(intronlength)])
                         
                 else:   ##deletionFS, insertionFS, or prematureStop
                     LOFvariants.append(':'.join(details[:6]))
@@ -1114,7 +1114,7 @@ if __name__ == "__main__":
                         if segdupdata[counter].count('(') > 3:
                             filters_failed = filters_failed+1
                             failed_filters.append('heavily_duplicated')
-                        outdata["# failed filters"] = `filters_failed`
+                        outdata["# failed filters"] = str(filters_failed)
                         outdata["filters failed"] = ','.join(failed_filters)
 
                         vcfPfamDescriptions = {}
@@ -1138,7 +1138,7 @@ if __name__ == "__main__":
                         outdata["5' flanking splice site"] = "N/A"
                         outdata["3' flanking splice site"] = "N/A"
                         outdata["canonical?"] = "N/A"
-                        outdata["# pseudogenes associated to transcript"] = `numpseudogenes[transcript]` if transcript in numpseudogenes else "0"
+                        outdata["# pseudogenes associated to transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
                         outdata["dN/dS (macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "N/A"
                         outdata["dN/dS (mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "N/A"
                         
@@ -1254,7 +1254,7 @@ if __name__ == "__main__":
                                                             ##IS DELETION (WOULD BE SPLICE OVERLAP)
                         else:                               ##indel is after last junction, position unchanged
                             juncpos = exonprec[-1]
-                        outdata["indel position in CDS"] = `newCDSpos`
+                        outdata["indel position in CDS"] = str(newCDSpos)
                         
                         lastindex = -1 if ispositivestr else 0
                         indeltoend = exonprec[-1]+numberOfExonsHash[lastindex][1]-numberOfExonsHash[lastindex][0]+1 + diff - (newexonpos-1) ##CHECK THIS EXTRA +1
@@ -1283,7 +1283,7 @@ if __name__ == "__main__":
                         alt_aa = translate_aa(modCDSseq)
     
                         try:
-                            nextATG = `3*(alt_aa[:1].index('M')+1)`
+                            nextATG = str(3*(alt_aa[:1].index('M')+1))
                         except:
                             nextATG = 'N/A'
                         
@@ -1366,13 +1366,13 @@ if __name__ == "__main__":
                             lofPosition = newCDSpos
                         else:
                             lofPosition = stopCDS
-                        outdata["stop position in CDS"] = `lofPosition`
+                        outdata["stop position in CDS"] = str(lofPosition)
                         
     #########################################################
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
     #########################################################
                             
-                        LOFvariants[-1]+=':'+':'.join([splice1+'/'+splice2, `newCDSpos`, `lofPosition`, nextATG, NMD, incrcodingpos]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
+                        LOFvariants[-1]+=':'+':'.join([splice1+'/'+splice2, str(newCDSpos), str(lofPosition), nextATG, NMD, incrcodingpos]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
     
             vcfOutputFile.write('\t'.join(data[k] for k in range(0,7))+'\t')
             allvariants = []
@@ -1393,4 +1393,4 @@ if __name__ == "__main__":
     spliceOutputFile.close()
     vatFile.close()
     
-    print "Finished at: " + datetime.datetime.now().strftime("%H:%M:%S")
+    print("Finished at: " + datetime.datetime.now().strftime("%H:%M:%S"))

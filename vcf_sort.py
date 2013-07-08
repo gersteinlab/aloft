@@ -16,8 +16,8 @@ def sort_nicely(l):
 
 if __name__ == "__main__":
 	if len(sys.argv) < 3:
-		print "Usage: <input_path> <output_path>\n"
-		print "Takes input_path and sorts it numerically to output_path. Input is a VCF file."
+		print("Usage: <input_path> <output_path>\n")
+		print("Takes input_path and sorts it numerically to output_path. Input is a VCF file.")
 		sys.exit(1)
 	inputPath = sys.argv[1]
 	outputPath = sys.argv[2]
