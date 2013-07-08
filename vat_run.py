@@ -6,6 +6,8 @@ from subprocess import Popen, PIPE
 import re
 from vcf_sort import *
 
+VAT_BIN_PATH = "vat/vat-2.0.1-install/bin/"
+
 def run_vat(arguments):
 	#example as input path: '/net/gerstein/sb238/ftw/finnish/Finns.nogeno.vcf.gz'
 	# or a .vcf is fine too
@@ -100,9 +102,9 @@ def run_vat(arguments):
 	
 	print("Running snpMapper...")
 	try:
-		snpMapperPipe = Popen(['snpMapper', annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=snpInputFile)
+		snpMapperPipe = Popen([os.path.join(VAT_BIN_PATH, 'snpMapper'), annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=snpInputFile)
 	except:
-		print("ERROR: Failed to open snpMapper. Is snpMapper in your PATH?")
+		print("ERROR: Failed to open snpMapper")
 		sys.exit(1)
 	
 	numSnp = 0
@@ -124,9 +126,9 @@ def run_vat(arguments):
 	
 	print("Running indelMapper...")
 	try:
-		indelMapperPipe = Popen(['indelMapper', annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=indelInputFile)
+		indelMapperPipe = Popen([os.path.join(VAT_BIN_PATH, 'indelMapper'), annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=indelInputFile)
 	except:
-		print("ERROR: Failed to open indelMapper. Is indelMapper in your PATH?")
+		print("ERROR: Failed to open indelMapper.")
 		sys.exit(1)
 	
 	for line in indelMapperPipe.stdout:
