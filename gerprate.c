@@ -1,16 +1,8 @@
-// To compile on Louise:
-// gcc gerprate.c -IPython-2.7.3/ -IPython-2.7.3/Include/ -LPython-2.7.3/ -l python2.7 -lpthread -lm -ldl -lutil -fPIC -shared -o gerprate.so
-// For platforms where python-config exists, you can get the list of libraries to link via python-config --libs
-
-// when building python, you want to pass CFLAGS=-fPIC to configure
-
-#ifdef __APPLE__
-    #include <Python/Python.h>
-#else
-    #include "Python.h"
-#endif
-
-static char isByteOrderLittleEndian = 0;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <limits.h>
 
 // Returns 1 if the machine is little endian, otherwise 0 if big endian
 static char isLittleEndian(void)
@@ -19,36 +11,65 @@ static char isLittleEndian(void)
     return (*((unsigned char *)(&testInteger)) == 1);
 }
 
-static PyObject *buildList(PyObject *self, PyObject *args)
+static void writeFloat(FILE *file, char isLittleEndianByteOrder, float data)
 {
-    const char *filepath = NULL;
-    const char *outfilepath = NULL;
-    if (!PyArg_ParseTuple(args, "ss", &filepath, &outfilepath))
+    if (isLittleEndianByteOrder)
     {
-        printf("Failed to parse arguments\n");
-        return NULL;
+        if (fwrite(&data, sizeof(data), 1, file) < 1)
+        {
+            printf("Failed to write float to file..\n");
+            exit(1);
+        }
     }
+    else
+    {
+        float value = data;
+        ((uint8_t *)&value)[0] = ((uint8_t *)&data)[3];
+        ((uint8_t *)&value)[1] = ((uint8_t *)&data)[2];
+        ((uint8_t *)&value)[2] = ((uint8_t *)&data)[1];
+        ((uint8_t *)&value)[3] = ((uint8_t *)&data)[0];
+        
+        if (fwrite(&value, sizeof(float), 1, file) < 1)
+        {
+            printf("Failed to write little endian data to file..\n");
+            exit(1);
+        }
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc < 3)
+    {
+        printf("Usage: %s <gerp_input_file> <cache_output_file>\n", argv[0]);
+        exit(1);
+    }
+    
+    const char *filepath = argv[1];
+    const char *outfilepath = argv[2];
+
+    char isLittleEndianByteOrder = isLittleEndian();
     
     FILE *file = fopen(filepath, "r");
     if (!file)
     {
         printf("Failed to open file %s\n", filepath);
-        return NULL;
+        exit(1);
     }
-    
-    unsigned int listMaxCount = 1000000000;
-    
-    float *list = malloc(sizeof(float) * listMaxCount);
-    if (!list)
+
+    char tempPath[PATH_MAX+1];
+    strncpy(tempPath, outfilepath, strlen(outfilepath)+1);
+    strcat(tempPath, "_temp");
+
+    FILE *cachedFile = fopen(tempPath, "w");
+    if (!cachedFile)
     {
-        printf("Failed to allocate enough memory for list\n");
-        fclose(file);
-        return NULL;
+        printf("Failed to open file for writing: %s\n", tempPath);
+        exit(1);
     }
-    
+
     // start at index 1 to match line numbers
-    list[0] = 0.0;
-    unsigned int listIndex = 1;
+    writeFloat(cachedFile, isLittleEndianByteOrder, 0.0);
     
     // read file in chunks
     char buffer[65536];
@@ -83,20 +104,7 @@ static PyObject *buildList(PyObject *self, PyObject *args)
             // go past '\t'
             data++;
             
-            if (listIndex >= listMaxCount)
-            {
-                listMaxCount *= 2;
-                list = realloc(list, sizeof(float) * listMaxCount);
-                if (!list)
-                {
-                    printf("realloc list on %s failed\n", filepath);
-                    fclose(file);
-                    return NULL;
-                }
-            }
-            
-            list[listIndex] = atof(data);
-            listIndex++;
+            writeFloat(cachedFile, isLittleEndianByteOrder, atof(data));
             
             while (data < lastNewline && *data != '\n')
             {
@@ -108,73 +116,14 @@ static PyObject *buildList(PyObject *self, PyObject *args)
         }
     }
     
-    char tempPath[PATH_MAX+1];
-    strncpy(tempPath, outfilepath, strlen(outfilepath)+1);
-    strcat(tempPath, "_temp");
-    
-    FILE *cachedFile = fopen(tempPath, "w");
-    if (cachedFile)
+    if (rename(tempPath, outfilepath) < 0)
     {
-        if (isByteOrderLittleEndian)
-        {
-            if (fwrite(list, sizeof(float), listIndex, cachedFile) < listIndex)
-            {
-                printf("Failed to write file %s\n", tempPath);
-                free(list);
-                return NULL;
-            }
-        }
-        else
-        {
-            assert(sizeof(float) == 4);
-            
-            int i;
-            for (i = 0; i < listIndex; i++)
-            {
-                float value = list[i];
-                ((uint8_t *)&value)[0] = ((uint8_t *)&list[i])[3];
-                ((uint8_t *)&value)[1] = ((uint8_t *)&list[i])[2];
-                ((uint8_t *)&value)[2] = ((uint8_t *)&list[i])[1];
-                ((uint8_t *)&value)[3] = ((uint8_t *)&list[i])[0];
-                
-                if (fwrite(&value, sizeof(float), 1, cachedFile) < 1)
-                {
-                    printf("Failed to write data to file %s\n", tempPath);
-                    free(list);
-                    return NULL;
-                }
-            }
-        }
-        
-        fclose(cachedFile);
-        
-        if (rename(tempPath, outfilepath) < 0)
-        {
-            printf("Failed to move %s to %s\n", tempPath, outfilepath);
-            free(list);
-            return NULL;
-        }
-    }
-    else
-    {
-        printf("Writing out cached file to %s failed\n", outfilepath);
-        free(list);
-        return NULL;
+        printf("Failed to move %s to %s\n", tempPath, outfilepath);
+        exit(1);
     }
 
-    free(list);
+    fclose(file);
+    fclose(cachedFile);
     
-    return Py_BuildValue("");
-}
-
-PyMethodDef gerprate_methods[] =
-{
-    {"buildList", (PyCFunction)buildList, METH_VARARGS, NULL},
-    {NULL, NULL, 0, NULL},
-};
-
-PyMODINIT_FUNC initgerprate(void)
-{
-    Py_InitModule("gerprate", gerprate_methods);
-    isByteOrderLittleEndian = isLittleEndian();
+    return 0;
 }

@@ -1,6 +1,8 @@
 import os
 import re
 import struct
+import subprocess
+import sys
 
 def getRejectionElementIntersectionData(codingExonIntervals, GERPelements, GERPelementIndex, chromosome, start, transcript, direction):
 	rejectedElements = []
@@ -131,17 +133,21 @@ def buildGerpRates(GERPratepath, GERPratecachepath, chromosome):
 	ratefilepath = os.path.join(GERPratepath,'chr' +chromosome+'.maf.rates')
 	cachepath = os.path.join(GERPratecachepath, chromosome+'.maf.rates_cached')
 	try:
-		#build cache file if it does not already exist using gerprate.so module
+		#build cache file if it does not already exist using our gerprate utility
 		if not os.path.exists(cachepath):
-	 		#trying to import our module more than once won't cause any harm
-	 		import gerprate
-	 		gerprate.buildList(ratefilepath, cachepath)
+			programName = "./gerprate"
+			exit_status = subprocess.check_call([programName, ratefilepath, cachepath])
+			if exit_status != 0:
+				print "ERROR: Exit status for following command was nonzero: %s %s %s" % (programName, ratefilepath, cachepath)
+				print "Was aloft properly installed?"
+				sys.exit(1)
 	 	return open(cachepath)
 	except:
 		print ratefilepath + " could not be opened."
 		print "Exiting program."
 		sys.exit(1)
 
+#the gerp cache files are 1-indexed
 def getGerpScore(cacheFile, start, length):
 	cacheFile.seek(start*4, 0)
 	GERPrates = struct.unpack("<%df" % (length), cacheFile.read(length*4))
