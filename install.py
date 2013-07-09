@@ -17,5 +17,5 @@ shutil.move(os.path.join(networkDirectory, networkModule), networkModule)
 
 shutil.rmtree(networkDirectory)
 
-#os.chdir('vat')
-#buildVat()
+os.chdir('vat')
+buildVat()
