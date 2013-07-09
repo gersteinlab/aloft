@@ -141,7 +141,7 @@ def buildGerpRates(GERPratepath, GERPratecachepath, chromosome):
 				print("ERROR: Exit status for following command was nonzero: %s %s %s" % (programName, ratefilepath, cachepath))
 				print("Was aloft properly installed?")
 				sys.exit(1)
-	 	return open(cachepath)
+		return open(cachepath)
 	except:
 		print(ratefilepath + " could not be opened.")
 		print("Exiting program.")
