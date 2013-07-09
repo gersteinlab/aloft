@@ -141,7 +141,7 @@ def buildGerpRates(GERPratepath, GERPratecachepath, chromosome):
 				print("ERROR: Exit status for following command was nonzero: %s %s %s" % (programName, ratefilepath, cachepath))
 				print("Was aloft properly installed?")
 				sys.exit(1)
-		return open(cachepath)
+		return open(cachepath, "rb")
 	except:
 		print(ratefilepath + " could not be opened.")
 		print("Exiting program.")
@@ -158,7 +158,7 @@ def findGERPelementIndex(elements, start, end):
 	low = 0
 	high = len(elements) - 1
 	while low<=high:
-		mid = (low+high)/2
+		mid = (low+high)//2
 		if start > elements[mid][1]:
 			low = mid+1
 		elif end < elements[mid][0]:

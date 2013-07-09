@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import sys, os, re, string, array, datetime
-import networkx as nx
 from optparse import OptionParser
 from subprocess import Popen, PIPE
 from vat_run import *
@@ -14,6 +13,9 @@ NMD_THRESHOLD = 50
 
 ##Boolean to skip network calculations, since they could take a very very long time
 SHOULD_SKIP_NETWORK_CALCULATIONS = True
+
+if not SHOULD_SKIP_NETWORK_CALCULATIONS:
+    import networkx as nx
 
 def abortIfPathDoesNotExist(path, shouldShowHelp=False):
     if path is not None and not os.path.exists(path):
@@ -240,7 +242,7 @@ def getSegDupData(vatFile, segdupPath, chrs):
         ##find right endpoint of interval search 
         low = 0; high = len(segdups[chr_num])-1
         while low<=high:
-            mid = (low+high)/2
+            mid = (low+high)//2
             if end<segdups[chr_num][mid][0]:
                 high = mid-1
             elif mid == len(segdups[chr_num])-1 or end<segdups[chr_num][mid+1][0]:
@@ -252,7 +254,7 @@ def getSegDupData(vatFile, segdupPath, chrs):
         ##find left endpoint of interval search
         low = 0; high = len(segdups[chr_num])-1
         while low<=high:
-            mid = (low+high)/2
+            mid = (low+high)//2
             if start>segdups[chr_num][mid][1] and start>segdupmax[chr_num][mid]:
                 low = mid+1
             elif mid==0:
@@ -385,7 +387,8 @@ def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, doma
             continue
 
         linesToSkip = 2
-        for line in inputFile:
+        for lineBytes in inputFile:
+            line = lineBytes.decode()
             if linesToSkip > 0:
                 linesToSkip -= 1
             else:
@@ -710,8 +713,10 @@ if __name__ == "__main__":
     print("Scanning 1000G file")
     thousandGChromosomeInfo = get1000GChromosomeInfo(args.thousandG)
     
-    print("Reading PPI network")
-    ppi = getPPINetwork(args.ppi)
+    if not SHOULD_SKIP_NETWORK_CALCULATIONS:
+        print("Reading PPI network")
+        ppi = getPPINetwork(args.ppi)
+        ppiHash = {"dgenes" : {}, "rgenes" : {}} #for caching
     
     print("Reading recessive genes list")
     rgenes = [line.strip() for line in open(args.recessive_genes)]
@@ -736,8 +741,6 @@ if __name__ == "__main__":
     
     print("Reading dNdS data")
     dNdSmacaque, dNdSmouse = getdNdSData(args.dNdS)
-
-    ppiHash = {"dgenes" : {}, "rgenes" : {}}
 
     #params for PF, SSF, SM, etc
     #this variable could use a better name since it's not just PFAM, but not sure what to call it

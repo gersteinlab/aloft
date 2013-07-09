@@ -39,7 +39,8 @@ def run_vat(arguments):
 	foundID = True
 	numberOfMissingComponents = 0
 	normalHeaderComponents = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO']
-	for line in inputFile:
+	for lineBytes in inputFile:
+		line = lineBytes.decode()
 		lineComponents = line.rstrip("\n").rstrip("\t").split("\t")
 
 		if line.startswith("#"):
@@ -113,7 +114,8 @@ def run_vat(arguments):
 	sortedLines = []
 	
 	vcfOutputFile = open(vatOutputPath, "w")
-	for line in snpMapperPipe.stdout:
+	for lineBytes in snpMapperPipe.stdout:
+		line = lineBytes.decode()
 		if line.startswith("#"):
 			vcfOutputFile.write(line)
 		else:
@@ -131,7 +133,8 @@ def run_vat(arguments):
 		print("ERROR: Failed to open indelMapper.")
 		sys.exit(1)
 	
-	for line in indelMapperPipe.stdout:
+	for lineBytes in indelMapperPipe.stdout:
+		line = lineBytes.decode()
 		if not line.startswith("#"):
 			sortedLines.append(line.rstrip("\n"))
 			numIndel += 1

@@ -1,6 +1,12 @@
-import string
-
-comptable = string.maketrans("ATGC", "TACG")
+#maketrans is not a part of string module in Python3
+#handle python 2.x and 3.x differently
+try:
+    #2.x
+    import string
+    comptable = string.maketrans("ATGC", "TACG")
+except AttributeError:
+    #3.x
+    comptable = str.maketrans("ATGC", "TACG")
 
 code={'TTT':'F', 'TTC':'F', 'TTA':'L', 'TTG':'L',\
       'CTT':'L', 'CTC':'L', 'CTA':'L', 'CTG':'L',\
