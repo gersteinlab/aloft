@@ -1120,22 +1120,6 @@ if __name__ == "__main__":
                             failed_filters.append('heavily_duplicated')
                         outdata["# failed filters"] = str(filters_failed)
                         outdata["filters failed"] = ','.join(failed_filters)
-
-                        vcfPfamDescriptions = {}
-                        if "prematureStop" in variant:
-                            transcriptID = transcript.split(".")[0]
-                            stopPosition = int(entry[2].split('_')[2])
-
-                            for paramKey in pfamParams:
-                                newDescriptions = getPfamDescription(transcriptToProteinHash, chr_num, transcriptID, stopPosition, chromosomesPFam, paramKey)
-                                vcfPfamDescriptions[paramKey] = newDescriptions[0]
-                                outdata[paramKey] = newDescriptions[1][0]
-                                outdata[pfamParamsWithTruncations[pfamParamsWithTruncations.index(paramKey)+1]] = newDescriptions[1][1]
-                        else:
-                            for paramKey in pfamParams:
-                                vcfPfamDescriptions[paramKey] = 'N/A'
-                                outdata[paramKey] = 'N/A'
-                                outdata[pfamParamsWithTruncations[pfamParamsWithTruncations.index(paramKey)+1]] = 'N/A'
     
                         outdata["indel position in CDS"] = "N/A"
                         outdata["stop position in CDS"] = "N/A"
@@ -1371,6 +1355,17 @@ if __name__ == "__main__":
                         else:
                             lofPosition = stopCDS
                         outdata["stop position in CDS"] = str(lofPosition)
+
+                        vcfPfamDescriptions = {}
+                        if "prematureStop" in variant:
+                            stopPosition = (lofPosition-1) // 3 + 1
+                        else:
+                            stopPosition = lofPosition // 3
+                        for paramKey in pfamParams:
+                            newDescriptions = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPosition, chromosomesPFam, paramKey)
+                            vcfPfamDescriptions[paramKey] = newDescriptions[0]
+                            outdata[paramKey] = newDescriptions[1][0]
+                            outdata[pfamParamsWithTruncations[pfamParamsWithTruncations.index(paramKey)+1]] = newDescriptions[1][1]
                         
     #########################################################
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
