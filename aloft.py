@@ -182,11 +182,12 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
                 GERPelementdata.append(str(GERPelements[elementIndex]))
 
                 rejectedElements = []
-                if 'prematureStop' in line:
-                    prematureStopIndex = line.index('prematureStop')
-                    lineComponents = line[prematureStopIndex-2:].split(":")
-                    direction = lineComponents[0]
-                    transcript = lineComponents[4]
+                if 'prematureStop' in line or 'insertionFS' in line or 'deletionFS' in line:
+                    variantIndex = line.index("VA=") + len("VA=")
+                    variants = line[variantIndex:].split(",")
+                    variant = variants[0].split(":")
+                    direction = variant[3]
+                    transcript = variant[7]
 
                     rejectedElements = getRejectionElementIntersectionData(codingExonIntervals, GERPelements, elementIndex, chr_num, start, transcript, direction)
 
