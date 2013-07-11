@@ -19,8 +19,8 @@ if __name__ == "__main__":
 		print("Usage: <input_path> <output_path>\n")
 		print("Takes input_path and sorts it numerically to output_path. Input is a VCF file.")
 		sys.exit(1)
-	inputPath = os.path.expanduser(sys.argv[1])
-	outputPath = os.path.expanduser(sys.argv[2])
+	inputPath = sys.argv[1]
+	outputPath = sys.argv[2]
 	
 	headerLines = []
 	regularLines = []
