@@ -12,10 +12,10 @@ def run_vat(arguments):
 	#example as input path: '/net/gerstein/sb238/ftw/finnish/Finns.nogeno.vcf.gz'
 	# or a .vcf is fine too
 	print('Parsing VCF file...')
-	inputPath = arguments[1]
-	vatOutputPath = arguments[2]
-	annotationIntervalPath = arguments[3]
-	annotationSequencePath = arguments[4]
+	inputPath = os.path.expanduser(arguments[1])
+	vatOutputPath = os.path.expanduser(arguments[2])
+	annotationIntervalPath = os.path.expanduser(arguments[3])
+	annotationSequencePath = os.path.expanduser(arguments[4])
 	
 	try:
 		open(inputPath)
