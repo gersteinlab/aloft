@@ -1362,7 +1362,7 @@ if __name__ == "__main__":
                         outdata["stop position in CDS"] = str(lofPosition)
 
                         vcfPfamDescriptions = {}
-                        if "prematureStop" in line:
+                        if "prematureStop" in variant:
                             stopPositionInAminoSpace = int(entry[2].split('_')[2])
                         else:
                             stopPositionInAminoSpace = (lofPosition-1) // 3 + 1
