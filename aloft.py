@@ -79,6 +79,11 @@ def parseCommandLineArguments():
 
     args = parser.parse_args()
 
+    #Expand ~ to user's home directory for all argument paths
+    for arg, path in vars(args).items():
+        if path is not None:
+            setattr(args, arg, os.path.expanduser(path))
+
     if not args.vcf and not args.vat:
         parser.print_help()
         print("Error: Neither a VCF or VAT file was specified. You must supply one of these as your input file")
