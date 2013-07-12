@@ -58,18 +58,8 @@ def getRejectionElementIntersectionData(codingExonIntervals, GERPelements, GERPe
 
 	return rejectedElements
 
-#if transcriptID isn't passed in, and it's a prematureStop, the function will parse it
-#line can be None if transcriptID is supplied and it's not a premature stop
-def getDisopredDataFromLine(disopredSequencesPath, line, transcriptID=None):
+def getDisopredData(disopredSequencesPath, transcriptID, stopPosition):
 	newData = "."
-	if line and 'prematureStop' in line:
-		prematureStopIndex = line.index('prematureStop')
-		lineComponents = line[prematureStopIndex:].split(":")
-		if not transcriptID:
-			transcriptID = lineComponents[3]
-		stopPosition = int(lineComponents[4].split("_")[2])
-	else:
-		stopPosition = None
 	try:
 		disoFilePath = os.path.join(disopredSequencesPath, "%s.diso" % (transcriptID))
 		disoFile = open(disoFilePath)

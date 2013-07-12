@@ -763,8 +763,8 @@ if __name__ == "__main__":
                 "causes NMD?", "5' flanking splice site",\
                 "3' flanking splice site", "canonical?",\
                 "# failed filters", "filters failed",\
-                "ancestral allele", "GERP score", "GERP element", "GERP rejection", "Disorder prediction",\
-                "segmental duplications"] + pfamParamsWithTruncations +\
+                "ancestral allele", "GERP score", "GERP element", "GERP rejection",\
+                "segmental duplications", "Disorder prediction"] + pfamParamsWithTruncations +\
                 ["1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
@@ -779,8 +779,8 @@ if __name__ == "__main__":
                 "SNP in canonical site?", "other splice site canonical?",\
                 "SNP location", "alt donor", "alt acceptor",\
                 "intron length", "# failed filters", "filters failed",\
-                "GERP score", "GERP element", "GERP rejection", "Disorder prediction",\
-                "segmental duplications"] + pfamParamsWithTruncations +\
+                "GERP score", "GERP element", "GERP rejection",\
+                "segmental duplications", "Disorder prediction"] + pfamParamsWithTruncations +\
                 ["1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
@@ -822,8 +822,6 @@ if __name__ == "__main__":
                 ancestral = "Alt"
             else:
                 ancestral = "Neither"
-    
-            disopredData = getDisopredDataFromLine(args.disopred_sequences, line)
             
             ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
             lineinfo = {'AA':'AA='+ancesdata[counter],\
@@ -831,15 +829,13 @@ if __name__ == "__main__":
                         'GERPscore':'GERPscore='+GERPratedata[counter],\
                         'GERPelement':'GERPelement='+GERPelementdata[counter],\
                         'GERPrejection':'GERPrejection='+GERPrejectiondata[counter],\
-                        'Disorderprediction':'Disorderprediction='+disopredData,\
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
-            infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'Disorderprediction', 'SegDup']
+            infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'SegDup']
     
             outdata["ancestral allele"] = ancesdata[counter]
             outdata["GERP score"] = GERPratedata[counter]
             outdata["GERP element"] = GERPelementdata[counter]
             outdata["GERP rejection"] = GERPrejectiondata[counter]
-            outdata["Disorder prediction"] = disopredData
             outdata["segmental duplications"] = '.' if segdupdata[counter].count('(') == '0' else segdupdata[counter]
     
             #Adding 1000G fields
@@ -1372,11 +1368,14 @@ if __name__ == "__main__":
                             outdata[paramKey] = newDescriptions[1][0]
                             outdata[pfamParamsWithTruncations[pfamParamsWithTruncations.index(paramKey)+1]] = newDescriptions[1][1]
                         
+                        disorderPredictionData = getDisopredData(args.disopred_sequences, transcript, stopPositionInAminoSpace)
+                        outdata["Disorder prediction"] = disorderPredictionData
+
     #########################################################
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
     #########################################################
                             
-                        LOFvariants[-1]+=':'+':'.join([splice1+'/'+splice2, str(newCDSpos), str(lofPosition), nextATG, NMD, incrcodingpos]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
+                        LOFvariants[-1]+=':'+':'.join([splice1+'/'+splice2, str(newCDSpos), str(lofPosition), nextATG, NMD, incrcodingpos, disorderPredictionData]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
     
             vcfOutputFile.write('\t'.join(data[k] for k in range(0,7))+'\t')
             allvariants = []
