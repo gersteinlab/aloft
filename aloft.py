@@ -125,7 +125,7 @@ def getAncestors(ancespath):
             sys.exit(1)
         print('Reading ancestral chromosome '+i+'...')
         f.readline()    ##first >**** line
-        ancestor[i]='0'+''.join(line.strip() for line in f)
+        ancestor[i] = '0' + f.read().replace("\n", "")
         f.close()
     return ancestor
 
@@ -430,7 +430,7 @@ def getGenomeSequences(genomePath, chrs):
             sys.exit(1)
         print('Reading chromosome '+i+'...')
         f.readline()    ##first >chr* line
-        genomeSequences[i]='0'+''.join(line.strip() for line in f)
+        genomeSequences[i] = '0' + f.read().replace("\n", "")
         f.close()
     return genomeSequences
 
