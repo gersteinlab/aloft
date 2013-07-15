@@ -654,6 +654,220 @@ def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
     numberOfNeighbors = sum(1 for gene in genes if gene in ppi.neighbors(gene_name))
     return dist, numberOfNeighbors
 
+def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, stop_codon, genomeSequences):
+    nmdHash = {"NMD" : None, 'splice1' : None, 'splice2' : None, 'canonical' : None, 'newCDSpos' : None, 'stopCDS' : None, 'nextATG' : None, 'incrcodingpos' : None, 'issinglecodingexon' : None}
+
+    l = sorted(CDS[chr_num][transcript])
+    if len(l)==0:
+        return nmdHash
+    nmdHash['issinglecodingexon'] = "YES" if len(l)==1 else "NO"
+    numberOfExonsHash = sorted(exon[chr_num][transcript])
+    CDSseq = ''; exonseq = ''
+    CDSprec = []; exonprec = []             ## prec holds # preceding nucleotides
+    ispositivestr = transcript_strand[transcript]=='+'
+    
+    ## build spliced exon and CDS sequences and maintain coordinate wrt transcript
+    tot = 0
+    for j in range(0,len(l)):
+        if ispositivestr:
+            i=j
+            CDSseq+=genomeSequences[chr_num][l[i][0]:l[i][1]+1].upper()
+        else:
+            i=len(l)-j-1
+            CDSseq+=compstr(genomeSequences[chr_num][l[i][0]:l[i][1]+1].upper())
+        CDSprec.append(tot)              ## stores in index i
+        tot += l[i][1]+1-l[i][0]
+    ## add on STOP sequence if annotated
+    try:
+        s = stop_codon[chr_num][transcript]
+    except:
+        s=(2,0)
+    if ispositivestr:
+        CDSseq+=genomeSequences[chr_num][s[0]:s[1]+1].upper()
+    else:
+        CDSseq+=compstr(genomeSequences[chr_num][s[0]:s[1]+1].upper())
+    
+    tot = 0
+    for j in range(0,len(numberOfExonsHash)):
+        if ispositivestr:
+            i=j
+            exonseq+=genomeSequences[chr_num][numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper()
+        else:
+            i=len(numberOfExonsHash)-j-1
+            exonseq+=compstr(genomeSequences[chr_num][numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper())
+        exonprec.append(tot)            ## stores in index i
+        tot += numberOfExonsHash[i][1]+1-numberOfExonsHash[i][0]
+    
+    ##build coding exons IN ORDER OF TRANSLATION, i.e. start->stop
+    coding_exons = []           ## flag coding exons (corresponds to exonpos)
+    CDS2ex = {}                 ## maps CDSpos to exonpos    
+    for i in range(0,len(numberOfExonsHash)):   ## i = exonpos
+        k = i if ispositivestr else len(numberOfExonsHash)-i-1  ## k = exonindex
+        coding_exons.append(0)
+        for j in range(0,len(l)):   ## j = CDSindex
+            if l[j][0]>=numberOfExonsHash[k][0] and l[j][1]<=numberOfExonsHash[k][1]:
+                coding_exons[i] = 1
+                j2 = j if ispositivestr else len(l)-j-1     ## j2 = CDSpos
+                CDS2ex[j2]=i
+                break
+                
+    ncodingexons = sum(coding_exons)    ## number of coding exons
+    try:
+        UTR=len(numberOfExonsHash)-(coding_exons.index(1)+ncodingexons) ## number of 3'UTR exons
+    except:     ## no coding exons
+        UTR=0
+    
+    ## find CDS and exon interval numbers
+    flag1=0
+    flag2=0
+    CDSpos=-1        ## this gives the CDSpos 0-based: i.e. first CDS is index 0
+    for i in range(0,len(l)):
+        if start>=l[i][0] and start<=l[i][1]:
+            CDSpos = i if ispositivestr else len(l)-i-1
+        if start>=l[i][0] and end<=l[i][1]:
+            flag1 = 1   ##indel is completely contained in CDS
+            break
+    
+    exonpos=-1       ## this gives the exonpos also 0-based
+    for i in range(0,len(numberOfExonsHash)):
+        if start>=numberOfExonsHash[i][0] and start<=numberOfExonsHash[i][1]:
+            exonpos = i if ispositivestr else len(numberOfExonsHash)-i-1
+        if start>=numberOfExonsHash[i][0] and end<=numberOfExonsHash[i][1]:
+            flag2 = 1   ##indel is completely contained in exon
+            break
+    if CDSpos==-1 or exonpos==-1:   ##start position of indel was not in ANY intervals
+        nmdHash['NMD'] = "no exons or no CDS containing start of indel"
+        return nmdHash
+    
+    exonindex= exonpos if ispositivestr else len(numberOfExonsHash)-exonpos-1
+    CDSindex= CDSpos if ispositivestr else len(l)-CDSpos-1
+    
+    codingpos = exonpos-coding_exons.index(1)      ## this gives coding exon position 0-based
+    
+    diff = len(subst)-len(data[3])
+    if ispositivestr:
+        ## 1-based position of indel in CDS coordinates
+        newCDSpos = CDSprec[CDSpos] + start - l[CDSindex][0] + 1
+        ## 1-based position of indel in exon coordinates
+        newexonpos = exonprec[exonpos] + start - numberOfExonsHash[exonindex][0] + 1
+    else:
+        newCDSpos = CDSprec[CDSpos] + l[CDSindex][1] - start + 1
+        newexonpos = exonprec[exonpos] + numberOfExonsHash[exonindex][1] - start + 1
+    ## # of exon nucleotides before e-e junction
+    if newexonpos-1<exonprec[-1]:       ##indel being before last e-e junction shifts e-e position
+        juncpos = exonprec[-1]+diff     ##WRONG IF START POSITION IS LAST NUCLEOTIDE BEFORE E-E AND
+                                        ##IS DELETION (WOULD BE SPLICE OVERLAP)
+    else:                               ##indel is after last junction, position unchanged
+        juncpos = exonprec[-1]
+    
+    nmdHash['newCDSpos'] = newCDSpos
+    
+    lastindex = -1 if ispositivestr else 0
+    indeltoend = exonprec[-1]+numberOfExonsHash[lastindex][1]-numberOfExonsHash[lastindex][0]+1 + diff - (newexonpos-1) ##CHECK THIS EXTRA +1
+    if flag1==0:
+        nmdHash['NMD'] = "no CDS regions completely containing variant"
+        return nmdHash
+
+    if flag2==0:
+        nmdHash['NMD'] = "no exon regions completely containing variant"
+        return nmdHash
+        
+    if ispositivestr:
+        modCDSseq = CDSseq[0:newCDSpos-1]
+        modCDSseq += subst
+        modCDSseq += CDSseq[newCDSpos-1+len(data[3]):]
+    else:
+        modCDSseq = CDSseq[0:newCDSpos-len(data[3])]
+        modCDSseq += compstr(subst)
+        modCDSseq += CDSseq[newCDSpos:]
+    ref_aa = translate_aa(CDSseq)
+    alt_aa = translate_aa(modCDSseq)
+    
+    try:
+        nextATG = str(3*(alt_aa[:1].index('M')+1))
+    except:
+        nextATG = 'N/A'
+
+    nmdHash['nextATG'] = nextATG
+    
+    ## # of CDS nucleotides before stop codon in alternate sequence
+    try:
+        stopCDS = 3*alt_aa.index('*')
+        nmdHash['stopCDS'] = stopCDS
+    except:
+        nmdHash['NMD'] = "No stop codon found in alt_aa"
+        return nmdHash
+    
+    ## stopexon is # of exon nucleotides preceding first nucleotide of stop codon
+    ## increxon is the exon position (not exon index) where the new stop occurs
+    
+    ## if is in very last CDS or STOP is in current CDS
+    if CDSpos==len(l)-1 or (stopCDS>=CDSprec[CDSpos] and stopCDS<CDSprec[CDSpos+1]+diff):
+        increxon = exonpos
+        if ispositivestr:
+            stopexon = exonprec[exonpos]+l[CDSpos][0]-numberOfExonsHash[exonpos][0]+stopCDS-CDSprec[CDSpos]
+        else:
+            stopexon = exonprec[exonpos]+numberOfExonsHash[exonindex][1]-l[CDSindex][1]+stopCDS-CDSprec[CDSpos]
+    else:
+        incrCDS = CDSpos
+        while incrCDS<len(l):
+            increxon = CDS2ex[incrCDS]
+            if incrCDS==len(l)-1 or (stopCDS>=CDSprec[incrCDS]+diff and stopCDS<CDSprec[incrCDS+1]+diff):
+                if ispositivestr:
+                    stopexon = exonprec[increxon]+l[incrCDS][0]-numberOfExonsHash[increxon][0]+stopCDS-(CDSprec[incrCDS]+diff)
+                else:
+                    stopexon = exonprec[increxon]+numberOfExonsHash[len(numberOfExonsHash)-increxon-1][1]-l[len(l)-incrCDS-1][1]+stopCDS-(CDSprec[incrCDS]+diff)
+                break
+            incrCDS+=1
+    incrcoding = sum(coding_exons[:increxon])   ##incrcoding is the coding exon position where new stop occurs
+    if ncodingexons == 1:
+        incrcodingpos = 'single'
+    elif incrcoding==0:
+        incrcodingpos = 'first'
+    elif incrcoding==ncodingexons-1:
+        incrcodingpos = 'last'
+    else:
+        incrcodingpos = 'middle'
+
+    nmdHash['incrcodingpos'] = incrcodingpos
+    
+    ## distances are calculated as follows: TAG_ _| is 5 from exon-exon junction/end of transcript etc.
+    ## end of transcript is denoted as end of last exon.
+    
+    ##number of nucleotides in all exons
+    transcriptend = exonprec[-1]+numberOfExonsHash[lastindex][1]-numberOfExonsHash[lastindex][0]+1 + diff    ## in exon coordinates
+    stoptoend = transcriptend - stopexon
+    stoptojunc = juncpos - stopexon
+    indeltoend = transcriptend - (newexonpos-1)
+    nmdHash['NMD'] = 'YES' if stoptojunc >= nmdThreshold else 'NO'
+    
+    ##exon index where new stop occurs
+    increxonindex = increxon if ispositivestr else len(numberOfExonsHash)-increxon-1
+    
+    if increxon==0:
+        splice1='.'     ## 5' flanking splice site (acceptor)
+    else:
+        if ispositivestr:
+            splice1=genomeSequences[chr_num][numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper()
+        else:
+            splice1=compstr(genomeSequences[chr_num][numberOfExonsHash[increxonindex][1]+1:numberOfExonsHash[increxonindex][1]+3].upper())                
+    if increxon==len(numberOfExonsHash)-1:
+        splice2='.'     ## 3' flanking splice site (donor)
+    else:
+        if ispositivestr:
+            splice2=genomeSequences[chr_num][numberOfExonsHash[increxon][1]+1:numberOfExonsHash[increxon][1]+3].upper()
+        else:
+            splice2=compstr(genomeSequences[chr_num][numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper())
+        
+    canonical = (splice1=='AG' or splice1=='.') and (splice2=='GT' or splice2=='.')
+    canonical = 'YES' if canonical else 'NO'
+
+    nmdHash['splice1'] = splice1
+    nmdHash['splice2'] = splice2
+    nmdHash['canonical'] = canonical
+
+    return nmdHash
+
 if __name__ == "__main__":
     print("Starting at: " + datetime.datetime.now().strftime("%H:%M:%S"))
 
@@ -1138,230 +1352,32 @@ if __name__ == "__main__":
                         lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in basicparams))
     #########################################################
                         
-                        l = sorted(CDS[chr_num][transcript])
-                        if len(l)==0:
+                        nmdData = findNMDForIndelsAndPrematureStop(NMD_THRESHOLD, chr_num, transcript, exon, stop_codon, genomeSequences)
+
+                        if nmdData['NMD'] is None:
                             continue
-                        outdata["is single coding exon?"] = "YES" if len(l)==1 else "NO"
-                        numberOfExonsHash = sorted(exon[chr_num][transcript])
-                        CDSseq = ''; exonseq = ''
-                        CDSprec = []; exonprec = []             ## prec holds # preceding nucleotides
-                        ispositivestr = transcript_strand[transcript]=='+'
-    
-                        ## build spliced exon and CDS sequences and maintain coordinate wrt transcript
-                        tot = 0
-                        for j in range(0,len(l)):
-                            if ispositivestr:
-                                i=j
-                                CDSseq+=genomeSequences[chr_num][l[i][0]:l[i][1]+1].upper()
-                            else:
-                                i=len(l)-j-1
-                                CDSseq+=compstr(genomeSequences[chr_num][l[i][0]:l[i][1]+1].upper())
-                            CDSprec.append(tot)              ## stores in index i
-                            tot += l[i][1]+1-l[i][0]
-                        ## add on STOP sequence if annotated
-                        try:
-                            s = stop_codon[chr_num][transcript]
-                        except:
-                            s=(2,0)
-                        if ispositivestr:
-                            CDSseq+=genomeSequences[chr_num][s[0]:s[1]+1].upper()
-                        else:
-                            CDSseq+=compstr(genomeSequences[chr_num][s[0]:s[1]+1].upper())
-                        
-                        tot = 0
-                        for j in range(0,len(numberOfExonsHash)):
-                            if ispositivestr:
-                                i=j
-                                exonseq+=genomeSequences[chr_num][numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper()
-                            else:
-                                i=len(numberOfExonsHash)-j-1
-                                exonseq+=compstr(genomeSequences[chr_num][numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper())
-                            exonprec.append(tot)            ## stores in index i
-                            tot += numberOfExonsHash[i][1]+1-numberOfExonsHash[i][0]
-    
-                        ##build coding exons IN ORDER OF TRANSLATION, i.e. start->stop
-                        coding_exons = []           ## flag coding exons (corresponds to exonpos)
-                        CDS2ex = {}                 ## maps CDSpos to exonpos    
-                        for i in range(0,len(numberOfExonsHash)):   ## i = exonpos
-                            k = i if ispositivestr else len(numberOfExonsHash)-i-1  ## k = exonindex
-                            coding_exons.append(0)
-                            for j in range(0,len(l)):   ## j = CDSindex
-                                if l[j][0]>=numberOfExonsHash[k][0] and l[j][1]<=numberOfExonsHash[k][1]:
-                                    coding_exons[i] = 1
-                                    j2 = j if ispositivestr else len(l)-j-1     ## j2 = CDSpos
-                                    CDS2ex[j2]=i
-                                    break
-                                    
-                        ncodingexons = sum(coding_exons)    ## number of coding exons
-                        try:
-                            UTR=len(numberOfExonsHash)-(coding_exons.index(1)+ncodingexons) ## number of 3'UTR exons
-                        except:     ## no coding exons
-                            UTR=0
-    
-                        ## find CDS and exon interval numbers
-                        flag1=0
-                        flag2=0
-                        CDSpos=-1        ## this gives the CDSpos 0-based: i.e. first CDS is index 0
-                        for i in range(0,len(l)):
-                            if start>=l[i][0] and start<=l[i][1]:
-                                CDSpos = i if ispositivestr else len(l)-i-1
-                            if start>=l[i][0] and end<=l[i][1]:
-                                flag1 = 1   ##indel is completely contained in CDS
-                                break
-                        
-                        exonpos=-1       ## this gives the exonpos also 0-based
-                        for i in range(0,len(numberOfExonsHash)):
-                            if start>=numberOfExonsHash[i][0] and start<=numberOfExonsHash[i][1]:
-                                exonpos = i if ispositivestr else len(numberOfExonsHash)-i-1
-                            if start>=numberOfExonsHash[i][0] and end<=numberOfExonsHash[i][1]:
-                                flag2 = 1   ##indel is completely contained in exon
-                                break
-                        if CDSpos==-1 or exonpos==-1:   ##start position of indel was not in ANY intervals
-                            outdata["causes NMD?"] = "no exons or no CDS containing start of indel"
-    #########################################################
+
+                        outdata['causes NMD?'] = nmdData['NMD']
+
+                        if nmdData['issinglecodingexon']:
+                            outdata["is single coding exon?"] = nmdData['issinglecodingexon']
+
+                        if nmdData['newCDSpos']:
+                            outdata['indel position in CDS'] = str(nmdData['newCDSpos'])
+
+                        if nmdData['NMD'] not in ['YES', 'NO']:
                             lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
-    #########################################################
                             continue
-    
-                        exonindex= exonpos if ispositivestr else len(numberOfExonsHash)-exonpos-1
-                        CDSindex= CDSpos if ispositivestr else len(l)-CDSpos-1
-    
-                        codingpos = exonpos-coding_exons.index(1)      ## this gives coding exon position 0-based
-    
-                        diff = len(subst)-len(data[3])
-                        if ispositivestr:
-                            ## 1-based position of indel in CDS coordinates
-                            newCDSpos = CDSprec[CDSpos] + start - l[CDSindex][0] + 1
-                            ## 1-based position of indel in exon coordinates
-                            newexonpos = exonprec[exonpos] + start - numberOfExonsHash[exonindex][0] + 1
-                        else:
-                            newCDSpos = CDSprec[CDSpos] + l[CDSindex][1] - start + 1
-                            newexonpos = exonprec[exonpos] + numberOfExonsHash[exonindex][1] - start + 1
-                        ## # of exon nucleotides before e-e junction
-                        if newexonpos-1<exonprec[-1]:       ##indel being before last e-e junction shifts e-e position
-                            juncpos = exonprec[-1]+diff     ##WRONG IF START POSITION IS LAST NUCLEOTIDE BEFORE E-E AND
-                                                            ##IS DELETION (WOULD BE SPLICE OVERLAP)
-                        else:                               ##indel is after last junction, position unchanged
-                            juncpos = exonprec[-1]
-                        outdata["indel position in CDS"] = str(newCDSpos)
-                        
-                        lastindex = -1 if ispositivestr else 0
-                        indeltoend = exonprec[-1]+numberOfExonsHash[lastindex][1]-numberOfExonsHash[lastindex][0]+1 + diff - (newexonpos-1) ##CHECK THIS EXTRA +1
-                        if flag1==0:
-                            outdata["causes NMD?"] = "no CDS regions completely containing variant"
-    #########################################################
-                            lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
-    #########################################################
-                            continue
-                        if flag2==0:
-                            outdata["causes NMD?"] = "no exon regions completely containing variant"
-    #########################################################
-                            lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
-    #########################################################
-                            continue
-                            
-                        if ispositivestr:
-                            modCDSseq = CDSseq[0:newCDSpos-1]
-                            modCDSseq += subst
-                            modCDSseq += CDSseq[newCDSpos-1+len(data[3]):]
-                        else:
-                            modCDSseq = CDSseq[0:newCDSpos-len(data[3])]
-                            modCDSseq += compstr(subst)
-                            modCDSseq += CDSseq[newCDSpos:]
-                        ref_aa = translate_aa(CDSseq)
-                        alt_aa = translate_aa(modCDSseq)
-    
-                        try:
-                            nextATG = str(3*(alt_aa[:1].index('M')+1))
-                        except:
-                            nextATG = 'N/A'
-                        
-                        ## # of CDS nucleotides before stop codon in alternate sequence
-                        try: stopCDS = 3*alt_aa.index('*')
-                        except:
-                            outdata["causes NMD?"] = "No stop codon found in alt_aa"
-    #########################################################
-                            lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
-    #########################################################
-                            continue
-    
-                        ## stopexon is # of exon nucleotides preceding first nucleotide of stop codon
-                        ## increxon is the exon position (not exon index) where the new stop occurs
-    
-                        ## if is in very last CDS or STOP is in current CDS
-                        if CDSpos==len(l)-1 or (stopCDS>=CDSprec[CDSpos] and stopCDS<CDSprec[CDSpos+1]+diff):
-                            increxon = exonpos
-                            if ispositivestr:
-                                stopexon = exonprec[exonpos]+l[CDSpos][0]-numberOfExonsHash[exonpos][0]+stopCDS-CDSprec[CDSpos]
-                            else:
-                                stopexon = exonprec[exonpos]+numberOfExonsHash[exonindex][1]-l[CDSindex][1]+stopCDS-CDSprec[CDSpos]
-                        else:
-                            incrCDS = CDSpos
-                            while incrCDS<len(l):
-                                increxon = CDS2ex[incrCDS]
-                                if incrCDS==len(l)-1 or (stopCDS>=CDSprec[incrCDS]+diff and stopCDS<CDSprec[incrCDS+1]+diff):
-                                    if ispositivestr:
-                                        stopexon = exonprec[increxon]+l[incrCDS][0]-numberOfExonsHash[increxon][0]+stopCDS-(CDSprec[incrCDS]+diff)
-                                    else:
-                                        stopexon = exonprec[increxon]+numberOfExonsHash[len(numberOfExonsHash)-increxon-1][1]-l[len(l)-incrCDS-1][1]+stopCDS-(CDSprec[incrCDS]+diff)
-                                    break
-                                incrCDS+=1
-                        incrcoding = sum(coding_exons[:increxon])   ##incrcoding is the coding exon position where new stop occurs
-                        if ncodingexons == 1:
-                            incrcodingpos = 'single'
-                        elif incrcoding==0:
-                            incrcodingpos = 'first'
-                        elif incrcoding==ncodingexons-1:
-                            incrcodingpos = 'last'
-                        else:
-                            incrcodingpos = 'middle'
-    
-                        ## distances are calculated as follows: TAG_ _| is 5 from exon-exon junction/end of transcript etc.
-                        ## end of transcript is denoted as end of last exon.
-    
-                        ##number of nucleotides in all exons
-                        transcriptend = exonprec[-1]+numberOfExonsHash[lastindex][1]-numberOfExonsHash[lastindex][0]+1 + diff    ## in exon coordinates
-                        stoptoend = transcriptend - stopexon
-                        stoptojunc = juncpos - stopexon
-                        indeltoend = transcriptend - (newexonpos-1)
-                        NMD = 'YES' if stoptojunc>=NMD_THRESHOLD else 'NO'
-                        outdata["causes NMD?"] = NMD
-    
-                        ##exon index where new stop occurs
-                        increxonindex = increxon if ispositivestr else len(numberOfExonsHash)-increxon-1
-    
-                        if increxon==0:
-                            splice1='.'     ## 5' flanking splice site (acceptor)
-                        else:
-                            if ispositivestr:
-                                splice1=genomeSequences[chr_num][numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper()
-                            else:
-                                splice1=compstr(genomeSequences[chr_num][numberOfExonsHash[increxonindex][1]+1:numberOfExonsHash[increxonindex][1]+3].upper())                
-                        if increxon==len(numberOfExonsHash)-1:
-                            splice2='.'     ## 3' flanking splice site (donor)
-                        else:
-                            if ispositivestr:
-                                splice2=genomeSequences[chr_num][numberOfExonsHash[increxon][1]+1:numberOfExonsHash[increxon][1]+3].upper()
-                            else:
-                                splice2=compstr(genomeSequences[chr_num][numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper())
-                            
-                        canonical = (splice1=='AG' or splice1=='.') and (splice2=='GT' or splice2=='.')
-                        canonical = 'YES' if canonical else 'NO'
-                        outdata["5' flanking splice site"] = splice1
-                        outdata["3' flanking splice site"] = splice2
-                        outdata["canonical?"] = canonical
-                        
-                        if "prematureStop" in variant:
-                            lofPosition = newCDSpos
-                        else:
-                            lofPosition = stopCDS
+
+                        lofPosition = nmdData['newCDSpos'] if "prematureStop" in variant else nmdData['stopCDS']
+
+                        outdata["5' flanking splice site"] = nmdData['splice1']
+                        outdata["3' flanking splice site"] = nmdData['splice2']
+                        outdata["canonical?"] = nmdData['canonical']
                         outdata["stop position in CDS"] = str(lofPosition)
 
                         vcfPfamDescriptions = {}
-                        if "prematureStop" in variant:
-                            stopPositionInAminoSpace = int(entry[2].split('_')[2])
-                        else:
-                            stopPositionInAminoSpace = (lofPosition-1) // 3 + 1
+                        stopPositionInAminoSpace = int(entry[2].split('_')[2]) if "prematureStop" in variant else (lofPosition-1) // 3 + 1
                         for paramKey in pfamParams:
                             newDescriptions = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPositionInAminoSpace, chromosomesPFam, paramKey)
                             vcfPfamDescriptions[paramKey] = newDescriptions[0]
@@ -1375,7 +1391,7 @@ if __name__ == "__main__":
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
     #########################################################
                             
-                        LOFvariants[-1]+=':'+':'.join([splice1+'/'+splice2, str(newCDSpos), str(lofPosition), nextATG, NMD, incrcodingpos, disorderPredictionData]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
+                        LOFvariants[-1]+=':'+':'.join([nmdData['splice1']+'/'+nmdData['splice2'], str(nmdData['newCDSpos']), str(lofPosition), nmdData['nextATG'], nmdData['NMD'], nmdData['incrcodingpos'], disorderPredictionData]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
     
             vcfOutputFile.write('\t'.join(data[k] for k in range(0,7))+'\t')
             allvariants = []
