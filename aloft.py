@@ -1377,7 +1377,7 @@ if __name__ == "__main__":
                         outdata["stop position in CDS"] = str(lofPosition)
 
                         vcfPfamDescriptions = {}
-                        stopPositionInAminoSpace = int(entry[2].split('_')[2]) if "prematureStop" in variant else (lofPosition-1) // 3 + 1
+                        stopPositionInAminoSpace = int(entry[2].split('_')[2]) if "prematureStop" in variant else lofPosition // 3 + 1
                         for paramKey in pfamParams:
                             newDescriptions = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPositionInAminoSpace, chromosomesPFam, paramKey)
                             vcfPfamDescriptions[paramKey] = newDescriptions[0]
