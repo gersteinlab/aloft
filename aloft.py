@@ -5,7 +5,7 @@ from optparse import OptionParser
 from subprocess import Popen, PIPE
 from vat_run import *
 from sequencing import *
-from aloft_common import *
+from common import *
 import argparse
 
 ##NMD threshold (premature STOP to last exon-exon junction)
