@@ -154,7 +154,7 @@ def run_vat(arguments):
 	
 	vcfOutputFile.close()
 	
-	print("There were %d snp lines and %d indel lines" % (numSnp, numIndel))
+	#print("There were %d snp lines and %d indel lines" % (numSnp, numIndel))
 
 if __name__ == "__main__":
 	run_vat(sys.argv)
