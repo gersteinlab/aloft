@@ -27,7 +27,7 @@ def run_vat(arguments):
 	if inputPath.endswith(".gz"):
 		inputFile = gzip.open(inputPath, 'rb')
 	else:
-		inputFile = open(inputPath)
+		inputFile = open(inputPath, 'rb')
 	
 	TEMP_SNP_PATH = os.path.join(os.path.split(vatOutputPath)[0],"snpinput_temp")
 	TEMP_INDEL_PATH = os.path.join(os.path.split(vatOutputPath)[0],"indelinput_temp")
