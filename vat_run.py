@@ -19,15 +19,13 @@ def run_vat(arguments):
 	annotationSequencePath = arguments[4]
 	
 	try:
-		open(inputPath)
+		if inputPath.endswith(".gz"):
+			inputFile = gzip.open(inputPath, 'rb')
+		else:
+			inputFile = open(inputPath, 'rb')
 	except:
 		print("Failed to open " + inputPath)
 		sys.exit(1)
-	
-	if inputPath.endswith(".gz"):
-		inputFile = gzip.open(inputPath, 'rb')
-	else:
-		inputFile = open(inputPath, 'rb')
 	
 	TEMP_SNP_PATH = os.path.join(os.path.split(vatOutputPath)[0],"snpinput_temp")
 	TEMP_INDEL_PATH = os.path.join(os.path.split(vatOutputPath)[0],"indelinput_temp")
