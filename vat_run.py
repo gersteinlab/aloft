@@ -5,6 +5,7 @@ import os, sys
 from subprocess import Popen, PIPE
 import re
 from vcf_sort import *
+import gzip
 
 VAT_BIN_PATH = "vat/vat-2.0.1-install/bin/"
 
@@ -24,8 +25,7 @@ def run_vat(arguments):
 		sys.exit(1)
 	
 	if inputPath.endswith(".gz"):
-		zcatPipe = Popen(['zcat', inputPath], stdout=PIPE)
-		inputFile = zcatPipe.stdout
+		inputFile = gzip.open(inputPath, 'rb')
 	else:
 		inputFile = open(inputPath)
 	
