@@ -7,15 +7,13 @@ from vat_run import *
 from sequencing import *
 from common import *
 import argparse
+import networkx as nx
 
 ##NMD threshold (premature STOP to last exon-exon junction)
 NMD_THRESHOLD = 50
 
 ##Boolean to skip network calculations, since they could take a very very long time
 SHOULD_SKIP_NETWORK_CALCULATIONS = True
-
-if not SHOULD_SKIP_NETWORK_CALCULATIONS:
-    import networkx as nx
 
 def abortIfPathDoesNotExist(path, shouldShowHelp=False):
     if path is not None and not os.path.exists(path):
