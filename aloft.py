@@ -9,9 +9,6 @@ from common import *
 import argparse
 import networkx as nx
 
-##NMD threshold (premature STOP to last exon-exon junction)
-NMD_THRESHOLD = 50
-
 ##Boolean to skip network calculations, since they could take a very very long time
 SHOULD_SKIP_NETWORK_CALCULATIONS = True
 
@@ -50,6 +47,8 @@ def parseCommandLineArguments():
 
     parser.add_argument('--gerp_cache', help='Output to directory for gerp cache files; directory is created if it does not exist', default='gerp_cache/')
 
+    parser.add_argument('--nmd_threshold', help='Distance from premature stop to last exon-exon junction; used to find NMD cause', type=int, default=50)
+
     parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/ens67_gtpcgtpolymorphic.txt')
     parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens70.txt files', default='data/prot-features/')
     parser.add_argument('--thousandG', help='Path to 1000G file', default='data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.gencode16.SNPS.vat.vcf')
@@ -79,7 +78,7 @@ def parseCommandLineArguments():
 
     #Expand ~ to user's home directory for all argument paths
     for arg, path in vars(args).items():
-        if path is not None:
+        if path is not None and arg != 'nmd_threshold':
             setattr(args, arg, os.path.expanduser(path))
 
     if not args.vcf and not args.vat:
@@ -100,7 +99,7 @@ def parseCommandLineArguments():
 
     #Try to see if we can detect and open all input files
     for arg, path in vars(args).items():
-        if path not in [args.vat, args.vcf, args.output, args.gerp_cache]:
+        if arg not in ['vat', 'vcf', 'output', 'gerp_cache', 'nmd_threshold']:
             abortIfPathDoesNotExist(path, True)
             if not os.path.isdir(path):
                 try:
@@ -1350,7 +1349,7 @@ if __name__ == "__main__":
                         lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in basicparams))
     #########################################################
                         
-                        nmdData = findNMDForIndelsAndPrematureStop(NMD_THRESHOLD, chr_num, transcript, exon, stop_codon, genomeSequences)
+                        nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, chr_num, transcript, exon, stop_codon, genomeSequences)
 
                         if nmdData['NMD'] is None:
                             continue
