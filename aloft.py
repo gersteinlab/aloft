@@ -1,5 +1,16 @@
 #!/usr/bin/env python
 
+#Aloft is now compatible with python 2.7+ and python 3
+#In order to keep compatibility, make sure to:
+#do print("spam") not print "spam" since print is now a function
+#do str(5) not `5` since backticks have been removed
+#use // for floor division (aka integer division). 5/2 is 2.5 in python3 but 5/2 is 2 in python2 while 5//2 is 2 in both and float(5) / 2 is 2.5 in both.
+#convert from binary to strings when necessary (like output from a pipe); opening files intended for binary access requires passing 'b' in file mode
+#do not use xrange since it is removed
+#consider that some functions (e.g, range, dict.items()) return iterators instead of lists, use list() to convert them to lists if needed
+#test aloft with both python3 and python2.7
+#see http://docs.python.org/3.0/whatsnew/3.0.html
+
 import sys, os, re, string, array, datetime
 from optparse import OptionParser
 from subprocess import Popen, PIPE
