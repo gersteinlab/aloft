@@ -8,9 +8,7 @@ from sequencing import *
 from common import *
 import argparse
 import networkx as nx
-
-##Boolean to skip network calculations, since they could take a very very long time
-SHOULD_SKIP_NETWORK_CALCULATIONS = True
+import pickle
 
 def abortIfPathDoesNotExist(path, shouldShowHelp=False):
     if path is not None and not os.path.exists(path):
@@ -45,7 +43,7 @@ def parseCommandLineArguments():
 
     parser.add_argument('--output', help='Path to output directory; directory is created if it does not exist', default='aloft_output/')
 
-    parser.add_argument('--gerp_cache', help='Output to directory for gerp cache files; directory is created if it does not exist', default='gerp_cache/')
+    parser.add_argument('--cache', help='Output to directory for cached files; directory is created if it does not exist', default='cache/')
 
     parser.add_argument('--nmd_threshold', help='Distance from premature stop to last exon-exon junction; used to find NMD cause', type=int, default=50)
 
@@ -95,11 +93,13 @@ def parseCommandLineArguments():
     abortIfPathDoesNotExist(args.vcf)
 
     abortIfCannotCreateDirectory(args.output)
-    abortIfCannotCreateDirectory(args.gerp_cache)
+    abortIfCannotCreateDirectory(args.cache)
+
+    abortIfCannotCreateDirectory(os.path.join(args.cache, "gerp"))
 
     #Try to see if we can detect and open all input files
     for arg, path in vars(args).items():
-        if arg not in ['vat', 'vcf', 'output', 'gerp_cache', 'nmd_threshold']:
+        if arg not in ['vat', 'vcf', 'output', 'cache', 'nmd_threshold']:
             abortIfPathDoesNotExist(path, True)
             if not os.path.isdir(path):
                 try:
@@ -905,7 +905,7 @@ if __name__ == "__main__":
     #Load exon intervals from .interval file, used later for intersecting with gerp elements
     codingExonIntervals = getCodingExonIntervals(args.annotation_interval)
     
-    GERPratedata, GERPelementdata, GERPrejectiondata = getGERPData(vatFile, chrs, args.elements, args.rates, args.gerp_cache, codingExonIntervals)
+    GERPratedata, GERPelementdata, GERPrejectiondata = getGERPData(vatFile, chrs, args.elements, args.rates, os.path.join(args.cache, "gerp"), codingExonIntervals)
     segdupdata = getSegDupData(vatFile, args.segdup, chrs)
     
     print('Building CDS and exon dictionaries...')
@@ -930,10 +930,15 @@ if __name__ == "__main__":
     print("Scanning 1000G file")
     thousandGChromosomeInfo = get1000GChromosomeInfo(args.thousandG)
     
-    if not SHOULD_SKIP_NETWORK_CALCULATIONS:
-        print("Reading PPI network")
-        ppi = getPPINetwork(args.ppi)
-        ppiHash = {"dgenes" : {}, "rgenes" : {}} #for caching
+    print("Reading PPI network")
+    ppi = getPPINetwork(args.ppi)
+    ppiHashPath = os.path.join(args.cache, "ppi")
+
+    #ppiHash will contain cached values of shortest paths to genes
+    if os.path.exists(ppiHashPath):
+        ppiHash = pickle.load(open(ppiHashPath, "rb"))
+    else:
+        ppiHash = {"dgenes" : {}, "rgenes" : {}}
     
     print("Reading recessive genes list")
     rgenes = [line.strip() for line in open(args.recessive_genes)]
@@ -1135,7 +1140,7 @@ if __name__ == "__main__":
     
                 ##calculate distance to dominant and recessive genes
                 gene_name = outdata["gene"]
-                if not SHOULD_SKIP_NETWORK_CALCULATIONS and gene_name in ppi:
+                if gene_name in ppi:
                     dominantdist, numberOfDominantNeighbors = parsePPI(ppi, ppiHash, "dgenes", gene_name, dgenes)
                     outdata["shortest path to dominant gene"] = 'N/A' if dominantdist is None else str(dominantdist)
                     outdata["dominant neighbors"] = str(numberOfDominantNeighbors)
@@ -1408,5 +1413,8 @@ if __name__ == "__main__":
     lofOutputFile.close()
     spliceOutputFile.close()
     vatFile.close()
+
+    #save shortest path values to cache file
+    pickle.dump(ppiHash, open(ppiHashPath, "wb"), protocol=2)
     
     print("Finished at: " + datetime.datetime.now().strftime("%H:%M:%S"))
