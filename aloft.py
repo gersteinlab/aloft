@@ -882,6 +882,78 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
 
     return nmdHash
 
+#not exactly sure what this function does so not exactly sure what to call it
+def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
+    newData = {'found' : None, 'new' : None, 'acceptor' : None, 'donor' : None, 'intronlength' : None}
+    l = sorted(CDS[chr_num][transcript], reverse= not ispositivestr)
+    found = False
+    end = 0  ##0 for end toward smaller basepair number, 1 for other end
+    for i in range(0,len(l)):
+        r = l[i]
+        if start-r[1] in [1,2]:
+            end = 1
+            found = True
+            break
+        elif r[0]-start in [1,2]:
+            end = 0
+            found = True
+            break
+
+    newData['found'] = found
+    if not found:
+        spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
+        spliceOutputFile.write("\tCDS match not found: pos="+str(start)+' transcript='+transcript+'\n')
+        return newData
+
+    if ispositivestr:
+        if (end==0 and i==0) or (end==1 and i==len(l)-1):
+            return newData
+        if end==0:
+            acceptor = genomeSequences[chr_num][l[i][0]-2:l[i][0]].upper()
+            if start==l[i][0]-2:
+                new = (1, subst+acceptor[1])
+            else:
+                new = (1, acceptor[0]+subst)
+            donor = genomeSequences[chr_num][l[i-1][1]+1:l[i-1][1]+3].upper()
+            intronlength = l[i][0]-l[i-1][1]-1
+        elif end==1:
+            acceptor = genomeSequences[chr_num][l[i+1][0]-2:l[i+1][0]].upper()
+            donor = genomeSequences[chr_num][l[i][1]+1:l[i][1]+3].upper()
+            if start==l[i][1]+1:
+                new = (0, subst+donor[1])
+            else:
+                new = (0, donor[0]+subst)
+            intronlength = l[i+1][0]-l[i][1]-1
+    else:   ##not ispositivestr
+        if (end==1 and i==0) or (end==0 and i==len(l)-1):
+            return newData
+        if end==0:
+            donor = genomeSequences[chr_num][l[i][0]-2:l[i][0]].upper()
+            acceptor = genomeSequences[chr_num][l[i+1][1]+1:l[i+1][1]+3].upper()
+            if start==l[i][0]-2:
+                new = (0, subst+donor[1])
+            else:
+                new = (0, donor[0]+subst)
+            intronlength = l[i][0]-l[i+1][1]-1
+        elif end==1:
+            donor = genomeSequences[chr_num][l[i-1][0]-2:l[i-1][0]].upper()
+            acceptor = genomeSequences[chr_num][l[i][1]+1:l[i][1]+3].upper()
+            if start==l[i][1]+1:
+                new = (1, subst+acceptor[1])
+            else:
+                new = (1, acceptor[0]+subst)
+            intronlength = l[i-1][0]-l[i][1]-1
+        donor = compstr(donor.upper())
+        acceptor = compstr(acceptor.upper())
+        new = (new[0],compstr(new[1].upper()))
+
+    newData['donor'] = donor
+    newData['acceptor'] = acceptor
+    newData['new'] = new
+    newData['intronlength'] = intronlength
+
+    return newData
+
 if __name__ == "__main__":
     #print("Starting at: " + datetime.datetime.now().strftime("%H:%M:%S"))
     startProgramExecutionTime = datetime.datetime.now()
@@ -1205,73 +1277,26 @@ if __name__ == "__main__":
                         outdata["dN/dS (mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "N/A"
                         
                         insertAncestralField(spliceOutputFile)
-    
-                        l = sorted(CDS[chr_num][transcript], reverse= not ispositivestr)
-                        found = 0
-                        end = 0  ##0 for end toward smaller basepair number, 1 for other end
-                        for i in range(0,len(l)):
-                            r = l[i]
-                            if start-r[1] in [1,2]:
-                                end = 1
-                                found = 1
-                                break
-                            elif r[0]-start in [1,2]:
-                                end = 0
-                                found = 1
-                                break
-    #########################################################
-                        if not found:
+
+                        spliceSearchData = searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start)
+
+                        def writeSpliceOutput(failure):
                             spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
-                            spliceOutputFile.write("\tCDS match not found: pos="+str(start)+' transcript='+transcript+'\n')
+                            spliceOutputFile.write("\t%s: pos=" % (failure) +str(start)+' transcript='+transcript+'\n')
+
+                        if not spliceSearchData['found']:
+                            writeSpliceOutput("CDS match not found")
                             continue
-                        if ispositivestr:
-                            if (end==0 and i==0) or (end==1 and i==len(l)-1):
-                                spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
-                                spliceOutputFile.write("\tno donor/acceptor pair: pos="+str(start)+' transcript='+transcript+'\n')
-    #########################################################
-                                continue
-                            if end==0:
-                                acceptor = genomeSequences[chr_num][l[i][0]-2:l[i][0]].upper()
-                                if start==l[i][0]-2:
-                                    new = (1, subst+acceptor[1])
-                                else:
-                                    new = (1, acceptor[0]+subst)
-                                donor = genomeSequences[chr_num][l[i-1][1]+1:l[i-1][1]+3].upper()
-                                intronlength = l[i][0]-l[i-1][1]-1
-                            elif end==1:
-                                acceptor = genomeSequences[chr_num][l[i+1][0]-2:l[i+1][0]].upper()
-                                donor = genomeSequences[chr_num][l[i][1]+1:l[i][1]+3].upper()
-                                if start==l[i][1]+1:
-                                    new = (0, subst+donor[1])
-                                else:
-                                    new = (0, donor[0]+subst)
-                                intronlength = l[i+1][0]-l[i][1]-1
-                        else:   ##not ispositivestr
-                            if (end==1 and i==0) or (end==0 and i==len(l)-1):
-    #########################################################
-                                spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
-                                spliceOutputFile.write("\tno donor/acceptor pair: pos="+str(start)+' transcript='+transcript+'\n')
-    #########################################################
-                                continue
-                            if end==0:
-                                donor = genomeSequences[chr_num][l[i][0]-2:l[i][0]].upper()
-                                acceptor = genomeSequences[chr_num][l[i+1][1]+1:l[i+1][1]+3].upper()
-                                if start==l[i][0]-2:
-                                    new = (0, subst+donor[1])
-                                else:
-                                    new = (0, donor[0]+subst)
-                                intronlength = l[i][0]-l[i+1][1]-1
-                            elif end==1:
-                                donor = genomeSequences[chr_num][l[i-1][0]-2:l[i-1][0]].upper()
-                                acceptor = genomeSequences[chr_num][l[i][1]+1:l[i][1]+3].upper()
-                                if start==l[i][1]+1:
-                                    new = (1, subst+acceptor[1])
-                                else:
-                                    new = (1, acceptor[0]+subst)
-                                intronlength = l[i-1][0]-l[i][1]-1
-                            donor = compstr(donor.upper())
-                            acceptor = compstr(acceptor.upper())
-                            new = (new[0],compstr(new[1].upper()))
+
+                        if not spliceSearchData['new']:
+                            writeSpliceOutput("no donor/acceptor pair")
+                            continue
+
+                        new = spliceSearchData['new']
+                        donor = spliceSearchData['donor']
+                        acceptor = spliceSearchData['acceptor']
+                        intronlength = spliceSearchData['intronlength']
+
                         outdata["donor"] = donor
                         outdata["acceptor"] = acceptor
                         outdata["intron length"] = str(intronlength)
@@ -1289,13 +1314,12 @@ if __name__ == "__main__":
                             outdata["SNP location"] = "donor"
                             outdata["alt donor"] = new[1].upper()
                             outdata["alt acceptor"] = acceptor
-    
                         else:
                             outdata["SNP location"] = "acceptor"
                             outdata["alt donor"] = donor
                             outdata["alt acceptor"] = new[1].upper()
     
-    		    #calculation of filters
+    		  #calculation of filters
                         filters_failed = 0
                         failed_filters = []
                         if isCanonical == 'NO':
@@ -1335,7 +1359,7 @@ if __name__ == "__main__":
                         transcript = entry[1]
                         outdata["transcript"]=transcript
                        
-    		    #calculation of filters
+    		  #calculation of filters
                         filters_failed = 0
                         failed_filters = []
                         try:	#since LOFposition may not be provided
