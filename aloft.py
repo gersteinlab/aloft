@@ -1128,6 +1128,11 @@ if __name__ == "__main__":
             if found==1:
                 lineinfo['VA']='VA='
                 infotypes.append('VA')
+
+            def insertAncestralField(outfile):
+                ancestralInsertion = ";".join([lineinfo['Ancestral']] + data[7].split(";"))
+                outfile.write("\t".join(data[0:7] + [ancestralInsertion] + data[8:]))
+                outfile.write('\t'+ '\t'.join(outdata[i] for i in basicparams))
             
             LOFvariants = []
             splicevariants = []
@@ -1199,12 +1204,7 @@ if __name__ == "__main__":
                         outdata["dN/dS (macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "N/A"
                         outdata["dN/dS (mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "N/A"
                         
-    ##########################################################
-                        #Insert Ancestral
-                        ancestralInsertion = ";".join([lineinfo['Ancestral']] + data[7].split(";"))
-                        spliceOutputFile.write("\t".join(data[0:7] + [ancestralInsertion] + data[8:]))
-                        spliceOutputFile.write('\t'+ '\t'.join(outdata[i] for i in basicparams))
-    #########################################################
+                        insertAncestralField(spliceOutputFile)
     
                         l = sorted(CDS[chr_num][transcript], reverse= not ispositivestr)
                         found = 0
@@ -1365,12 +1365,7 @@ if __name__ == "__main__":
                         outdata["dN/dS (macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "N/A"
                         outdata["dN/dS (mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "N/A"
                         
-    #########################################################
-                        #Insert Ancestral
-                        ancestralInsertion = ";".join([lineinfo['Ancestral']] + data[7].split(";"))
-                        lofOutputFile.write("\t".join(data[0:7] + [ancestralInsertion] + data[8:]))
-                        lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in basicparams))
-    #########################################################
+                        insertAncestralField(lofOutputFile)
                         
                         nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, chr_num, transcript, exon, stop_codon, genomeSequences)
 
