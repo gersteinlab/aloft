@@ -74,9 +74,15 @@ def parseCommandLineArguments():
 
     args = parser.parse_args()
 
+    #safe way to test if args has an attribute named arg whose name is equal to key
+    def testArgumentEquality(args, arg, key):
+        if not hasattr(args, key):
+            raise Exception("%s attribute does not exist!" % (key))
+        return key == arg
+
     #Expand ~ to user's home directory for all argument paths
     for arg, path in vars(args).items():
-        if path is not None and arg != 'nmd_threshold':
+        if path is not None and not testArgumentEquality(args, arg, 'nmd_threshold'):
             setattr(args, arg, os.path.expanduser(path))
 
     if not args.vcf and not args.vat:
@@ -99,7 +105,7 @@ def parseCommandLineArguments():
 
     #Try to see if we can detect and open all input files
     for arg, path in vars(args).items():
-        if arg not in ['vat', 'vcf', 'output', 'cache', 'nmd_threshold']:
+        if not any(map(lambda key: testArgumentEquality(args, arg, key), ['vat', 'vcf', 'output', 'cache', 'nmd_threshold'])):
             abortIfPathDoesNotExist(path, True)
             if not os.path.isdir(path):
                 try:
