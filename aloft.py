@@ -872,7 +872,8 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
     return nmdHash
 
 if __name__ == "__main__":
-    print("Starting at: " + datetime.datetime.now().strftime("%H:%M:%S"))
+    #print("Starting at: " + datetime.datetime.now().strftime("%H:%M:%S"))
+    startProgramExecutionTime = datetime.datetime.now()
 
     args = parseCommandLineArguments()
 
@@ -1422,5 +1423,6 @@ if __name__ == "__main__":
 
     #save shortest path values to cache file
     pickle.dump(ppiHash, open(ppiHashPath, "wb"), protocol=2)
-    
-    print("Finished at: " + datetime.datetime.now().strftime("%H:%M:%S"))
+
+    #print("Finished at: " + datetime.datetime.now().strftime("%H:%M:%S"))
+    print("Finished execution in %d seconds" % ((datetime.datetime.now() - startProgramExecutionTime).seconds))
