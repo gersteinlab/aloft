@@ -5,10 +5,10 @@ import subprocess
 import sys
 
 def printError(error, exit=True):
-    sys.stderr.write("Error: %s\n" % error)
-    if exit:
-        sys.stderr.write("Exiting..\n")
-        sys.exit(1)
+	sys.stderr.write("Error: %s\n" % error)
+	if exit:
+		sys.stderr.write("Exiting..\n")
+		sys.exit(1)
 
 def getRejectionElementIntersectionData(codingExonIntervals, GERPelements, GERPelementIndex, chromosome, start, transcript, direction):
 	rejectedElements = []
