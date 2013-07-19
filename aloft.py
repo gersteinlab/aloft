@@ -21,12 +21,13 @@ import argparse
 import networkx as nx
 import pickle
 
+VERBOSE = None
+
 def abortIfPathDoesNotExist(path, shouldShowHelp=False):
     if path is not None and not os.path.exists(path):
         if shouldShowHelp:
             parser.print_help()
-        print("Error: %s does not exist." % (path))
-        sys.exit(1)
+        printError("%s does not exist" % (path))
 
 def abortIfCannotCreateDirectory(directory):
     if not os.path.exists(directory):
@@ -34,16 +35,14 @@ def abortIfCannotCreateDirectory(directory):
             os.mkdir(directory)
         except:
             parser.print_help()
-            print("Error: Failed to create directory %s" % (directory))
-            sys.exit(1)
+            printError("Failed to create directory %s" % (directory))
 
 def abortIfCannotWriteFile(filepath):
     try:
         newFile=open(filepath, 'w')
     except:
         parser.print_help()
-        print(filepath+ ' could not be written to.')
-        sys.exit(1)
+        printError("%s could not be written to" % (filepath))
     return newFile
 
 def parseCommandLineArguments():
@@ -57,6 +56,8 @@ def parseCommandLineArguments():
     parser.add_argument('--cache', help='Output to directory for cached files; directory is created if it does not exist', default='cache/')
 
     parser.add_argument('--nmd_threshold', help='Distance from premature stop to last exon-exon junction; used to find NMD cause', type=int, default=50)
+
+    parser.add_argument('--verbose', '-v', help='Verbose mode', action='store_true')
 
     parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/ens67_gtpcgtpolymorphic.txt')
     parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens70.txt files', default='data/prot-features/')
@@ -85,6 +86,9 @@ def parseCommandLineArguments():
 
     args = parser.parse_args()
 
+    global VERBOSE
+    VERBOSE = args.verbose
+
     #safe way to test if args has an attribute named arg whose name is equal to key
     def testArgumentEquality(args, arg, key):
         if not hasattr(args, key):
@@ -93,18 +97,16 @@ def parseCommandLineArguments():
 
     #Expand ~ to user's home directory for all argument paths
     for arg, path in vars(args).items():
-        if path is not None and not testArgumentEquality(args, arg, 'nmd_threshold'):
+        if path is not None and not any(map(lambda key: testArgumentEquality(args, arg, key), ['nmd_threshold', 'verbose'])):
             setattr(args, arg, os.path.expanduser(path))
 
     if not args.vcf and not args.vat:
         parser.print_help()
-        print("Error: Neither a VCF or VAT file was specified. You must supply one of these as your input file")
-        sys.exit(1)
+        printError("Neither a VCF or VAT file was specified. You must supply one of these as your input file")
 
     if args.vcf and args.vat:
         parser.print_help()
-        print("Error: Both a VCF or VAT file were specified. You must supply only one of these as your input file, but not both")
-        sys.exit(1)
+        printError("Both a VCF or VAT file were specified. You must supply only one of these as your input file, but not both")
 
     abortIfPathDoesNotExist(args.vat)
     abortIfPathDoesNotExist(args.vcf)
@@ -116,28 +118,27 @@ def parseCommandLineArguments():
 
     #Try to see if we can detect and open all input files
     for arg, path in vars(args).items():
-        if not any(map(lambda key: testArgumentEquality(args, arg, key), ['vat', 'vcf', 'output', 'cache', 'nmd_threshold'])):
+        if not any(map(lambda key: testArgumentEquality(args, arg, key), ['vat', 'vcf', 'output', 'cache', 'nmd_threshold', 'verbose'])):
             abortIfPathDoesNotExist(path, True)
             if not os.path.isdir(path):
                 try:
                     f = open(path)
                     f.close()
                 except:
-                    print("Error: --%s: %s cannot be opened (insufficient read privileges?)" % (arg, path))
-                    sys.exit(1)
+                    printError("--%s: %s cannot be opened (insufficient read privileges?)" % (arg, path))
     return args
 
 def getAncestors(ancespath):
     ## Coordinates for chromosomes are 1-based.
     ancestor={}
     for i in chrs:
+        individualAncestorPath = os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa')
         try:
-            f=open(os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa'))
+            f=open(individualAncestorPath)
         except:
-            print(os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa') + ' could not be opened.')
-            print('Exiting program.')
-            sys.exit(1)
-        print('Reading ancestral chromosome '+i+'...')
+            printError("%s could not be opened... Exiting program" % (individualAncestorPath))
+
+        if VERBOSE: print('Reading ancestral chromosome '+i+'...')
         f.readline()    ##first >**** line
         ancestor[i] = '0' + f.read().replace("\n", "")
         f.close()
@@ -168,23 +169,26 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
 
     for i in chrs:
         if line.split('\t')[0].split('chr')[-1]!=i:
-            print('no indels on chromosome ' + i)
+            if VERBOSE: print('no indels on chromosome ' + i)
             continue
+
+        individualElementPath = os.path.join(args.elements, 'hg19_chr'+i+'_elems.txt')
         try:
-            elementfile=open(os.path.join(args.elements, 'hg19_chr'+i+'_elems.txt'))
+            elementfile=open(individualElementPath)
         except:
-            print(os.path.join(args.elements, 'hg19_chr'+i+'_elems.txt') + ' could not be opened.')
-            print('Exiting program.')
-            sys.exit(1)
-        print('Reading GERP information for chromosome '+i+'...')
-        startTime = datetime.datetime.now()
+            printError("%s could not be opened.." % (individualElementPath))
+        
+        if VERBOSE:
+            print('Reading GERP information for chromosome '+i+'...')
+            startTime = datetime.datetime.now()
+        
         gerpCacheFile = buildGerpRates(GERPratepath, GERPratecachepath, i)
         
-        print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
+        if VERBOSE: print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
         
         GERPelements = getGERPelements(elementfile)
 
-        print('Calculating GERP scores for chromosome '+i+'...')
+        if VERBOSE: print('Calculating GERP scores for chromosome '+i+'...')
         startTime = datetime.datetime.now()
         while line.split('\t')[0].split('chr')[-1]==i:
             data = line.split('\t')
@@ -216,7 +220,7 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
                     GERPrejectiondata.append(".")
             
             line=vatFile.readline()
-        print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
+        if VERBOSE: print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
 
     return GERPratedata, GERPelementdata, GERPrejectiondata
 
@@ -226,7 +230,7 @@ def getSegDupData(vatFile, segdupPath, chrs):
     for i in chrs:
         segdups[i] = []
         segdupmax[i] = []
-    print("Reading segdup information...")
+    if VERBOSE: print("Reading segdup information...")
     segdupfile = open(segdupPath)
     line = segdupfile.readline()
     while line.startswith("#") or line=="\n":
@@ -251,7 +255,7 @@ def getSegDupData(vatFile, segdupPath, chrs):
     while line.startswith("#") or line=="\n":
         segdupdata.append('')
         line=vatFile.readline()
-    print('Calculating segdup overlaps...')
+    if VERBOSE: print('Calculating segdup overlaps...')
     while line!="":
         data = line.split('\t')
         chr_num = data[0].split('chr')[-1]
@@ -373,8 +377,7 @@ def getTranscriptToProteinHash(transcriptToProteinFilePath):
     try:
         inputFile = open(transcriptToProteinFilePath, "r")
     except:
-        print("Failed to open " + transcriptToProteinFilePath)
-        sys.exit(1)
+        printError("Failed to open %s" % (transcriptToProteinFilePath))
 
     transcriptToProteinHash = {}
     firstLine = True
@@ -403,7 +406,7 @@ def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, doma
             pipe2 = Popen(['uniq'], stdin=pipe1.stdout, stdout=PIPE)
             inputFile = pipe2.stdout
         except:
-            print("Couldn't read " + path + " , skipping chr" + chromosome)
+            printError("Couldn't read %s, skipping %s" % (path, chromosome), False)
             continue
 
         linesToSkip = 2
@@ -436,13 +439,14 @@ def getGenomeSequences(genomePath, chrs):
     #mapping to chromosome -> sequences in genomePath
     genomeSequences={}
     for i in chrs:
+        individualSequencePath = os.path.join(genomePath, 'chr'+i+'.fa')
         try:
-            f=open(os.path.join(genomePath, 'chr'+i+'.fa'))
+            f=open(individualSequencePath)
         except:
-            print(os.path.join(genomePath, 'chr'+i+'.fa') + ' could not be opened.')
-            print('Exiting program.')
-            sys.exit(1)
-        print('Reading chromosome '+i+'...')
+            printError("%s could not be opened" % (individualSequencePath))
+        
+        if VERBOSE: print('Reading chromosome '+i+'...')
+        
         f.readline()    ##first >chr* line
         genomeSequences[i] = '0' + f.read().replace("\n", "")
         f.close()
@@ -625,8 +629,7 @@ def getESP6500ExomeChromosomeInfo(exomesPath, chromosomes):
         try:
             exomeInputFile = open(exomePath)
         except:
-            print("Couldn't read " + exomePath)
-            print("Skipping...")
+            printError("Couldn't read %s, skipping.." % (exomePath), False)
             exomeInputFile = None
         
         if exomeInputFile:
@@ -955,26 +958,23 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
     return newData
 
 if __name__ == "__main__":
-    #print("Starting at: " + datetime.datetime.now().strftime("%H:%M:%S"))
-    startProgramExecutionTime = datetime.datetime.now()
+    if VERBOSE: startProgramExecutionTime = datetime.datetime.now()
 
     args = parseCommandLineArguments()
 
     if args.vcf:
         #run VAT
         vatPath = os.path.join(args.output, os.path.basename(args.vcf) + ".vat")
-        print("Running VAT on %s" % (args.vcf) + "\n")
-        run_vat([sys.argv[0], args.vcf, vatPath, args.annotation_interval, args.annotation_sequence])
+        run_vat([sys.argv[0], args.vcf, vatPath, args.annotation_interval, args.annotation_sequence], VERBOSE)
     else:
         vatPath = args.vat
     
-    print("Running ALoFT on %s" % (vatPath) + "\n")
+    if VERBOSE: print("Running ALoFT on %s" % (vatPath) + "\n")
     
     try:
         vatFile = open(vatPath)
     except:
-        print("Error: Failed to read %s" % (vatPath))
-        sys.exit(1)
+        printError("Failed to read %s" % (vatPath))
     
     tabbedOutputLofPath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_lof")
     tabbedOutputSplicePath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_splice")
@@ -998,15 +998,16 @@ if __name__ == "__main__":
     GERPratedata, GERPelementdata, GERPrejectiondata = getGERPData(vatFile, chrs, args.elements, args.rates, os.path.join(args.cache, "gerp"), codingExonIntervals)
     segdupdata = getSegDupData(vatFile, args.segdup, chrs)
     
-    print('Building CDS and exon dictionaries...')
-    startTime = datetime.datetime.now()
+    if VERBOSE:
+        print('Building CDS and exon dictionaries...')
+        startTime = datetime.datetime.now()
     
     genomeSequences = getGenomeSequences(args.genome, chrs)
     transcript_strand, CDS, exon, stop_codon = getCDSAndExonDictionaries(args.annotation, chrs)
     
-    print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
-    
-    print('Begin ALoFT Calculations and Write-Out (this may take a while)...')
+    if VERBOSE:
+        print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
+        print('Begin ALoFT Calculations and Write-Out (this may take a while)...')
             
     transcriptToProteinHash = getTranscriptToProteinHash(args.ensembl_table)
 
@@ -1017,10 +1018,10 @@ if __name__ == "__main__":
     exomesChromosomeInfo = getESP6500ExomeChromosomeInfo(args.exomes, chrs)
 
     #Scan 1000G file
-    print("Scanning 1000G file")
+    if VERBOSE: print("Scanning 1000G file")
     thousandGChromosomeInfo = get1000GChromosomeInfo(args.thousandG)
     
-    print("Reading PPI network")
+    if VERBOSE: print("Reading PPI network")
     ppi = getPPINetwork(args.ppi)
     ppiHashPath = os.path.join(args.cache, "ppi")
 
@@ -1030,28 +1031,28 @@ if __name__ == "__main__":
     else:
         ppiHash = {"dgenes" : {}, "rgenes" : {}}
     
-    print("Reading recessive genes list")
+    if VERBOSE: print("Reading recessive genes list")
     rgenes = [line.strip() for line in open(args.recessive_genes)]
     
-    print("Reading dominant genes list")
+    if VERBOSE: print("Reading dominant genes list")
     dgenes = [line.strip() for line in open(args.dominant_genes)]
     
-    print("Reading haploinsufficiency disease genes list")
+    if VERBOSE: print("Reading haploinsufficiency disease genes list")
     haploscores = getScores(args.haplo_score, 1)
     
-    print("Reading LOF disease scores")
+    if VERBOSE: print("Reading LOF disease scores")
     LOFscores = getScores(args.LOF_score, 1)
     
-    print("Reading netSNP disease scores")
+    if VERBOSE: print("Reading netSNP disease scores")
     netSNPscores = getScores(args.netSNP_score, -1)
     
-    print("Reading pseudogene data")
+    if VERBOSE: print("Reading pseudogene data")
     numpseudogenes = getPseudogeneData(args.pseudogenes)
     
-    print("Reading paralog data")
+    if VERBOSE: print("Reading paralog data")
     paralogs = getParalogData(args.paralogs)
     
-    print("Reading dNdS data")
+    if VERBOSE: print("Reading dNdS data")
     dNdSmacaque, dNdSmouse = getdNdSData(args.dNdS)
 
     #params for PF, SSF, SM, etc
@@ -1454,5 +1455,4 @@ if __name__ == "__main__":
     #save shortest path values to cache file
     pickle.dump(ppiHash, open(ppiHashPath, "wb"), protocol=2)
 
-    #print("Finished at: " + datetime.datetime.now().strftime("%H:%M:%S"))
-    print("Finished execution in %d seconds" % ((datetime.datetime.now() - startProgramExecutionTime).seconds))
+    if VERBOSE: print("Finished execution in %d seconds" % ((datetime.datetime.now() - startProgramExecutionTime).seconds))

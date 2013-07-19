@@ -1,22 +1,30 @@
 #!/usr/bin/env python
-#You can just run VAT. Usage is <input_vcf> <vat_output> <annotation_interval_input> <annotation_sequence_input> This script will take care of sorting the input_vcf file numerically.
+#You can just run VAT without running aloft if you want.
+#Usage is <input_vcf> <vat_output> <annotation_interval_input> <annotation_sequence_input> <verbosity_level>
+#This script will take care of sorting the input_vcf file numerically.
+#For verbosity_level you must pass in 0 (indicating no verbosity) or 1 (indicating verbosity)
 
 import os, sys
 from subprocess import Popen, PIPE
 import re
 from vcf_sort import *
 import gzip
+from common import printError
 
 VAT_BIN_PATH = "vat/vat-2.0.1-install/bin/"
 
-def run_vat(arguments):
+def run_vat(arguments, forceVerbose=False):
 	#example as input path: '/net/gerstein/sb238/ftw/finnish/Finns.nogeno.vcf.gz'
 	# or a .vcf is fine too
-	print('Parsing VCF file...')
 	inputPath = arguments[1]
 	vatOutputPath = arguments[2]
 	annotationIntervalPath = arguments[3]
 	annotationSequencePath = arguments[4]
+	verbose = False
+	if forceVerbose or (5 < len(arguments) and int(arguments[5]) > 0):
+		verbose = True
+
+	if verbose: print('Parsing VCF file...')
 	
 	try:
 		if inputPath.endswith(".gz"):
@@ -24,8 +32,7 @@ def run_vat(arguments):
 		else:
 			inputFile = open(inputPath, 'rb')
 	except:
-		print("Failed to open " + inputPath)
-		sys.exit(1)
+		printError("Failed to open %s" % (inputPath))
 	
 	TEMP_SNP_PATH = os.path.join(os.path.split(vatOutputPath)[0],"snpinput_temp")
 	TEMP_INDEL_PATH = os.path.join(os.path.split(vatOutputPath)[0],"indelinput_temp")
@@ -99,12 +106,11 @@ def run_vat(arguments):
 	snpInputFile = open(TEMP_SNP_PATH, "r")
 	indelInputFile = open(TEMP_INDEL_PATH, "r")
 	
-	print("Running snpMapper...")
+	if verbose: print("Running snpMapper...")
 	try:
 		snpMapperPipe = Popen([os.path.join(VAT_BIN_PATH, 'snpMapper'), annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=snpInputFile)
 	except:
-		print("ERROR: Failed to open snpMapper")
-		sys.exit(1)
+		printError("Failed to open snpMapper")
 	
 	numSnp = 0
 	numIndel = 0
@@ -124,12 +130,11 @@ def run_vat(arguments):
 	
 	os.remove(TEMP_SNP_PATH)
 	
-	print("Running indelMapper...")
+	if verbose: print("Running indelMapper...")
 	try:
 		indelMapperPipe = Popen([os.path.join(VAT_BIN_PATH, 'indelMapper'), annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=indelInputFile)
 	except:
-		print("ERROR: Failed to open indelMapper.")
-		sys.exit(1)
+		printError("Failed to open indelMapper")
 	
 	for lineBytes in indelMapperPipe.stdout:
 		line = lineBytes.decode()
@@ -141,7 +146,7 @@ def run_vat(arguments):
 	
 	os.remove(TEMP_INDEL_PATH)
 	
-	print("Writing out VAT file...")
+	if verbose: print("Writing out VAT file...")
 	#Sort and remove duplicate entries
 	sort_nicely(sortedLines)
 	lastLine = None
@@ -152,7 +157,7 @@ def run_vat(arguments):
 	
 	vcfOutputFile.close()
 	
-	#print("There were %d snp lines and %d indel lines" % (numSnp, numIndel))
+	if verbose: print("Finishing VAT. There were %d snp lines and %d indel lines in the output" % (numSnp, numIndel))
 
 if __name__ == "__main__":
 	run_vat(sys.argv)
