@@ -12,6 +12,7 @@ def printError(error, exit=True):
 
 def getRejectionElementIntersectionData(codingExonIntervals, GERPelements, GERPelementIndex, chromosome, start, transcript, direction):
 	rejectedElements = []
+	truncatedExons = []
 	if transcript in codingExonIntervals[chromosome]:
 		stopExonIndex = 0
 		foundIntersection = False
@@ -62,7 +63,7 @@ def getRejectionElementIntersectionData(codingExonIntervals, GERPelements, GERPe
 						#append exon number (1 based), rejection score, distance element is covered inside exon, percentage element is 	inside exon
 						rejectedElements.append((exons.index(truncatedExon)+1, relevantElement[2], distanceCovered, exonLength, 100.0 * distanceCovered / exonLength))
 
-	return rejectedElements
+	return rejectedElements, len(truncatedExons)
 
 def getDisopredData(disopredSequencesPath, transcriptID, stopPosition):
 	newData = "."

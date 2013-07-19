@@ -158,6 +158,7 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
     GERPratedata=[]
     GERPelementdata=[]
     GERPrejectiondata = []
+    GERPrejectioncountdata = []
 
     vatFile.seek(0)
     line = vatFile.readline()
@@ -165,6 +166,7 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
         GERPratedata.append('')
         GERPelementdata.append('')
         GERPrejectiondata.append('')
+        GERPrejectioncountdata.append('')
         line=vatFile.readline()
 
     for i in chrs:
@@ -188,8 +190,10 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
         
         GERPelements = getGERPelements(elementfile)
 
-        if VERBOSE: print('Calculating GERP scores for chromosome '+i+'...')
-        startTime = datetime.datetime.now()
+        if VERBOSE:
+            print('Calculating GERP scores for chromosome '+i+'...')
+            startTime = datetime.datetime.now()
+
         while line.split('\t')[0].split('chr')[-1]==i:
             data = line.split('\t')
             chr_num = data[0].split('chr')[-1]
@@ -201,6 +205,7 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
             if elementIndex == -1:
                 GERPelementdata.append(".")
                 GERPrejectiondata.append(".")
+                GERPrejectioncountdata.append(".")
             else:
                 GERPelementdata.append(str(GERPelements[elementIndex]))
 
@@ -212,17 +217,20 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
                     direction = variant[3]
                     transcript = variant[7]
 
-                    rejectedElements = getRejectionElementIntersectionData(codingExonIntervals, GERPelements, elementIndex, chr_num, start, transcript, direction)
+                    rejectedElements, numberOfTruncatedExons = getRejectionElementIntersectionData(codingExonIntervals, GERPelements, elementIndex, chr_num, start, transcript, direction)
 
                 if len(rejectedElements) > 0:
                     GERPrejectiondata.append(",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements]))
+                    GERPrejectioncountdata.append(":".join([str(numberOfTruncatedExons), str(len(codingExonIntervals[chr_num][transcript]))]))
                 else:
                     GERPrejectiondata.append(".")
+                    GERPrejectioncountdata.append(".")
             
             line=vatFile.readline()
+        
         if VERBOSE: print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
 
-    return GERPratedata, GERPelementdata, GERPrejectiondata
+    return GERPratedata, GERPelementdata, GERPrejectiondata, GERPrejectioncountdata
 
 def getSegDupData(vatFile, segdupPath, chrs):
     segdups={}
@@ -958,7 +966,7 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
     return newData
 
 if __name__ == "__main__":
-    if VERBOSE: startProgramExecutionTime = datetime.datetime.now()
+    startProgramExecutionTime = datetime.datetime.now()
 
     args = parseCommandLineArguments()
 
@@ -995,7 +1003,7 @@ if __name__ == "__main__":
     #Load exon intervals from .interval file, used later for intersecting with gerp elements
     codingExonIntervals = getCodingExonIntervals(args.annotation_interval)
     
-    GERPratedata, GERPelementdata, GERPrejectiondata = getGERPData(vatFile, chrs, args.elements, args.rates, os.path.join(args.cache, "gerp"), codingExonIntervals)
+    GERPratedata, GERPelementdata, GERPrejectiondata, GERPrejectioncountdata = getGERPData(vatFile, chrs, args.elements, args.rates, os.path.join(args.cache, "gerp"), codingExonIntervals)
     segdupdata = getSegDupData(vatFile, args.segdup, chrs)
     
     if VERBOSE:
@@ -1070,7 +1078,7 @@ if __name__ == "__main__":
                 "causes NMD?", "5' flanking splice site",\
                 "3' flanking splice site", "canonical?",\
                 "# failed filters", "filters failed",\
-                "ancestral allele", "GERP score", "GERP element", "GERP rejection",\
+                "ancestral allele", "GERP score", "GERP element", "GERP rejection", "exon counts",\
                 "segmental duplications", "Disorder prediction"] + pfamParamsWithTruncations +\
                 ["1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
@@ -1086,7 +1094,7 @@ if __name__ == "__main__":
                 "SNP in canonical site?", "other splice site canonical?",\
                 "SNP location", "alt donor", "alt acceptor",\
                 "intron length", "# failed filters", "filters failed",\
-                "GERP score", "GERP element", "GERP rejection",\
+                "GERP score", "GERP element", "GERP rejection", "exon counts",\
                 "segmental duplications", "Disorder prediction"] + pfamParamsWithTruncations +\
                 ["1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
@@ -1136,6 +1144,7 @@ if __name__ == "__main__":
                         'GERPscore':'GERPscore='+GERPratedata[counter],\
                         'GERPelement':'GERPelement='+GERPelementdata[counter],\
                         'GERPrejection':'GERPrejection='+GERPrejectiondata[counter],\
+                        'exoncounts':'exoncounts='+GERPrejectioncountdata[counter],\
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'SegDup']
     
@@ -1143,6 +1152,7 @@ if __name__ == "__main__":
             outdata["GERP score"] = GERPratedata[counter]
             outdata["GERP element"] = GERPelementdata[counter]
             outdata["GERP rejection"] = GERPrejectiondata[counter]
+            outdata["exon counts"] = GERPrejectioncountdata[counter]
             outdata["segmental duplications"] = '.' if segdupdata[counter].count('(') == '0' else segdupdata[counter]
     
             #Adding 1000G fields
