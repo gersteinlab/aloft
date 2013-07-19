@@ -673,7 +673,6 @@ def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
                     dist = shortestPathLength
                 else:
                     dist = min(dist, shortestPathLength)
-        if dist is not None:
             ppiHash[hashKey][gene_name] = dist
 
     numberOfNeighbors = sum(1 for gene in genes if gene in ppi.neighbors(gene_name))
