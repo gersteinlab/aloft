@@ -158,7 +158,7 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
     GERPratedata=[]
     GERPelementdata=[]
     GERPrejectiondata = []
-    GERPrejectioncountdata = []
+    exonsCountData = []
 
     vatFile.seek(0)
     line = vatFile.readline()
@@ -166,7 +166,7 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
         GERPratedata.append('')
         GERPelementdata.append('')
         GERPrejectiondata.append('')
-        GERPrejectioncountdata.append('')
+        exonsCountData.append('')
         line=vatFile.readline()
 
     for i in chrs:
@@ -200,37 +200,41 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
             start = int(data[1])
             length = len(data[3])
             end = start + length-1  ##inclusive endpoint
+
+            variantIndex = line.index("VA=") + len("VA=")
+            variants = line[variantIndex:].split(",")
+            variant = variants[0].split(":")
+            direction = variant[3]
+            transcript = variant[7]
+
             GERPratedata.append(str(getGerpScore(gerpCacheFile, start, length)))
+
+            exons = codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None
+            truncatedExons = getTruncatedExons(exons, transcript, chr_num, start, direction) if exons else None
+
+            exonsCountData.append(":".join([str(len(truncatedExons)) if truncatedExons else ".", str(len(exons)) if exons else "."]))
+
             elementIndex = findGERPelementIndex(GERPelements, start, end)
             if elementIndex == -1:
                 GERPelementdata.append(".")
                 GERPrejectiondata.append(".")
-                GERPrejectioncountdata.append(".")
             else:
                 GERPelementdata.append(str(GERPelements[elementIndex]))
 
                 rejectedElements = []
-                if 'prematureStop' in line or 'insertionFS' in line or 'deletionFS' in line:
-                    variantIndex = line.index("VA=") + len("VA=")
-                    variants = line[variantIndex:].split(",")
-                    variant = variants[0].split(":")
-                    direction = variant[3]
-                    transcript = variant[7]
-
-                    rejectedElements, numberOfTruncatedExons = getRejectionElementIntersectionData(codingExonIntervals, GERPelements, elementIndex, chr_num, start, transcript, direction)
+                if exons and truncatedExons and ('prematureStop' in line or 'insertionFS' in line or 'deletionFS' in line):
+                    rejectedElements = getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, elementIndex, direction)
 
                 if len(rejectedElements) > 0:
                     GERPrejectiondata.append(",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements]))
-                    GERPrejectioncountdata.append(":".join([str(numberOfTruncatedExons), str(len(codingExonIntervals[chr_num][transcript]))]))
                 else:
                     GERPrejectiondata.append(".")
-                    GERPrejectioncountdata.append(".")
             
             line=vatFile.readline()
         
         if VERBOSE: print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
-
-    return GERPratedata, GERPelementdata, GERPrejectiondata, GERPrejectioncountdata
+        
+    return GERPratedata, GERPelementdata, GERPrejectiondata, exonsCountData
 
 def getSegDupData(vatFile, segdupPath, chrs):
     segdups={}
@@ -1002,7 +1006,7 @@ if __name__ == "__main__":
     #Load exon intervals from .interval file, used later for intersecting with gerp elements
     codingExonIntervals = getCodingExonIntervals(args.annotation_interval)
     
-    GERPratedata, GERPelementdata, GERPrejectiondata, GERPrejectioncountdata = getGERPData(vatFile, chrs, args.elements, args.rates, os.path.join(args.cache, "gerp"), codingExonIntervals)
+    GERPratedata, GERPelementdata, GERPrejectiondata, exonsCountData = getGERPData(vatFile, chrs, args.elements, args.rates, os.path.join(args.cache, "gerp"), codingExonIntervals)
     segdupdata = getSegDupData(vatFile, args.segdup, chrs)
     
     if VERBOSE:
@@ -1143,7 +1147,7 @@ if __name__ == "__main__":
                         'GERPscore':'GERPscore='+GERPratedata[counter],\
                         'GERPelement':'GERPelement='+GERPelementdata[counter],\
                         'GERPrejection':'GERPrejection='+GERPrejectiondata[counter],\
-                        'exoncounts':'exoncounts='+GERPrejectioncountdata[counter],\
+                        'exoncounts':'exoncounts='+exonsCountData[counter],\
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'SegDup']
     
@@ -1151,7 +1155,7 @@ if __name__ == "__main__":
             outdata["GERP score"] = GERPratedata[counter]
             outdata["GERP element"] = GERPelementdata[counter]
             outdata["GERP rejection"] = GERPrejectiondata[counter]
-            outdata["exon counts"] = GERPrejectioncountdata[counter]
+            outdata["exon counts"] = exonsCountData[counter]
             outdata["segmental duplications"] = '.' if segdupdata[counter].count('(') == '0' else segdupdata[counter]
     
             #Adding 1000G fields

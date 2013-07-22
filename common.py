@@ -10,60 +10,57 @@ def printError(error, exit=True):
 		sys.stderr.write("Exiting..\n")
 		sys.exit(1)
 
-def getRejectionElementIntersectionData(codingExonIntervals, GERPelements, GERPelementIndex, chromosome, start, transcript, direction):
-	rejectedElements = []
-	truncatedExons = []
-	if transcript in codingExonIntervals[chromosome]:
-		stopExonIndex = 0
-		foundIntersection = False
-		for block in codingExonIntervals[chromosome][transcript]:
-			if block[0] <= start and block[1] >= start:
-				foundIntersection = True
-				break
-			stopExonIndex += 1
-
-		if foundIntersection:
-			exons = codingExonIntervals[chromosome][transcript]
+def getTruncatedExons(exons, transcript, chromosome, start, direction):
+	truncatedExons = None
+	stopExonIndex = 0
+	for block in exons:
+		if block[0] <= start and block[1] >= start:
 			if direction == '+':
 				truncatedExons = exons[stopExonIndex:]
 			elif direction == '-':
 				truncatedExons = exons[0:stopExonIndex+1]
+			break
+		stopExonIndex += 1
+	return truncatedExons
 
-			elementIndex = GERPelementIndex
+def getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, GERPelementIndex, direction):
+	rejectedElements = []
 
-			#Make a list of elements that may be relevant to the truncated exons
-			relevantElements = []
-			while elementIndex >= 0 and elementIndex < len(GERPelements) and ((direction == '-' and GERPelements[elementIndex][1] >= truncatedExons[0][0]) or (direction == '+' and GERPelements[elementIndex][0] <= truncatedExons[-1][1])):
-				relevantElements.append(GERPelements[elementIndex])
-				if direction == '+':
-					elementIndex += 1
-				elif direction == '-':
-					elementIndex -= 1
+	elementIndex = GERPelementIndex
 
-			#find all truncated exons and elements that intersect
-			for truncatedExon in truncatedExons:
-				for relevantElement in relevantElements:
-					#check if they overlap in any way
-					if truncatedExon[0] <= relevantElement[1] and truncatedExon[1] >= relevantElement[0]:
-						distanceCovered = 0
-						exonLength = truncatedExon[1] - truncatedExon[0] + 1
+	#Make a list of elements that may be relevant to the truncated exons
+	relevantElements = []
+	while elementIndex >= 0 and elementIndex < len(GERPelements) and ((direction == '-' and GERPelements[elementIndex][1] >= truncatedExons[0][0]) or (direction == '+' and GERPelements[elementIndex][0] <= truncatedExons[-1][1])):
+		relevantElements.append(GERPelements[elementIndex])
+		if direction == '+':
+			elementIndex += 1
+		elif direction == '-':
+			elementIndex -= 1
+
+	#find all truncated exons and elements that intersect
+	for truncatedExon in truncatedExons:
+		for relevantElement in relevantElements:
+			#check if they overlap in any way
+			if truncatedExon[0] <= relevantElement[1] and truncatedExon[1] >= relevantElement[0]:
+				distanceCovered = 0
+				exonLength = truncatedExon[1] - truncatedExon[0] + 1
 	
-						#see if element completly contains exon
-						if relevantElement[0] <= truncatedExon[0] and relevantElement[1] >= truncatedExon[1]:
-							distanceCovered = exonLength
-						#if exon completely contains element
-						elif truncatedExon[0] <= relevantElement[0] and truncatedExon[1] >= relevantElement[1]:
-							distanceCovered = (relevantElement[0] - truncatedExon[0] + 1) + (truncatedExon[1] - relevantElement[1] + 1)
-						#otherwise find the partial overlap
-						elif relevantElement[0] > truncatedExon[0]:
-							distanceCovered = truncatedExon[1] - relevantElement[0] + 1
-						elif relevantElement[1] < truncatedExon[1]:
-							distanceCovered = relevantElement[1] - truncatedExon[0] + 1
+				#see if element completly contains exon
+				if relevantElement[0] <= truncatedExon[0] and relevantElement[1] >= truncatedExon[1]:
+					distanceCovered = exonLength
+				#if exon completely contains element
+				elif truncatedExon[0] <= relevantElement[0] and truncatedExon[1] >= relevantElement[1]:
+					distanceCovered = (relevantElement[0] - truncatedExon[0] + 1) + (truncatedExon[1] - relevantElement[1] + 1)
+				#otherwise find the partial overlap
+				elif relevantElement[0] > truncatedExon[0]:
+					distanceCovered = truncatedExon[1] - relevantElement[0] + 1
+				elif relevantElement[1] < truncatedExon[1]:
+					distanceCovered = relevantElement[1] - truncatedExon[0] + 1
 	
-						#append exon number (1 based), rejection score, distance element is covered inside exon, percentage element is 	inside exon
-						rejectedElements.append((exons.index(truncatedExon)+1, relevantElement[2], distanceCovered, exonLength, 100.0 * distanceCovered / exonLength))
+				#append exon number (1 based), rejection score, distance element is covered inside exon, percentage element is 	inside exon
+				rejectedElements.append((exons.index(truncatedExon)+1, relevantElement[2], distanceCovered, exonLength, 100.0 * distanceCovered / exonLength))
 
-	return rejectedElements, len(truncatedExons)
+	return rejectedElements
 
 def getDisopredData(disopredSequencesPath, transcriptID, stopPosition):
 	newData = "."
@@ -135,9 +132,7 @@ def buildGerpRates(GERPratepath, GERPratecachepath, chromosome):
 			programName = "./gerprate"
 			exit_status = subprocess.check_call([programName, ratefilepath, cachepath])
 			if exit_status != 0:
-				print("ERROR: Exit status for following command was nonzero: %s %s %s" % (programName, ratefilepath, cachepath))
-				print("Was aloft properly installed?")
-				sys.exit(1)
+				printError("Exit status for following command was nonzero: %s %s %s - was aloft properly installed?" % (programName, ratefilepath, cachepath))
 		return open(cachepath, "rb")
 	except:
 		print(ratefilepath + " could not be opened.")
