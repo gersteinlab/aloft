@@ -17,8 +17,16 @@ mismapping, and other information. ALOFT only calculates these
 parameters for frameshift indels, loss-of-function (LoF) SNPs, and for SNPs 
 located in splice sites.
 
+II. System Requirements
+- Python 2.7.x or Python 3.x
 
-II. Input Files (Required):
+II. Installation (Required):
+cd aloft
+python install.py
+
+This will install VAT, our gerp score caching module, and the networkx module all required to run aloft.
+
+III. Input Files (Required):
 
 1) VCF file containing unannotated variants, passed in using the --vcf option.
 Alternatively, an annotated VCF file output by a separate manual run of VAT 
@@ -28,48 +36,47 @@ should be passed in with the --vat option. See options section below.
 default values.
 
 
-III. Output Files (may be overridden, see Section V Options):
+IV. Output Files (may be overridden, see Section V Options):
 
-1) output/vat_output.vcf
-Created/overwritten only if a VCF is passed in using the --vcf option.  This 
-intermediate file is then run through aloft.py to produce the 
-following three files.
+Pass an output directory via --output
 
-2) output/output.vcf
-VCF file created based on the output from VAT.  Includes all information 
+Four files may be created into this output directory:
+
+1) A vcf file that VAT generates if --vcf is supplied.
+This intermediate file is then run through
+aloft.py to produce the following three files.
+
+2) VCF file created based on the output from VAT.  Includes all information 
 output by VAT, plus the features calculated by aloft.py.
 
-3) output/tabbed_output_lof
-Tab-delimited file containing the subset of VAT output associated with LoF 
-SNPs and frameshift indels.  All information from the VAT file is included, 
+3) Tab-delimited file (labeled lof) containing the subset of VAT output associated with LoF 
+SNPs and frameshift indels. All information from the VAT file is included, 
 plus ALL features calculated by aloft.py for LoF variants.  
 Each variant is output on multiple rows, one for each combination of alternate 
 allele and affected transcript.
 
-4) output/tabbed_output_splice
-Tab-delimited file containing the subset of VAT output associated with splice 
+4) Tab-delimited file (labeled splice) containing the subset of VAT output associated with splice 
 site SNPs.  All information from the VAT file is included, plus ALL features 
 calculated by aloft.py for splice site SNPs.  Each variant is 
 output on multiple rows, one for each combination of alternate allele and 
 affected transcript.
 
 
-IV. Usage
+V. Usage
 ALoFT can be invoked as follows:
-/path/to/python2.7/python  /path/to/aloft.py  [--option1=arg1] [--option2=arg2]...
+cd aloft
+python aloft.py [--option1=arg1] [--option2=arg2]...
 
 Example:
-/path/to/python2.7/python /path/to/aloft.py --vcf=vcf_file.vcf
+python aloft.py --vcf=vcf_file.vcf
 OR 
 (for specifying VAT input instead of unannotated vcf file)
-/path/to/python2.7/python /path/to/aloft.py --vat=vat_file.vcf
+python aloft.py --vat=vat_file.vcf
 OR 
 (for specifying output destination)
-/path/to/python2.7/python /path/to/aloft.py --vcf=vcf_file.vcf 
---vcf_output=/path/to/directory --tabbed_output_lof=/path/to/directory
---tabbed_output_splice=/path/to/directory
+python aloft.py --vcf=vcf_file.vcf --output=/path/to/directory
 
-V. Options
+VI. Options
 aloft.py recognizes the following options (default values given):
 
 --vcf=""
@@ -87,21 +94,15 @@ http://info.gersteinlab.org/VAT#Interval.
 Specifies path to annotation sequence file in FASTA format. The fasta file
 is extracted from the interval file by the VAT utility interval2sequences.
 
---vat=output/vat_output.vcf
-Specifies path to VAT output file.  If input VCF file is given with --vcf 
-option, VAT will be run on the input VCF file and written to the file given 
-to the --vat option.
+--vat=/path/to/vat_output.vcf
+Specifies path to VAT output file to run aloft on.
 
---tabbed_output_lof=output/tabbed_output_lof
-Specifies path to tabbed output file of NMD_predictor containing LoF variants
+--output=/path/to/output_directory
+Specifies path to tabbed output file of NMD_predictor containing LoF variants, tabbed output file of NMD_predictor containing splice site SNPs, and to VCF file containing VAT output plus additional calculated features.
 
---tabbed_output_splice=output/tabbed_output_splice
-Specifies path to tabbed output file of NMD_predictor containing splice site 
-SNPs.
-
---vcf_output=output/output.vcf
-Specifies path to VCF file containing VAT output, plus additional calculated 
-features.
+--cache=cache/
+Specifies path to directory containing cache of GERP score information and protein-protein interaction information.  
+Directory will be created if it doesn't already exist.
 
 --elements=data/elements/
 Specifies path to directory containing GERP element information.  Files must 
@@ -113,10 +114,6 @@ Specifies path to GENCODE genome annotation file.
 --rates=data/bases/
 Specifies path to directory containing GERP score information.  Files must be 
 named chr*.maf.rates, where * is 1-22/X/Y.
-
---gerp_cache=gerp_cache/
-Specifies path to directory containing cache of GERP score information.  
-Directory will be created if it doesn't already exist.
 
 --ancestor=data/homo_sapiens_ancestor_GRCh37_e71/
 Specifies path to directory containing ancestral chromosome files.  Files must 
@@ -132,8 +129,7 @@ Specifies path to file containing 1000Genomes variant data.
 Specifies path to directory containing ESP6500 SNP data.  Files must be named ESP6500.chr*.snps.vcf, where * is 1-22/X/Y.
 
 --ensembl_table=data/ens67_gtpcgtpolymorphic.txt
-Specifies path to file containing mappings between Ensembl gene and protein 
-IDs.
+Specifies path to file containing mappings between Ensembl gene and protein IDs.
 
 --protein_features=prot_features/
 Specifies path to directory containing protein domain information.  Files must be named chr*.prot-features-ens70.txt, where * is 1-22/X/Y.
@@ -141,10 +137,11 @@ Specifies path to directory containing protein domain information.  Files must b
 --transmembrane=tm_ens70/
 Specifies
 
+--nmd_threshold=50
+Distance from premature stop to last exon-exon junction; used to find NMD cause. By default, this is 50.
 
 VI. Notes
-The main components are aloft.py and vat_run.py.  vat_run.py must be 
-present in the same directory or in the PYTHONPATH of the Python installation.
+The main components are aloft.py and vat_run.py.
 
 aloft.py: Contains the main body of code.  If a VCF file is not 
 passed in, Reads information from all relevant input files into memory, and 
@@ -152,15 +149,7 @@ passed in, Reads information from all relevant input files into memory, and
 vat_run.py: Contains run_vat(), a function called by aloft.py to run 
 VAT automatically. 
 
-
-VII. System Requirements
-- VAT installed, available at http://info.gersteinlab.org/VAT.  snpMapper and 
-indelMapper must be in shell PATH.
-- Python 2.7
-- NetworkX Python library (v. 1.7 or higher) in PYTHONPATH of Python 
-installation
-
-VIII. ALoFT Features
+VII. ALoFT Features
 For all variants:
 Partial/full - Full if all transcripts of the affected gene are affected, 
 partial otherwise
@@ -173,6 +162,3 @@ recessive gene in protein interaction network
 For premature stop-causing SNPs/indels only:
 
 For splice SNPs only:
-
-VIIII. Adjustable Parameters
-    NMD threshold = 50
