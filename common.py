@@ -92,7 +92,13 @@ def getDisopredData(disopredSequencesPath, transcriptID, stopPosition):
 					residueCountAfterPrematureStop += 1
 
 		if stopPosition is not None:
-			newData = "/".join([str(disorderedResidues), str(residueCount), str(disorderedResiduesAfterPrematureStop), str(residueCountAfterPrematureStop), "%.2f" % (100.0 * disorderedResidues / residueCount), "%.2f" % (100.0 * disorderedResiduesAfterPrematureStop / residueCountAfterPrematureStop), str(stopPosition)])
+			if residueCountAfterPrematureStop == 0:
+				disorderedResiduesAfterPrematureStopPercentage = '.'
+				printError("Residue count after stop position %d is zero for %s" % (stopPosition, transcriptID), False)
+			else:
+				disorderedResiduesAfterPrematureStopPercentage = "%.2f" % (100.0 * disorderedResiduesAfterPrematureStop / residueCountAfterPrematureStop)
+
+			newData = "/".join([str(disorderedResidues), str(residueCount), str(disorderedResiduesAfterPrematureStop), str(residueCountAfterPrematureStop), "%.2f" % (100.0 * disorderedResidues / residueCount), disorderedResiduesAfterPrematureStopPercentage, str(stopPosition)])
 		else:
 			newData = "/".join([str(disorderedResidues), str(residueCount), "%.2f" % (100.0 * disorderedResidues / residueCount)])
 	except IOError:

@@ -679,7 +679,7 @@ def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
                     dist = min(dist, shortestPathLength)
             ppiHash[hashKey][gene_name] = dist
 
-    numberOfNeighbors = sum(1 for gene in genes if gene in ppi.neighbors(gene_name))
+    numberOfNeighbors = sum(1 for gene in genes if gene != gene_name and gene in ppi.neighbors(gene_name))
     return dist, numberOfNeighbors
 
 def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, stop_codon, genomeSequences):
@@ -1255,6 +1255,8 @@ if __name__ == "__main__":
                     outdata["dominant neighbors"] = str(numberOfDominantNeighbors)
 
                     recessdist, numberOfRecessiveNeighbors = parsePPI(ppi, ppiHash, "rgenes", gene_name, rgenes)
+                    if recessdist is None and numberOfRecessiveNeighbors > 0:
+                        print(gene_name)
                     outdata["shortest path to recessive gene"] = 'N/A' if recessdist is None else str(recessdist)
                     outdata["recessive neighbors"] = str(numberOfRecessiveNeighbors)
                 else:
