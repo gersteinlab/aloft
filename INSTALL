@@ -1,20 +1,17 @@
-You will first have to download and install VAT to run this package.
+You will first have to have Python 2.7 or 3.x installed to run aloft. To check your python version:
+python --version
 
-You have to have the library path set to the following libraries for bios, gsl, and blat. And indelMapper and snpMapper have to be in your PATH.
+Run install.py to compile all dependencies that aloft requires:
+cd aloft
+python install.py
 
-Run install.sh to compile a dependency required by new_NMD script:
-sh install.sh
-
-This will compile gerprate.c and link it to Python
-
-new_NMD_predictor_final.py is the main script.
+aloft.py is the main script.
 This will prompt up the help screen:
-python new_NMD_predictor_final.py --help
+python aloft.py
 
 The input VCF file supplied by --vcf should have a header line starting with #CHROM like:
 #CHROM POS ID ALT REF ...
 
 Only CHROM and POS are necessary to have, but the number of columns in this header line must match with the number of lines in the VCF file.
 
-Then run python new_NMD_predictor_final.py:
-python new_NMD_predictor_final.py
+Then run python aloft.py with either of --vcf or --vat set, as well as all the data that aloft needs
