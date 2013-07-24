@@ -974,6 +974,28 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
 
     return newData
 
+def getMatchingNagnagnagPositions(genomeSequence, chr_num, start):
+    #NAGN <snp>AG NAG
+    nagnagSequence = genomeSequences[chr_num][start-4:start+5]
+    if not ispositivestr:
+        nagnagSequence = compstr(nagnagSequence)
+
+    nagNagPositions = []
+
+    if nagnagSequence[1:3] == 'AG':
+        if ispositivestr:
+            nagNagPositions.append(start-3)
+        else:
+            nagNagPositions.append(start+3)
+    
+    if nagnagSequence[7:9] == 'AG':
+        if ispositivestr:
+            nagNagPositions.append(start+3)
+        else:
+            nagNagPositions.append(start-3)
+
+    return nagNagPositions
+
 if __name__ == "__main__":
     startProgramExecutionTime = datetime.datetime.now()
 
@@ -1101,7 +1123,7 @@ if __name__ == "__main__":
                 "shortest path to dominant gene", "dominant neighbors",\
                 "donor", "acceptor",\
                 "SNP in canonical site?", "other splice site canonical?",\
-                "SNP location", "alt donor", "alt acceptor",\
+                "SNP location", "alt donor", "alt acceptor", "nagnag positions",\
                 "intron length", "# failed filters", "filters failed",\
                 "GERP score", "GERP element", "GERP rejection", "exon counts",\
                 "segmental duplications", "Disorder prediction"] + pfamParamsWithTruncations +\
@@ -1293,6 +1315,9 @@ if __name__ == "__main__":
                         outdata["transcript length"] = entry[2]
                         outdata["longest transcript?"] = "YES" if int(outdata["transcript length"])==longesttranscript else "NO"
                         ispositivestr = transcript_strand[transcript]=='+'
+
+                        nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, chr_num, start)
+                        outdata['nagnag positions'] = '/'.join(map(str, nagNagPositions)) if len(nagNagPositions) > 0 else '.'
     
                         outdata["# pseudogenes associated to transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
                         outdata["dN/dS (macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "N/A"
