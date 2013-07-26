@@ -180,7 +180,7 @@ def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath,
             if VERBOSE: print('no indels on chromosome ' + i)
             continue
 
-        individualElementPath = os.path.join(args.elements, 'hg19_chr'+i+'_elems.txt')
+        individualElementPath = os.path.join(GERPelementpath, 'hg19_chr'+i+'_elems.txt')
         try:
             elementfile=open(individualElementPath)
         except:
