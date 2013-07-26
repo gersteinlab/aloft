@@ -575,36 +575,32 @@ def calculateExomeCoordinate(component):
         return 0.0
     return int(values[0]) * 1.0 / (int(values[0]) + int(values[1]))
 
-def getESP6500ExomeChromosomeInfo(exomesPath, chromosomes):
+def getESP6500ExomeChromosomeInfo(exomesPath, chromosome):
     exomesChromosomeInfo = {}
-    for chromosome in chromosomes:
-        exomesChromosomeInfo[chromosome] = {}
-        exomePath = os.path.join(exomesPath, 'ESP6500.chr%s.snps.vcf' % (chromosome)) 
-        try:
-            exomeInputFile = open(exomePath)
-        except:
-            printError("Couldn't read %s, skipping.." % (exomePath), False)
-            exomeInputFile = None
-        
-        if exomeInputFile:
-            for exomeLine in exomeInputFile:
-                if not exomeLine.startswith("#"):
-                    exomeLineComponents = exomeLine.split("\t")
-                    
-                    x = "NA"
-                    y = "NA"
-                    z = "NA"
-                    for component in exomeLineComponents[7].split(";"):
-                        if component.startswith('EA_AC='):
-                            x = "%.4f" % (calculateExomeCoordinate(component))
-                        elif component.startswith('AA_AC='):
-                            y = "%.4f" % (calculateExomeCoordinate(component))
-                        elif component.startswith('TAC='):
-                            z = "%.4f" % (calculateExomeCoordinate(component))
-                            
-                    exomesChromosomeInfo[chromosome][int(exomeLineComponents[1])] = ("%s,%s,%s" % (x, y, z))
-            
-            exomeInputFile.close()
+    exomePath = os.path.join(exomesPath, 'ESP6500.chr%s.snps.vcf' % (chromosome))
+    try:
+        exomeInputFile = open(exomePath)
+    except:
+        printError("Couldn't read %s, skipping.." % (exomePath), False)
+        exomeInputFile = None
+    if exomeInputFile:
+        for exomeLine in exomeInputFile:
+            if not exomeLine.startswith("#"):
+                exomeLineComponents = exomeLine.split("\t")
+                
+                x = "NA"
+                y = "NA"
+                z = "NA"
+                for component in exomeLineComponents[7].split(";"):
+                    if component.startswith('EA_AC='):
+                        x = "%.4f" % (calculateExomeCoordinate(component))
+                    elif component.startswith('AA_AC='):
+                        y = "%.4f" % (calculateExomeCoordinate(component))
+                    elif component.startswith('TAC='):
+                        z = "%.4f" % (calculateExomeCoordinate(component))
+                        
+                exomesChromosomeInfo[int(exomeLineComponents[1])] = ("%s,%s,%s" % (x, y, z))
+        exomeInputFile.close()
     return exomesChromosomeInfo
 
 def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
@@ -987,9 +983,6 @@ if __name__ == "__main__":
     ##{'1':{'ENSP...':'PF...\t4-25\t(ENSP...)'}, '2':{...}, ...}
     chromosomesPFam = dict(list(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items()) + list(getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"], 3).items()) + list(getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items()))
 
-    #Scan ESP6500 (exome) fields
-    exomesChromosomeInfo = getESP6500ExomeChromosomeInfo(args.exomes, chrs)
-
     #Scan 1000G file
     if VERBOSE: print("Scanning 1000G file")
     thousandGChromosomeInfo = get1000GChromosomeInfo(args.thousandG)
@@ -1097,7 +1090,8 @@ if __name__ == "__main__":
 
         if not currentLoadedChromosome or currentLoadedChromosome != chr_num:
             #This is where we get a chance to data that is unique to a chromosome
-            if VERBOSE: print("Reading data from chromosome %s..." % (chromosome))
+            if VERBOSE: print("Reading data from chromosome %s..." % (chr_num))
+            exomesChromosomeInfo = getESP6500ExomeChromosomeInfo(args.exomes, chr_num) #Scan ESP6500 (exome) fields
             genomeSequences = getGenomeSequences(args.genome, chr_num)
             gerpCacheFile = buildGerpRates(args.rates, os.path.join(args.cache, "gerp"), chr_num)
             GERPelements = getGERPelements(open(os.path.join(args.elements, "hg19_chr%s_elems.txt" % (chr_num))))
@@ -1169,9 +1163,9 @@ if __name__ == "__main__":
             
             #Add exomes info to output
             infotypes += ['ESP6500', 'ESP6500_AAF']
-            if start in exomesChromosomeInfo[chr_num]:
+            if start in exomesChromosomeInfo:
                 lineinfo['ESP6500'] = 'ESP6500=Yes'
-                lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=' + exomesChromosomeInfo[chr_num][start]
+                lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=' + exomesChromosomeInfo[start]
             else:
                 lineinfo['ESP6500'] = 'ESP6500=No'
                 lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=NA,NA,NA'
