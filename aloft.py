@@ -134,29 +134,17 @@ def parseCommandLineArguments():
                     printError("--%s: %s cannot be opened (insufficient read privileges?)" % (arg, path))
     return args
 
-def getAncestors(ancespath):
-    ## Coordinates for chromosomes are 1-based.
-    ancestor={}
-    for i in chrs:
-        individualAncestorPath = os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa')
-        try:
-            f=open(individualAncestorPath)
-        except:
-            printError("%s could not be opened... Exiting program" % (individualAncestorPath))
+def getAncestorData(ancespath, chromosome):
+    individualAncestorPath = os.path.join(ancespath, "homo_sapiens_ancestor_%s.fa" % (chromosome))
+    try:
+        f=open(individualAncestorPath)
+    except:
+        printError("%s could not be opened... Exiting program" % (individualAncestorPath))
 
-        if VERBOSE: print('Reading ancestral chromosome '+i+'...')
-        f.readline()    ##first >**** line
-        ancestor[i] = '0' + f.read().replace("\n", "")
-        f.close()
-    return ancestor
-
-def parseances(ancestor, line):
-    if line.startswith("#") or line=="\n":
-        return ""
-    data = line.split('\t')
-    chr_num = data[0].split('chr')[-1]
-    start = int(data[1])
-    return ancestor[chr_num][start:start+len(data[3])].upper()
+    f.readline()    ##first >**** line
+    data = '0' + f.read().replace("\n", "")
+    f.close()
+    return data
 
 def getGERPData(gerpCacheFile, GERPelements, exons, start, end, direction):
     rateData = str(getGerpScore(gerpCacheFile, start, end - start + 1))
@@ -957,12 +945,6 @@ if __name__ == "__main__":
     
     chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
     
-    ##list of ancestral alleles for each line in input file,
-    ##"" if metadata line, '.' if none available
-    ancestors = getAncestors(args.ancestor)
-    ancesdata = [parseances(ancestors, line) for line in vatFile]
-    del ancestors
-    
     #Load exon intervals from .interval file, used later for intersecting with gerp elements
     codingExonIntervals = getCodingExonIntervals(args.annotation_interval)
     
@@ -1091,6 +1073,7 @@ if __name__ == "__main__":
         if not currentLoadedChromosome or currentLoadedChromosome != chr_num:
             #This is where we get a chance to data that is unique to a chromosome
             if VERBOSE: print("Reading data from chromosome %s..." % (chr_num))
+            ancestorData = getAncestorData(args.ancestor, chr_num)
             exomesChromosomeInfo = getESP6500ExomeChromosomeInfo(args.exomes, chr_num) #Scan ESP6500 (exome) fields
             genomeSequences = getGenomeSequences(args.genome, chr_num)
             gerpCacheFile = buildGerpRates(args.rates, os.path.join(args.cache, "gerp"), chr_num)
@@ -1099,9 +1082,10 @@ if __name__ == "__main__":
         
         #Filter lines
         if "deletionFS" in line or "insertionFS" in line or "premature" in line or "splice" in line:
-            if data[3] == ancesdata[counter]:
+            ancesdata = ancestorData[start:start+len(data[3])].upper()
+            if data[3] == ancesdata:
                 ancestral = "Ref"
-            elif data[4] == ancesdata[counter]:
+            elif data[4] == ancesdata:
                 ancestral = "Alt"
             else:
                 ancestral = "Neither"
@@ -1115,7 +1099,7 @@ if __name__ == "__main__":
             GERPratedata, GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(gerpCacheFile, GERPelements, codingExonIntervals[chr_num][gerpTranscript] if gerpTranscript in codingExonIntervals[chr_num] else None, start, end, gerpDirection)
             
             ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
-            lineinfo = {'AA':'AA='+ancesdata[counter],\
+            lineinfo = {'AA':'AA='+ancesdata,\
                         'Ancestral':'Ancestral='+ancestral,\
                         'GERPscore':'GERPscore='+GERPratedata,\
                         'GERPelement':'GERPelement='+GERPelementdata,\
@@ -1124,7 +1108,7 @@ if __name__ == "__main__":
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'SegDup']
     
-            outdata["ancestral allele"] = ancesdata[counter]
+            outdata["ancestral allele"] = ancesdata
             outdata["GERP score"] = GERPratedata
             outdata["GERP element"] = GERPelementdata
             outdata["GERP rejection"] = GERPrejectiondata
@@ -1363,7 +1347,7 @@ if __name__ == "__main__":
                                 failed_filters.append('near_stop')
                         except:
                             pass
-                        if ancesdata[counter]==subst:
+                        if ancesdata==subst:
                             filters_failed = filters_failed+1
                             failed_filters.append('lof_anc')
                         if segdupdata[counter].count('(') > 3:
