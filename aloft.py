@@ -1126,8 +1126,7 @@ if __name__ == "__main__":
                 "SNP location", "alt donor", "alt acceptor", "nagnag positions",\
                 "intron length", "# failed filters", "filters failed",\
                 "GERP score", "GERP element", "GERP rejection", "exon counts",\
-                "segmental duplications", "Disorder prediction"] + pfamParamsWithTruncations +\
-                ["1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
+                "segmental duplications", "1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
                 "haploinsufficiency disease score",\
