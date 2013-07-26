@@ -400,8 +400,6 @@ def getGenomeSequences(genomePath, chromosome):
     except:
         printError("%s could not be opened" % (individualSequencePath))
 
-    if VERBOSE: print("Reading genome sequences for chromosome %s..." % (chromosome))
-
     f.readline()    ##first >chr* line
     genomeSequences = '0' + f.read().replace("\n", "")
     f.close()
@@ -1099,6 +1097,7 @@ if __name__ == "__main__":
 
         if not currentLoadedChromosome or currentLoadedChromosome != chr_num:
             #This is where we get a chance to data that is unique to a chromosome
+            if VERBOSE: print("Reading data from chromosome %s..." % (chromosome))
             genomeSequences = getGenomeSequences(args.genome, chr_num)
             gerpCacheFile = buildGerpRates(args.rates, os.path.join(args.cache, "gerp"), chr_num)
             GERPelements = getGERPelements(open(os.path.join(args.elements, "hg19_chr%s_elems.txt" % (chr_num))))
