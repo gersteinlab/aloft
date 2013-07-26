@@ -452,22 +452,19 @@ def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, doma
 
     return chromosomesPFam
 
-def getGenomeSequences(genomePath, chrs):
-    ## Coordinates for chromosomes are 1-based.
-    #mapping to chromosome -> sequences in genomePath
-    genomeSequences={}
-    for i in chrs:
-        individualSequencePath = os.path.join(genomePath, 'chr'+i+'.fa')
-        try:
-            f=open(individualSequencePath)
-        except:
-            printError("%s could not be opened" % (individualSequencePath))
-        
-        if VERBOSE: print('Reading chromosome '+i+'...')
-        
-        f.readline()    ##first >chr* line
-        genomeSequences[i] = '0' + f.read().replace("\n", "")
-        f.close()
+def getGenomeSequences(genomePath, chromosome):
+    individualSequencePath = os.path.join(genomePath, "chr%s.fa" % (chromosome))
+    try:
+        f=open(individualSequencePath)
+    except:
+        printError("%s could not be opened" % (individualSequencePath))
+
+    if VERBOSE: print("Reading genome sequences for chromosome %s..." % (chromosome))
+
+    f.readline()    ##first >chr* line
+    genomeSequences = '0' + f.read().replace("\n", "")
+    f.close()
+
     return genomeSequences
 
 def getCDSAndExonDictionaries(annotationPath, chrs):
@@ -705,10 +702,10 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
     for j in range(0,len(l)):
         if ispositivestr:
             i=j
-            CDSseq+=genomeSequences[chr_num][l[i][0]:l[i][1]+1].upper()
+            CDSseq+=genomeSequences[l[i][0]:l[i][1]+1].upper()
         else:
             i=len(l)-j-1
-            CDSseq+=compstr(genomeSequences[chr_num][l[i][0]:l[i][1]+1].upper())
+            CDSseq+=compstr(genomeSequences[l[i][0]:l[i][1]+1].upper())
         CDSprec.append(tot)              ## stores in index i
         tot += l[i][1]+1-l[i][0]
     ## add on STOP sequence if annotated
@@ -717,18 +714,18 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
     except:
         s=(2,0)
     if ispositivestr:
-        CDSseq+=genomeSequences[chr_num][s[0]:s[1]+1].upper()
+        CDSseq+=genomeSequences[s[0]:s[1]+1].upper()
     else:
-        CDSseq+=compstr(genomeSequences[chr_num][s[0]:s[1]+1].upper())
+        CDSseq+=compstr(genomeSequences[s[0]:s[1]+1].upper())
     
     tot = 0
     for j in range(0,len(numberOfExonsHash)):
         if ispositivestr:
             i=j
-            exonseq+=genomeSequences[chr_num][numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper()
+            exonseq+=genomeSequences[numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper()
         else:
             i=len(numberOfExonsHash)-j-1
-            exonseq+=compstr(genomeSequences[chr_num][numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper())
+            exonseq+=compstr(genomeSequences[numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper())
         exonprec.append(tot)            ## stores in index i
         tot += numberOfExonsHash[i][1]+1-numberOfExonsHash[i][0]
     
@@ -882,16 +879,16 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
         splice1='.'     ## 5' flanking splice site (acceptor)
     else:
         if ispositivestr:
-            splice1=genomeSequences[chr_num][numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper()
+            splice1=genomeSequences[numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper()
         else:
-            splice1=compstr(genomeSequences[chr_num][numberOfExonsHash[increxonindex][1]+1:numberOfExonsHash[increxonindex][1]+3].upper())                
+            splice1=compstr(genomeSequences[numberOfExonsHash[increxonindex][1]+1:numberOfExonsHash[increxonindex][1]+3].upper())                
     if increxon==len(numberOfExonsHash)-1:
         splice2='.'     ## 3' flanking splice site (donor)
     else:
         if ispositivestr:
-            splice2=genomeSequences[chr_num][numberOfExonsHash[increxon][1]+1:numberOfExonsHash[increxon][1]+3].upper()
+            splice2=genomeSequences[numberOfExonsHash[increxon][1]+1:numberOfExonsHash[increxon][1]+3].upper()
         else:
-            splice2=compstr(genomeSequences[chr_num][numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper())
+            splice2=compstr(genomeSequences[numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper())
         
     canonical = (splice1=='AG' or splice1=='.') and (splice2=='GT' or splice2=='.')
     canonical = 'YES' if canonical else 'NO'
@@ -929,16 +926,16 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
         if (end==0 and i==0) or (end==1 and i==len(l)-1):
             return newData
         if end==0:
-            acceptor = genomeSequences[chr_num][l[i][0]-2:l[i][0]].upper()
+            acceptor = genomeSequences[l[i][0]-2:l[i][0]].upper()
             if start==l[i][0]-2:
                 new = (1, subst+acceptor[1])
             else:
                 new = (1, acceptor[0]+subst)
-            donor = genomeSequences[chr_num][l[i-1][1]+1:l[i-1][1]+3].upper()
+            donor = genomeSequences[l[i-1][1]+1:l[i-1][1]+3].upper()
             intronlength = l[i][0]-l[i-1][1]-1
         elif end==1:
-            acceptor = genomeSequences[chr_num][l[i+1][0]-2:l[i+1][0]].upper()
-            donor = genomeSequences[chr_num][l[i][1]+1:l[i][1]+3].upper()
+            acceptor = genomeSequences[l[i+1][0]-2:l[i+1][0]].upper()
+            donor = genomeSequences[l[i][1]+1:l[i][1]+3].upper()
             if start==l[i][1]+1:
                 new = (0, subst+donor[1])
             else:
@@ -948,16 +945,16 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
         if (end==1 and i==0) or (end==0 and i==len(l)-1):
             return newData
         if end==0:
-            donor = genomeSequences[chr_num][l[i][0]-2:l[i][0]].upper()
-            acceptor = genomeSequences[chr_num][l[i+1][1]+1:l[i+1][1]+3].upper()
+            donor = genomeSequences[l[i][0]-2:l[i][0]].upper()
+            acceptor = genomeSequences[l[i+1][1]+1:l[i+1][1]+3].upper()
             if start==l[i][0]-2:
                 new = (0, subst+donor[1])
             else:
                 new = (0, donor[0]+subst)
             intronlength = l[i][0]-l[i+1][1]-1
         elif end==1:
-            donor = genomeSequences[chr_num][l[i-1][0]-2:l[i-1][0]].upper()
-            acceptor = genomeSequences[chr_num][l[i][1]+1:l[i][1]+3].upper()
+            donor = genomeSequences[l[i-1][0]-2:l[i-1][0]].upper()
+            acceptor = genomeSequences[l[i][1]+1:l[i][1]+3].upper()
             if start==l[i][1]+1:
                 new = (1, subst+acceptor[1])
             else:
@@ -974,9 +971,9 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
 
     return newData
 
-def getMatchingNagnagnagPositions(genomeSequence, chr_num, start):
+def getMatchingNagnagnagPositions(genomeSequence, start):
     #NAGN <snp>AG NAG
-    nagnagSequence = genomeSequences[chr_num][start-4:start+5]
+    nagnagSequence = genomeSequences[start-4:start+5]
     if not ispositivestr:
         nagnagSequence = compstr(nagnagSequence)
 
@@ -1041,7 +1038,6 @@ if __name__ == "__main__":
         print('Building CDS and exon dictionaries...')
         startTime = datetime.datetime.now()
     
-    genomeSequences = getGenomeSequences(args.genome, chrs)
     transcript_strand, CDS, exon, stop_codon = getCDSAndExonDictionaries(args.annotation, chrs)
     
     if VERBOSE:
@@ -1153,11 +1149,17 @@ if __name__ == "__main__":
         counter+=1
         line = vatFile.readline()
 
+    currentLoadedChromosome = None
+
     while line!="":
         data = line.strip().split('\t')
         chr_num = data[0].split("chr")[-1]
         start = int(data[1])
         end = start+len(data[3])-1
+
+        if not currentLoadedChromosome or currentLoadedChromosome != chr_num:
+            genomeSequences = getGenomeSequences(args.genome, chr_num)
+            currentLoadedChromosome = chr_num
         
         #Filter lines
         if "deletionFS" in line or "insertionFS" in line or "premature" in line or "splice" in line:
@@ -1315,7 +1317,7 @@ if __name__ == "__main__":
                         outdata["longest transcript?"] = "YES" if int(outdata["transcript length"])==longesttranscript else "NO"
                         ispositivestr = transcript_strand[transcript]=='+'
 
-                        nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, chr_num, start)
+                        nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, start)
                         outdata['nagnag positions'] = '/'.join(map(str, nagNagPositions)) if len(nagNagPositions) > 0 else '.'
     
                         outdata["# pseudogenes associated to transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
