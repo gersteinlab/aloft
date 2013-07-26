@@ -147,10 +147,7 @@ def getAncestorData(ancespath, chromosome):
     return data
 
 def getGERPData(gerpCacheFile, GERPelements, exons, start, end, direction):
-    rateData = str(getGerpScore(gerpCacheFile, start, end - start + 1))
-
     truncatedExons = getTruncatedExons(exons, start, direction) if exons else None
-
     exonCountData = ":".join([str(len(truncatedExons)) if truncatedExons else ".", str(len(exons)) if exons else "."])
 
     elementIndex = findGERPelementIndex(GERPelements, start, end)
@@ -169,7 +166,7 @@ def getGERPData(gerpCacheFile, GERPelements, exons, start, end, direction):
         else:
             rejectionData = "."
 
-    return rateData, elementData, rejectionData, exonCountData
+    return elementData, rejectionData, exonCountData
 
 def getSegDupData(vatFile, segdupPath, chrs):
     segdups={}
@@ -1096,12 +1093,13 @@ if __name__ == "__main__":
             gerpDirection = gerpVariant[3]
             gerpTranscript = gerpVariant[7]
 
-            GERPratedata, GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(gerpCacheFile, GERPelements, codingExonIntervals[chr_num][gerpTranscript] if gerpTranscript in codingExonIntervals[chr_num] else None, start, end, gerpDirection)
+            GERPscore = getGerpScore(gerpCacheFile, start, end - start + 1)
+            GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(gerpCacheFile, GERPelements, codingExonIntervals[chr_num][gerpTranscript] if gerpTranscript in codingExonIntervals[chr_num] else None, start, end, gerpDirection)
             
             ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
             lineinfo = {'AA':'AA='+ancesdata,\
                         'Ancestral':'Ancestral='+ancestral,\
-                        'GERPscore':'GERPscore='+GERPratedata,\
+                        'GERPscore':'GERPscore='+str(GERPscore),\
                         'GERPelement':'GERPelement='+GERPelementdata,\
                         'GERPrejection':'GERPrejection='+GERPrejectiondata,\
                         'exoncounts':'exoncounts='+exonCountData,\
@@ -1109,7 +1107,7 @@ if __name__ == "__main__":
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'SegDup']
     
             outdata["ancestral allele"] = ancesdata
-            outdata["GERP score"] = GERPratedata
+            outdata["GERP score"] = str(GERPscore)
             outdata["GERP element"] = GERPelementdata
             outdata["GERP rejection"] = GERPrejectiondata
             outdata["exon counts"] = exonCountData
