@@ -134,113 +134,39 @@ def parseCommandLineArguments():
                     printError("--%s: %s cannot be opened (insufficient read privileges?)" % (arg, path))
     return args
 
-def getAncestors(ancespath):
-    ## Coordinates for chromosomes are 1-based.
-    ancestor={}
-    for i in chrs:
-        individualAncestorPath = os.path.join(ancespath, 'homo_sapiens_ancestor_'+i+'.fa')
-        try:
-            f=open(individualAncestorPath)
-        except:
-            printError("%s could not be opened... Exiting program" % (individualAncestorPath))
+def getAncestorData(ancespath, chromosome):
+    individualAncestorPath = os.path.join(ancespath, "homo_sapiens_ancestor_%s.fa" % (chromosome))
+    try:
+        f=open(individualAncestorPath)
+    except:
+        printError("%s could not be opened... Exiting program" % (individualAncestorPath))
 
-        if VERBOSE: print('Reading ancestral chromosome '+i+'...')
-        f.readline()    ##first >**** line
-        ancestor[i] = '0' + f.read().replace("\n", "")
-        f.close()
-    return ancestor
+    f.readline()    ##first >**** line
+    data = '0' + f.read().replace("\n", "")
+    f.close()
+    return data
 
-def parseances(ancestor, line):
-    if line.startswith("#") or line=="\n":
-        return ""
-    data = line.split('\t')
-    chr_num = data[0].split('chr')[-1]
-    start = int(data[1])
-    return ancestor[chr_num][start:start+len(data[3])].upper()
+def getGERPData(gerpCacheFile, GERPelements, exons, start, end, direction):
+    truncatedExons = getTruncatedExons(exons, start, direction) if exons else None
+    exonCountData = ":".join([str(len(truncatedExons)) if truncatedExons else ".", str(len(exons)) if exons else "."])
 
-def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, codingExonIntervals):
-    ## Coordinates are 1-based.
-    ## All GERP intervals include endpoints
-    GERPratedata=[]
-    GERPelementdata=[]
-    GERPrejectiondata = []
-    exonsCountData = []
+    elementIndex = findGERPelementIndex(GERPelements, start, end)
+    if elementIndex == -1:
+        elementData = "."
+        rejectionData = "."
+    else:
+        elementData = str(GERPelements[elementIndex])
 
-    vatFile.seek(0)
-    line = vatFile.readline()
-    while line.startswith("#") or line=="\n":
-        GERPratedata.append('')
-        GERPelementdata.append('')
-        GERPrejectiondata.append('')
-        exonsCountData.append('')
-        line=vatFile.readline()
+        rejectedElements = []
+        if exons and truncatedExons and ('prematureStop' in line or 'insertionFS' in line or 'deletionFS' in line):
+            rejectedElements = getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, elementIndex, direction)
 
-    for i in chrs:
-        if line.split('\t')[0].split('chr')[-1]!=i:
-            if VERBOSE: print('no indels on chromosome ' + i)
-            continue
+        if len(rejectedElements) > 0:
+            rejectionData = ",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements])
+        else:
+            rejectionData = "."
 
-        individualElementPath = os.path.join(args.elements, 'hg19_chr'+i+'_elems.txt')
-        try:
-            elementfile=open(individualElementPath)
-        except:
-            printError("%s could not be opened.." % (individualElementPath))
-        
-        if VERBOSE:
-            print('Reading GERP information for chromosome '+i+'...')
-            startTime = datetime.datetime.now()
-        
-        gerpCacheFile = buildGerpRates(GERPratepath, GERPratecachepath, i)
-        
-        if VERBOSE: print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
-        
-        GERPelements = getGERPelements(elementfile)
-
-        if VERBOSE:
-            print('Calculating GERP scores for chromosome '+i+'...')
-            startTime = datetime.datetime.now()
-
-        while line.split('\t')[0].split('chr')[-1]==i:
-            data = line.split('\t')
-            chr_num = data[0].split('chr')[-1]
-            start = int(data[1])
-            length = len(data[3])
-            end = start + length-1  ##inclusive endpoint
-
-            variantIndex = line.index("VA=") + len("VA=")
-            variants = line[variantIndex:].split(",")
-            variant = variants[0].split(":")
-            direction = variant[3]
-            transcript = variant[7]
-
-            GERPratedata.append(str(getGerpScore(gerpCacheFile, start, length)))
-
-            exons = codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None
-            truncatedExons = getTruncatedExons(exons, transcript, chr_num, start, direction) if exons else None
-
-            exonsCountData.append(":".join([str(len(truncatedExons)) if truncatedExons else ".", str(len(exons)) if exons else "."]))
-
-            elementIndex = findGERPelementIndex(GERPelements, start, end)
-            if elementIndex == -1:
-                GERPelementdata.append(".")
-                GERPrejectiondata.append(".")
-            else:
-                GERPelementdata.append(str(GERPelements[elementIndex]))
-
-                rejectedElements = []
-                if exons and truncatedExons and ('prematureStop' in line or 'insertionFS' in line or 'deletionFS' in line):
-                    rejectedElements = getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, elementIndex, direction)
-
-                if len(rejectedElements) > 0:
-                    GERPrejectiondata.append(",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements]))
-                else:
-                    GERPrejectiondata.append(".")
-            
-            line=vatFile.readline()
-        
-        if VERBOSE: print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
-        
-    return GERPratedata, GERPelementdata, GERPrejectiondata, exonsCountData
+    return elementData, rejectionData, exonCountData
 
 def getSegDupData(vatFile, segdupPath, chrs):
     segdups={}
@@ -452,22 +378,17 @@ def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, doma
 
     return chromosomesPFam
 
-def getGenomeSequences(genomePath, chrs):
-    ## Coordinates for chromosomes are 1-based.
-    #mapping to chromosome -> sequences in genomePath
-    genomeSequences={}
-    for i in chrs:
-        individualSequencePath = os.path.join(genomePath, 'chr'+i+'.fa')
-        try:
-            f=open(individualSequencePath)
-        except:
-            printError("%s could not be opened" % (individualSequencePath))
-        
-        if VERBOSE: print('Reading chromosome '+i+'...')
-        
-        f.readline()    ##first >chr* line
-        genomeSequences[i] = '0' + f.read().replace("\n", "")
-        f.close()
+def getGenomeSequences(genomePath, chromosome):
+    individualSequencePath = os.path.join(genomePath, "chr%s.fa" % (chromosome))
+    try:
+        f=open(individualSequencePath)
+    except:
+        printError("%s could not be opened" % (individualSequencePath))
+
+    f.readline()    ##first >chr* line
+    genomeSequences = '0' + f.read().replace("\n", "")
+    f.close()
+
     return genomeSequences
 
 def getCDSAndExonDictionaries(annotationPath, chrs):
@@ -639,36 +560,32 @@ def calculateExomeCoordinate(component):
         return 0.0
     return int(values[0]) * 1.0 / (int(values[0]) + int(values[1]))
 
-def getESP6500ExomeChromosomeInfo(exomesPath, chromosomes):
+def getESP6500ExomeChromosomeInfo(exomesPath, chromosome):
     exomesChromosomeInfo = {}
-    for chromosome in chromosomes:
-        exomesChromosomeInfo[chromosome] = {}
-        exomePath = os.path.join(exomesPath, 'ESP6500.chr%s.snps.vcf' % (chromosome)) 
-        try:
-            exomeInputFile = open(exomePath)
-        except:
-            printError("Couldn't read %s, skipping.." % (exomePath), False)
-            exomeInputFile = None
-        
-        if exomeInputFile:
-            for exomeLine in exomeInputFile:
-                if not exomeLine.startswith("#"):
-                    exomeLineComponents = exomeLine.split("\t")
-                    
-                    x = "NA"
-                    y = "NA"
-                    z = "NA"
-                    for component in exomeLineComponents[7].split(";"):
-                        if component.startswith('EA_AC='):
-                            x = "%.4f" % (calculateExomeCoordinate(component))
-                        elif component.startswith('AA_AC='):
-                            y = "%.4f" % (calculateExomeCoordinate(component))
-                        elif component.startswith('TAC='):
-                            z = "%.4f" % (calculateExomeCoordinate(component))
-                            
-                    exomesChromosomeInfo[chromosome][int(exomeLineComponents[1])] = ("%s,%s,%s" % (x, y, z))
-            
-            exomeInputFile.close()
+    exomePath = os.path.join(exomesPath, 'ESP6500.chr%s.snps.vcf' % (chromosome))
+    try:
+        exomeInputFile = open(exomePath)
+    except:
+        printError("Couldn't read %s, skipping.." % (exomePath), False)
+        exomeInputFile = None
+    if exomeInputFile:
+        for exomeLine in exomeInputFile:
+            if not exomeLine.startswith("#"):
+                exomeLineComponents = exomeLine.split("\t")
+                
+                x = "NA"
+                y = "NA"
+                z = "NA"
+                for component in exomeLineComponents[7].split(";"):
+                    if component.startswith('EA_AC='):
+                        x = "%.4f" % (calculateExomeCoordinate(component))
+                    elif component.startswith('AA_AC='):
+                        y = "%.4f" % (calculateExomeCoordinate(component))
+                    elif component.startswith('TAC='):
+                        z = "%.4f" % (calculateExomeCoordinate(component))
+                        
+                exomesChromosomeInfo[int(exomeLineComponents[1])] = ("%s,%s,%s" % (x, y, z))
+        exomeInputFile.close()
     return exomesChromosomeInfo
 
 def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
@@ -705,10 +622,10 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
     for j in range(0,len(l)):
         if ispositivestr:
             i=j
-            CDSseq+=genomeSequences[chr_num][l[i][0]:l[i][1]+1].upper()
+            CDSseq+=genomeSequences[l[i][0]:l[i][1]+1].upper()
         else:
             i=len(l)-j-1
-            CDSseq+=compstr(genomeSequences[chr_num][l[i][0]:l[i][1]+1].upper())
+            CDSseq+=compstr(genomeSequences[l[i][0]:l[i][1]+1].upper())
         CDSprec.append(tot)              ## stores in index i
         tot += l[i][1]+1-l[i][0]
     ## add on STOP sequence if annotated
@@ -717,18 +634,18 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
     except:
         s=(2,0)
     if ispositivestr:
-        CDSseq+=genomeSequences[chr_num][s[0]:s[1]+1].upper()
+        CDSseq+=genomeSequences[s[0]:s[1]+1].upper()
     else:
-        CDSseq+=compstr(genomeSequences[chr_num][s[0]:s[1]+1].upper())
+        CDSseq+=compstr(genomeSequences[s[0]:s[1]+1].upper())
     
     tot = 0
     for j in range(0,len(numberOfExonsHash)):
         if ispositivestr:
             i=j
-            exonseq+=genomeSequences[chr_num][numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper()
+            exonseq+=genomeSequences[numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper()
         else:
             i=len(numberOfExonsHash)-j-1
-            exonseq+=compstr(genomeSequences[chr_num][numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper())
+            exonseq+=compstr(genomeSequences[numberOfExonsHash[i][0]:numberOfExonsHash[i][1]+1].upper())
         exonprec.append(tot)            ## stores in index i
         tot += numberOfExonsHash[i][1]+1-numberOfExonsHash[i][0]
     
@@ -882,16 +799,16 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
         splice1='.'     ## 5' flanking splice site (acceptor)
     else:
         if ispositivestr:
-            splice1=genomeSequences[chr_num][numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper()
+            splice1=genomeSequences[numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper()
         else:
-            splice1=compstr(genomeSequences[chr_num][numberOfExonsHash[increxonindex][1]+1:numberOfExonsHash[increxonindex][1]+3].upper())                
+            splice1=compstr(genomeSequences[numberOfExonsHash[increxonindex][1]+1:numberOfExonsHash[increxonindex][1]+3].upper())                
     if increxon==len(numberOfExonsHash)-1:
         splice2='.'     ## 3' flanking splice site (donor)
     else:
         if ispositivestr:
-            splice2=genomeSequences[chr_num][numberOfExonsHash[increxon][1]+1:numberOfExonsHash[increxon][1]+3].upper()
+            splice2=genomeSequences[numberOfExonsHash[increxon][1]+1:numberOfExonsHash[increxon][1]+3].upper()
         else:
-            splice2=compstr(genomeSequences[chr_num][numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper())
+            splice2=compstr(genomeSequences[numberOfExonsHash[increxonindex][0]-2:numberOfExonsHash[increxonindex][0]].upper())
         
     canonical = (splice1=='AG' or splice1=='.') and (splice2=='GT' or splice2=='.')
     canonical = 'YES' if canonical else 'NO'
@@ -929,16 +846,16 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
         if (end==0 and i==0) or (end==1 and i==len(l)-1):
             return newData
         if end==0:
-            acceptor = genomeSequences[chr_num][l[i][0]-2:l[i][0]].upper()
+            acceptor = genomeSequences[l[i][0]-2:l[i][0]].upper()
             if start==l[i][0]-2:
                 new = (1, subst+acceptor[1])
             else:
                 new = (1, acceptor[0]+subst)
-            donor = genomeSequences[chr_num][l[i-1][1]+1:l[i-1][1]+3].upper()
+            donor = genomeSequences[l[i-1][1]+1:l[i-1][1]+3].upper()
             intronlength = l[i][0]-l[i-1][1]-1
         elif end==1:
-            acceptor = genomeSequences[chr_num][l[i+1][0]-2:l[i+1][0]].upper()
-            donor = genomeSequences[chr_num][l[i][1]+1:l[i][1]+3].upper()
+            acceptor = genomeSequences[l[i+1][0]-2:l[i+1][0]].upper()
+            donor = genomeSequences[l[i][1]+1:l[i][1]+3].upper()
             if start==l[i][1]+1:
                 new = (0, subst+donor[1])
             else:
@@ -948,16 +865,16 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
         if (end==1 and i==0) or (end==0 and i==len(l)-1):
             return newData
         if end==0:
-            donor = genomeSequences[chr_num][l[i][0]-2:l[i][0]].upper()
-            acceptor = genomeSequences[chr_num][l[i+1][1]+1:l[i+1][1]+3].upper()
+            donor = genomeSequences[l[i][0]-2:l[i][0]].upper()
+            acceptor = genomeSequences[l[i+1][1]+1:l[i+1][1]+3].upper()
             if start==l[i][0]-2:
                 new = (0, subst+donor[1])
             else:
                 new = (0, donor[0]+subst)
             intronlength = l[i][0]-l[i+1][1]-1
         elif end==1:
-            donor = genomeSequences[chr_num][l[i-1][0]-2:l[i-1][0]].upper()
-            acceptor = genomeSequences[chr_num][l[i][1]+1:l[i][1]+3].upper()
+            donor = genomeSequences[l[i-1][0]-2:l[i-1][0]].upper()
+            acceptor = genomeSequences[l[i][1]+1:l[i][1]+3].upper()
             if start==l[i][1]+1:
                 new = (1, subst+acceptor[1])
             else:
@@ -974,9 +891,9 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
 
     return newData
 
-def getMatchingNagnagnagPositions(genomeSequence, chr_num, start):
+def getMatchingNagnagnagPositions(genomeSequence, start):
     #NAGN <snp>AG NAG
-    nagnagSequence = genomeSequences[chr_num][start-4:start+5]
+    nagnagSequence = genomeSequences[start-4:start+5]
     if not ispositivestr:
         nagnagSequence = compstr(nagnagSequence)
 
@@ -1025,23 +942,15 @@ if __name__ == "__main__":
     
     chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
     
-    ##list of ancestral alleles for each line in input file,
-    ##"" if metadata line, '.' if none available
-    ancestors = getAncestors(args.ancestor)
-    ancesdata = [parseances(ancestors, line) for line in vatFile]
-    del ancestors
-    
     #Load exon intervals from .interval file, used later for intersecting with gerp elements
     codingExonIntervals = getCodingExonIntervals(args.annotation_interval)
     
-    GERPratedata, GERPelementdata, GERPrejectiondata, exonsCountData = getGERPData(vatFile, chrs, args.elements, args.rates, os.path.join(args.cache, "gerp"), codingExonIntervals)
     segdupdata = getSegDupData(vatFile, args.segdup, chrs)
     
     if VERBOSE:
         print('Building CDS and exon dictionaries...')
         startTime = datetime.datetime.now()
     
-    genomeSequences = getGenomeSequences(args.genome, chrs)
     transcript_strand, CDS, exon, stop_codon = getCDSAndExonDictionaries(args.annotation, chrs)
     
     if VERBOSE:
@@ -1052,9 +961,6 @@ if __name__ == "__main__":
 
     ##{'1':{'ENSP...':'PF...\t4-25\t(ENSP...)'}, '2':{...}, ...}
     chromosomesPFam = dict(list(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items()) + list(getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"], 3).items()) + list(getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items()))
-
-    #Scan ESP6500 (exome) fields
-    exomesChromosomeInfo = getESP6500ExomeChromosomeInfo(args.exomes, chrs)
 
     #Scan 1000G file
     if VERBOSE: print("Scanning 1000G file")
@@ -1126,8 +1032,7 @@ if __name__ == "__main__":
                 "SNP location", "alt donor", "alt acceptor", "nagnag positions",\
                 "intron length", "# failed filters", "filters failed",\
                 "GERP score", "GERP element", "GERP rejection", "exon counts",\
-                "segmental duplications", "Disorder prediction"] + pfamParamsWithTruncations +\
-                ["1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
+                "segmental duplications", "1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
                 "haploinsufficiency disease score",\
@@ -1154,36 +1059,58 @@ if __name__ == "__main__":
         counter+=1
         line = vatFile.readline()
 
+    currentLoadedChromosome = None
+
     while line!="":
         data = line.strip().split('\t')
         chr_num = data[0].split("chr")[-1]
         start = int(data[1])
         end = start+len(data[3])-1
+
+        if not currentLoadedChromosome or currentLoadedChromosome != chr_num:
+            #This is where we get a chance to data that is unique to a chromosome
+            if VERBOSE: print("Reading data from chromosome %s..." % (chr_num))
+            ancestorData = getAncestorData(args.ancestor, chr_num)
+            exomesChromosomeInfo = getESP6500ExomeChromosomeInfo(args.exomes, chr_num) #Scan ESP6500 (exome) fields
+            genomeSequences = getGenomeSequences(args.genome, chr_num)
+            gerpCacheFile = buildGerpRates(args.rates, os.path.join(args.cache, "gerp"), chr_num)
+            GERPelements = getGERPelements(open(os.path.join(args.elements, "hg19_chr%s_elems.txt" % (chr_num))))
+            currentLoadedChromosome = chr_num
         
         #Filter lines
         if "deletionFS" in line or "insertionFS" in line or "premature" in line or "splice" in line:
-            if data[3] == ancesdata[counter]:
+            ancesdata = ancestorData[start:start+len(data[3])].upper()
+            if data[3] == ancesdata:
                 ancestral = "Ref"
-            elif data[4] == ancesdata[counter]:
+            elif data[4] == ancesdata:
                 ancestral = "Alt"
             else:
                 ancestral = "Neither"
+
+            gerpVariantIndex = line.index("VA=") + len("VA=")
+            gerpVariants = line[gerpVariantIndex:].split(",")
+            gerpVariant = gerpVariants[0].split(":")
+            gerpDirection = gerpVariant[3]
+            gerpTranscript = gerpVariant[7]
+
+            GERPscore = getGerpScore(gerpCacheFile, start, end - start + 1)
+            GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(gerpCacheFile, GERPelements, codingExonIntervals[chr_num][gerpTranscript] if gerpTranscript in codingExonIntervals[chr_num] else None, start, end, gerpDirection)
             
             ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
-            lineinfo = {'AA':'AA='+ancesdata[counter],\
+            lineinfo = {'AA':'AA='+ancesdata,\
                         'Ancestral':'Ancestral='+ancestral,\
-                        'GERPscore':'GERPscore='+GERPratedata[counter],\
-                        'GERPelement':'GERPelement='+GERPelementdata[counter],\
-                        'GERPrejection':'GERPrejection='+GERPrejectiondata[counter],\
-                        'exoncounts':'exoncounts='+exonsCountData[counter],\
+                        'GERPscore':'GERPscore='+str(GERPscore),\
+                        'GERPelement':'GERPelement='+GERPelementdata,\
+                        'GERPrejection':'GERPrejection='+GERPrejectiondata,\
+                        'exoncounts':'exoncounts='+exonCountData,\
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'SegDup']
     
-            outdata["ancestral allele"] = ancesdata[counter]
-            outdata["GERP score"] = GERPratedata[counter]
-            outdata["GERP element"] = GERPelementdata[counter]
-            outdata["GERP rejection"] = GERPrejectiondata[counter]
-            outdata["exon counts"] = exonsCountData[counter]
+            outdata["ancestral allele"] = ancesdata
+            outdata["GERP score"] = str(GERPscore)
+            outdata["GERP element"] = GERPelementdata
+            outdata["GERP rejection"] = GERPrejectiondata
+            outdata["exon counts"] = exonCountData
             outdata["segmental duplications"] = '.' if segdupdata[counter].count('(') == '0' else segdupdata[counter]
     
             #Adding 1000G fields
@@ -1218,9 +1145,9 @@ if __name__ == "__main__":
             
             #Add exomes info to output
             infotypes += ['ESP6500', 'ESP6500_AAF']
-            if start in exomesChromosomeInfo[chr_num]:
+            if start in exomesChromosomeInfo:
                 lineinfo['ESP6500'] = 'ESP6500=Yes'
-                lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=' + exomesChromosomeInfo[chr_num][start]
+                lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=' + exomesChromosomeInfo[start]
             else:
                 lineinfo['ESP6500'] = 'ESP6500=No'
                 lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=NA,NA,NA'
@@ -1316,7 +1243,7 @@ if __name__ == "__main__":
                         outdata["longest transcript?"] = "YES" if int(outdata["transcript length"])==longesttranscript else "NO"
                         ispositivestr = transcript_strand[transcript]=='+'
 
-                        nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, chr_num, start)
+                        nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, start)
                         outdata['nagnag positions'] = '/'.join(map(str, nagNagPositions)) if len(nagNagPositions) > 0 else '.'
     
                         outdata["# pseudogenes associated to transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
@@ -1418,7 +1345,7 @@ if __name__ == "__main__":
                                 failed_filters.append('near_stop')
                         except:
                             pass
-                        if ancesdata[counter]==subst:
+                        if ancesdata==subst:
                             filters_failed = filters_failed+1
                             failed_filters.append('lof_anc')
                         if segdupdata[counter].count('(') > 3:
