@@ -1,42 +1,48 @@
-
 ###############################################################################
  
 ALoFT - Automated Loss of Function Tool
 Version 1.0
-Released 4/21/2013		
+Released 2013	
 Gerstein Lab - Yale University
 
 ###############################################################################
 
-I. Program Description
+I. Description
 ALoFT takes as input an VCF (variant call format) file, runs it through the 
 variant annotation tool (VAT) tools snpMapper and indelMapper, and runs 
 the sorted VAT output through aloft.py, which calculates many 
 other variant-specific features that give functional, evolutionary, probable 
 mismapping, and other information. ALOFT only calculates these 
 parameters for frameshift indels, loss-of-function (LoF) SNPs, and for SNPs 
-located in splice sites.
+located in splice sites. ALOFT is split into separate modules based on features.
+QUICK LIST FEATURES HERE
+
 
 II. System Requirements
-- Python 2.7.x or Python 3.x
+Python 2.7.x or Python 3.x
+RedHat Linux
+NOT compatible with Windows systems
 
-II. Installation (Required):
+
+III. Installation:
+
 cd aloft
-python install.py
+/path/to/python/interpreter install.py
 
-This will install VAT, our gerp score caching module, and the networkx module all required to run aloft.
+This will install VAT, our gerp score caching module, and the networkx module required to run aloft.
 
-III. Input Files (Required):
+
+IV. Input Files (Required):
 
 1) VCF file containing unannotated variants, passed in using the --vcf option.
 Alternatively, an annotated VCF file output by a separate manual run of VAT 
 should be passed in with the --vat option. See options section below.
 
 2) Reference files. For complete list, see section below regarding options and 
-default values.
+default values. Most reference files should be already in place.
 
 
-IV. Output Files (may be overridden, see Section V Options):
+V. Output Files (may be overridden, see Section V Options):
 
 Pass an output directory via --output
 
@@ -46,8 +52,7 @@ Four files may be created into this output directory:
 This intermediate file is then run through
 aloft.py to produce the following three files.
 
-2) VCF file created based on the output from VAT.  Includes all information 
-output by VAT, plus the features calculated by aloft.py.
+2) Output VCF file. Includes all information output by VAT and all features in ALOFT.
 
 3) Tab-delimited file (labeled lof) containing the subset of VAT output associated with LoF 
 SNPs and frameshift indels. All information from the VAT file is included, 
@@ -62,7 +67,7 @@ output on multiple rows, one for each combination of alternate allele and
 affected transcript.
 
 
-V. Usage
+VII. Usage
 ALoFT can be invoked as follows:
 cd aloft
 python aloft.py [--option1=arg1] [--option2=arg2]...
@@ -70,19 +75,40 @@ python aloft.py [--option1=arg1] [--option2=arg2]...
 Example:
 python aloft.py --vcf=vcf_file.vcf
 OR 
-(for specifying VAT input instead of unannotated vcf file)
-python aloft.py --vat=vat_file.vcf
+python aloft.py --vat=vat_file.vcf         (for specifying VAT input instead of unannotated vcf file)
 OR 
-(for specifying output destination)
-python aloft.py --vcf=vcf_file.vcf --output=/path/to/directory
+python aloft.py --vcf=vcf_file.vcf --output=/path/to/directory    (for specifying output destination)
 
-VI. Options
-aloft.py recognizes the following options (default values given):
+
+VIII. ALoFT Features
+ALOFT calculated the following features for all variants:
+Partial/full - Full if all transcripts of the affected gene are affected, 
+partial otherwise
+Transcript length - Length of affected transcript in nucleotides
+Longest transcript - YES if transcript is the longest transcript affected by 
+variant, NO otherwise
+Shortest path to recessive gene - Minimum length of a shortest path to a 
+recessive gene in protein interaction network
+
+For premature stop-causing SNPs/indels only:
+
+For splice SNPs only:
+
+
+IX. Options
+aloft.py recognizes the following options for altering input and reference files (default values given):
+ALOFT will come packaged with most of the necessary reference files.
 
 --vcf=""
 Specifies path to VCF input file.  Set to empty string by default.  If none 
 specified, NMD_predictor will try to skip VAT and run directly on the file 
 given to the --vat option. This or --vat option is needed for proper execution.
+
+--vat=/path/to/vat_output.vcf
+Specifies path to VAT output file to run aloft on.
+
+--output=/path/to/output_directory
+Specifies path to tabbed output files and VCF file from ALOFT.
 
 --annotation_interval=data/gencode.v16.pc.interval
 Specifies path to genome annotation interval file. The interval file is
@@ -93,12 +119,6 @@ http://info.gersteinlab.org/VAT#Interval.
 --annotation_sequence=data/gencode.v16.pc.fa
 Specifies path to annotation sequence file in FASTA format. The fasta file
 is extracted from the interval file by the VAT utility interval2sequences.
-
---vat=/path/to/vat_output.vcf
-Specifies path to VAT output file to run aloft on.
-
---output=/path/to/output_directory
-Specifies path to tabbed output file of NMD_predictor containing LoF variants, tabbed output file of NMD_predictor containing splice site SNPs, and to VCF file containing VAT output plus additional calculated features.
 
 --cache=cache/
 Specifies path to directory containing cache of GERP score information and protein-protein interaction information.  
@@ -116,49 +136,36 @@ Specifies path to directory containing GERP score information.  Files must be
 named chr*.maf.rates, where * is 1-22/X/Y.
 
 --ancestor=data/homo_sapiens_ancestor_GRCh37_e71/
-Specifies path to directory containing ancestral chromosome files.  Files must 
+Path to directory containing ancestral chromosome files.  Files must 
 be named homo_sapiens_ancestor_*.fa, where * is 1-22/X/Y.
 
 --segdup=data/hg19-segdup.txt
-Specifies path to file containing genome segmental duplication regions.
+Path to file containing genome segmental duplication regions.
 
 --thousandG=data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.gencode16.SNPS.vat.vcf
-Specifies path to file containing 1000Genomes variant data.
+Path to file containing 1000Genomes variant data.
 
 --exomes=data/ESP6500/
-Specifies path to directory containing ESP6500 SNP data.  Files must be named ESP6500.chr*.snps.vcf, where * is 1-22/X/Y.
+Path to directory containing ESP6500 SNP data.  Files must be named ESP6500.chr*.snps.vcf, where * is 1-22/X/Y.
 
 --ensembl_table=data/ens67_gtpcgtpolymorphic.txt
-Specifies path to file containing mappings between Ensembl gene and protein IDs.
+Path to file containing mappings between Ensembl gene and protein IDs.
 
---protein_features=prot_features/
-Specifies path to directory containing protein domain information.  Files must be named chr*.prot-features-ens70.txt, where * is 1-22/X/Y.
+--protein_features=data/prot_features/
+Path to directory containing protein domain information.  Files must be named chr*.prot-features-ens70.txt, where * is 1-22/X/Y.
 
 --transmembrane=tm_ens70/
-Specifies
+Path
 
 --nmd_threshold=50
 Distance from premature stop to last exon-exon junction; used to find NMD cause. By default, this is 50.
 
-VI. Notes
-The main components are aloft.py and vat_run.py.
+
+X. Detailed 
+The main components of ALOFT are aloft.py and vat_run.py.
 
 aloft.py: Contains the main body of code.  If a VCF file is not 
 passed in, Reads information from all relevant input files into memory, and 
 
 vat_run.py: Contains run_vat(), a function called by aloft.py to run 
 VAT automatically. 
-
-VII. ALoFT Features
-For all variants:
-Partial/full - Full if all transcripts of the affected gene are affected, 
-partial otherwise
-Transcript length - Length of affected transcript in nucleotides
-Longest transcript - YES if transcript is the longest transcript affected by 
-variant, NO otherwise
-Shortest path to recessive gene - Minimum length of a shortest path to a 
-recessive gene in protein interaction network
-
-For premature stop-causing SNPs/indels only:
-
-For splice SNPs only:
