@@ -10,7 +10,7 @@ def printError(error, exit=True):
 		sys.stderr.write("Exiting..\n")
 		sys.exit(1)
 
-def getTruncatedExons(exons, transcript, chromosome, start, direction):
+def getTruncatedExons(exons, start, direction):
 	truncatedExons = None
 	stopExonIndex = 0
 	for block in exons:

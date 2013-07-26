@@ -158,89 +158,30 @@ def parseances(ancestor, line):
     start = int(data[1])
     return ancestor[chr_num][start:start+len(data[3])].upper()
 
-def getGERPData(vatFile, chrs, GERPelementpath, GERPratepath, GERPratecachepath, codingExonIntervals):
-    ## Coordinates are 1-based.
-    ## All GERP intervals include endpoints
-    GERPratedata=[]
-    GERPelementdata=[]
-    GERPrejectiondata = []
-    exonsCountData = []
+def getGERPData(gerpCacheFile, GERPelements, exons, start, end, direction):
+    rateData = str(getGerpScore(gerpCacheFile, start, end - start + 1))
 
-    vatFile.seek(0)
-    line = vatFile.readline()
-    while line.startswith("#") or line=="\n":
-        GERPratedata.append('')
-        GERPelementdata.append('')
-        GERPrejectiondata.append('')
-        exonsCountData.append('')
-        line=vatFile.readline()
+    truncatedExons = getTruncatedExons(exons, start, direction) if exons else None
 
-    for i in chrs:
-        if line.split('\t')[0].split('chr')[-1]!=i:
-            if VERBOSE: print('no indels on chromosome ' + i)
-            continue
+    exonCountData = ":".join([str(len(truncatedExons)) if truncatedExons else ".", str(len(exons)) if exons else "."])
 
-        individualElementPath = os.path.join(GERPelementpath, 'hg19_chr'+i+'_elems.txt')
-        try:
-            elementfile=open(individualElementPath)
-        except:
-            printError("%s could not be opened.." % (individualElementPath))
-        
-        if VERBOSE:
-            print('Reading GERP information for chromosome '+i+'...')
-            startTime = datetime.datetime.now()
-        
-        gerpCacheFile = buildGerpRates(GERPratepath, GERPratecachepath, i)
-        
-        if VERBOSE: print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
-        
-        GERPelements = getGERPelements(elementfile)
+    elementIndex = findGERPelementIndex(GERPelements, start, end)
+    if elementIndex == -1:
+        elementData = "."
+        rejectionData = "."
+    else:
+        elementData = str(GERPelements[elementIndex])
 
-        if VERBOSE:
-            print('Calculating GERP scores for chromosome '+i+'...')
-            startTime = datetime.datetime.now()
+        rejectedElements = []
+        if exons and truncatedExons and ('prematureStop' in line or 'insertionFS' in line or 'deletionFS' in line):
+            rejectedElements = getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, elementIndex, direction)
 
-        while line.split('\t')[0].split('chr')[-1]==i:
-            data = line.split('\t')
-            chr_num = data[0].split('chr')[-1]
-            start = int(data[1])
-            length = len(data[3])
-            end = start + length-1  ##inclusive endpoint
+        if len(rejectedElements) > 0:
+            rejectionData = ",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements])
+        else:
+            rejectionData = "."
 
-            variantIndex = line.index("VA=") + len("VA=")
-            variants = line[variantIndex:].split(",")
-            variant = variants[0].split(":")
-            direction = variant[3]
-            transcript = variant[7]
-
-            GERPratedata.append(str(getGerpScore(gerpCacheFile, start, length)))
-
-            exons = codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None
-            truncatedExons = getTruncatedExons(exons, transcript, chr_num, start, direction) if exons else None
-
-            exonsCountData.append(":".join([str(len(truncatedExons)) if truncatedExons else ".", str(len(exons)) if exons else "."]))
-
-            elementIndex = findGERPelementIndex(GERPelements, start, end)
-            if elementIndex == -1:
-                GERPelementdata.append(".")
-                GERPrejectiondata.append(".")
-            else:
-                GERPelementdata.append(str(GERPelements[elementIndex]))
-
-                rejectedElements = []
-                if exons and truncatedExons and ('prematureStop' in line or 'insertionFS' in line or 'deletionFS' in line):
-                    rejectedElements = getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, elementIndex, direction)
-
-                if len(rejectedElements) > 0:
-                    GERPrejectiondata.append(",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements]))
-                else:
-                    GERPrejectiondata.append(".")
-            
-            line=vatFile.readline()
-        
-        if VERBOSE: print(str((datetime.datetime.now() - startTime).seconds) + " seconds.")
-        
-    return GERPratedata, GERPelementdata, GERPrejectiondata, exonsCountData
+    return rateData, elementData, rejectionData, exonCountData
 
 def getSegDupData(vatFile, segdupPath, chrs):
     segdups={}
@@ -1031,7 +972,6 @@ if __name__ == "__main__":
     #Load exon intervals from .interval file, used later for intersecting with gerp elements
     codingExonIntervals = getCodingExonIntervals(args.annotation_interval)
     
-    GERPratedata, GERPelementdata, GERPrejectiondata, exonsCountData = getGERPData(vatFile, chrs, args.elements, args.rates, os.path.join(args.cache, "gerp"), codingExonIntervals)
     segdupdata = getSegDupData(vatFile, args.segdup, chrs)
     
     if VERBOSE:
@@ -1158,7 +1098,10 @@ if __name__ == "__main__":
         end = start+len(data[3])-1
 
         if not currentLoadedChromosome or currentLoadedChromosome != chr_num:
+            #This is where we get a chance to data that is unique to a chromosome
             genomeSequences = getGenomeSequences(args.genome, chr_num)
+            gerpCacheFile = buildGerpRates(args.rates, os.path.join(args.cache, "gerp"), chr_num)
+            GERPelements = getGERPelements(open(os.path.join(args.elements, "hg19_chr%s_elems.txt" % (chr_num))))
             currentLoadedChromosome = chr_num
         
         #Filter lines
@@ -1169,22 +1112,30 @@ if __name__ == "__main__":
                 ancestral = "Alt"
             else:
                 ancestral = "Neither"
+
+            gerpVariantIndex = line.index("VA=") + len("VA=")
+            gerpVariants = line[gerpVariantIndex:].split(",")
+            gerpVariant = gerpVariants[0].split(":")
+            gerpDirection = gerpVariant[3]
+            gerpTranscript = gerpVariant[7]
+
+            GERPratedata, GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(gerpCacheFile, GERPelements, codingExonIntervals[chr_num][gerpTranscript] if gerpTranscript in codingExonIntervals[chr_num] else None, start, end, gerpDirection)
             
             ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
             lineinfo = {'AA':'AA='+ancesdata[counter],\
                         'Ancestral':'Ancestral='+ancestral,\
-                        'GERPscore':'GERPscore='+GERPratedata[counter],\
-                        'GERPelement':'GERPelement='+GERPelementdata[counter],\
-                        'GERPrejection':'GERPrejection='+GERPrejectiondata[counter],\
-                        'exoncounts':'exoncounts='+exonsCountData[counter],\
+                        'GERPscore':'GERPscore='+GERPratedata,\
+                        'GERPelement':'GERPelement='+GERPelementdata,\
+                        'GERPrejection':'GERPrejection='+GERPrejectiondata,\
+                        'exoncounts':'exoncounts='+exonCountData,\
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'SegDup']
     
             outdata["ancestral allele"] = ancesdata[counter]
-            outdata["GERP score"] = GERPratedata[counter]
-            outdata["GERP element"] = GERPelementdata[counter]
-            outdata["GERP rejection"] = GERPrejectiondata[counter]
-            outdata["exon counts"] = exonsCountData[counter]
+            outdata["GERP score"] = GERPratedata
+            outdata["GERP element"] = GERPelementdata
+            outdata["GERP rejection"] = GERPrejectiondata
+            outdata["exon counts"] = exonCountData
             outdata["segmental duplications"] = '.' if segdupdata[counter].count('(') == '0' else segdupdata[counter]
     
             #Adding 1000G fields
