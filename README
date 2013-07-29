@@ -81,18 +81,63 @@ python aloft.py --vcf=vcf_file.vcf --output=/path/to/directory    (for specifyin
 
 
 VIII. ALoFT Features
-ALOFT calculated the following features for all variants:
-Partial/full - Full if all transcripts of the affected gene are affected, 
+ALOFT calculates the following features for all variants:
+- VAT Features: includes all features from VAT snpMapper and indelMapper
+- Partial/full: full if all transcripts of the affected gene are affected, 
 partial otherwise
-Transcript length - Length of affected transcript in nucleotides
-Longest transcript - YES if transcript is the longest transcript affected by 
+- Transcript length: length of affected transcript in nucleotides
+- Longest transcript: YES if transcript is the longest transcript affected by 
 variant, NO otherwise
-Shortest path to recessive gene - Minimum length of a shortest path to a 
+- Shortest path to recessive gene: minimum length of a shortest path to a 
 recessive gene in protein interaction network
+- Recessive Neighbors: 
+- Shortest path to dominant gene: minimum of length of a shortest path to a dominant
+gene in the protein interaction network
+- Dominant Neighbors: 
+- Number of Failed Filters:
+- Filters Failed:
+- GERP Score:
+- GERP Element:
+- GERP Rejection:
+- Exon Counts:
+- Segmental Duplications:
+- 1000Genomes Phase 1: blank, AF, ASN_AF, AFR_AF, EUR_AF
+- ESP6500: AF, AAF
+- Haploinsufficiency disease score:
+- LoF disease score
+- netSNP disease score
+- Number of pseudogenes associated with transcript
+- Number of paralogs associated with identified gene
+- dN/dS (macaque)
+- dN/dS (mouse)
 
-For premature stop-causing SNPs/indels only:
+For Loss of Function SNPs/indels only:
+- Is single coding exon?:
+- Indel position in CDS:
+- Causes NMD?:
+- 5' flanking splice site:
+- 3' flanking splice site:
+- Canonical?:
+- Ancestral Allele:
+- Disorder Prediction: 
+- PFAM intersection and truncation:
+- SSF intersection and truncation:
+- SM intersection and truncation:
+- Tmhmm intersection and truncation:
+- Sigp intersection and truncation:
+- Post translational modifications (intersection and truncations): includes acetylation,
+(mono/di/tri)methylation, O-GlcNAc, phophorylation, sumolyation, ubiquitination
 
 For splice SNPs only:
+- Donor:
+- Acceptor:
+- SNP in canonical site?
+- Other splice site canonical?
+- SNP location:
+- Alt donor:
+- Alt acceptor:
+- NAGNAG positions:
+- Intron length:
 
 
 IX. Options
@@ -155,7 +200,7 @@ Path to file containing mappings between Ensembl gene and protein IDs.
 Path to directory containing protein domain information.  Files must be named chr*.prot-features-ens70.txt, where * is 1-22/X/Y.
 
 --transmembrane=tm_ens70/
-Path
+Path to directory containing transmembrane protein family database.
 
 --nmd_threshold=50
 Distance from premature stop to last exon-exon junction; used to find NMD cause. By default, this is 50.
