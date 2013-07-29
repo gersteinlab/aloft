@@ -402,26 +402,15 @@ def getCDSAndExonDictionaries(annotationPath, chrs):
     exon['M']={}
     stop_codon['M']={}
 
-    ##count number of lines preceding actual annotation data
-    counter = 0
     annotfile = open(annotationPath)
-    for line in annotfile:
-        if len(line)<3:
-            counter+=1
-            continue
-        if line.startswith("#"):    ##all preceding lines begin with #
-            counter+=1
-        else:
-            annotfile.seek(0)
-            break
-    for i in range(0,counter):
-        annotfile.readline()
 
     ##begin going through actual annotation data
     oldtr = ""  ##last seen transcript
     oldchr = "" ##chr num of last seen transcript
     tlines = [] ##all split CDS lines in oldtr
     for line in annotfile:
+        if line.startswith("#"):
+            continue
         data = line.strip().split('\t')
         chr_num=data[0].split('chr')[-1]
         annottype = data[2]
