@@ -4,6 +4,12 @@ ALoFT - Automated Loss of Function Tool
 Version 1.0
 Released 2013	
 Gerstein Lab - Yale University
+Citation: 
+Contact: Dr. Suganthi Balasubramanian (suganthi.bala@yale.edu)
+		 Mayur Pawashe (mayur.pawashe@yale.edu)
+		 Jeremy Liu (jeremy.liu@yale.edu)
+
+TODOs: Update Feature List, Update Reference File List, Package
 
 ###############################################################################
 
@@ -12,15 +18,15 @@ ALoFT takes as input an VCF (variant call format) file, runs it through the
 variant annotation tool (VAT) tools snpMapper and indelMapper, and runs 
 the sorted VAT output through aloft.py, which calculates many 
 other variant-specific features that give functional, evolutionary, probable 
-mismapping, and other information. ALOFT only calculates these 
+mismapping, and other information. ALoFT only calculates these 
 parameters for frameshift indels, loss-of-function (LoF) SNPs, and for SNPs 
-located in splice sites. ALOFT is split into separate modules based on features.
-QUICK LIST FEATURES HERE
+located in splice sites. ALoFT is split into separate modules based on features.
+See section VIII Features for a detailed description of the features in ALoFT.
 
 
 II. System Requirements
 Python 2.7.x or Python 3.x
-RedHat Linux
+Linux
 NOT compatible with Windows systems
 
 
@@ -38,8 +44,8 @@ IV. Input Files (Required):
 Alternatively, an annotated VCF file output by a separate manual run of VAT 
 should be passed in with the --vat option. See options section below.
 
-2) Reference files. For complete list, see section below regarding options and 
-default values. Most reference files should be already in place.
+2) Reference files (defaults already in place). 
+For complete list, see section below regarding options and default values.
 
 
 V. Output Files (may be overridden, see Section V Options):
@@ -94,13 +100,14 @@ recessive gene in protein interaction network
 - Shortest path to dominant gene: minimum of length of a shortest path to a dominant
 gene in the protein interaction network
 - Dominant Neighbors: 
-- Number of Failed Filters:
-- Filters Failed:
-- GERP Score:
-- GERP Element:
-- GERP Rejection:
+- Number of Failed Filters: number of call filters failed associated with the variant
+- Filters Failed: list of the call filters failed associated with the variant
+- GERP Score: associated GERP score of the variant position
+- GERP Element: associated GERP element of the variant position
+- GERP Rejection: associated GERP rejection score of the variant position
 - Exon Counts:
-- Segmental Duplications:
+- Segmental Duplications: Gives the position of associated segdups as a bracketed list,
+or a period if none exist.
 - 1000Genomes Phase 1: blank, AF, ASN_AF, AFR_AF, EUR_AF
 - ESP6500: AF, AAF
 - Haploinsufficiency disease score:
@@ -112,15 +119,19 @@ gene in the protein interaction network
 - dN/dS (mouse)
 
 For Loss of Function SNPs/indels only:
-- Is single coding exon?:
+- Is single coding exon?: YES if the variant intersects a transcript with only one coding
+exon, NO if the variant does not.
 - Indel position in CDS:
-- Causes NMD?:
+- Causes NMD?: Nonsense Mediated Decay prediction based on proximity to the end of the last
+exon. Default cutoff distance is 50 base pairs.
 - 5' flanking splice site:
 - 3' flanking splice site:
 - Canonical?:
 - Ancestral Allele:
-- Disorder Prediction: 
-- PFAM intersection and truncation:
+- Disorder Prediction: Gives the percentage of disordered residues in the translated
+nucleotide sequence. Also gives the percentage of disordered residues in the translated
+nucleotide sequence after the truncation caused by a premature stop.
+- PFAM intersection and truncation: 
 - SSF intersection and truncation:
 - SM intersection and truncation:
 - Tmhmm intersection and truncation:
@@ -206,11 +217,22 @@ Path to directory containing transmembrane protein family database.
 Distance from premature stop to last exon-exon junction; used to find NMD cause. By default, this is 50.
 
 
-X. Detailed 
-The main components of ALOFT are aloft.py and vat_run.py.
+X. Components
 
 aloft.py: Contains the main body of code.  If a VCF file is not 
 passed in, Reads information from all relevant input files into memory, and 
 
+common.py: Auxiliary file that contains common functions used by ALoFT.
+
+data: Directory for the default reference files used by ALoFT
+
+gerprate.c:
+
+install.py: Installation script for the GERP cache and network cache used by ALoFT to improve efficiency.
+
+sequencing.py: Auxiliary file that contains methods used to translate nucleotide sequence to amino acids.
+
 vat_run.py: Contains run_vat(), a function called by aloft.py to run 
 VAT automatically. 
+
+vcf_sort.py: Contains the functions to sort VAT output by increasing chromosome and position number.
