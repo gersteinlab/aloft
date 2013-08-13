@@ -1414,7 +1414,10 @@ if __name__ == "__main__":
     spliceOutputFile.close()
     vatFile.close()
 
-    #save shortest path values to cache file
-    pickle.dump(ppiHash, open(ppiHashPath, "wb"), protocol=2)
+    try:
+        #save shortest path values to cache file
+        pickle.dump(ppiHash, open(ppiHashPath, "wb"), protocol=2)
+    except:
+        printError("Failed to write PPI cache, skipping..", False)
 
     if VERBOSE: print("Finished execution in %d seconds" % ((datetime.datetime.now() - startProgramExecutionTime).seconds))
