@@ -49,7 +49,7 @@ def run_vat(arguments, forceVerbose=False):
 		lineComponents = line.rstrip("\n").rstrip("\t").split("\t")
 
 		if line.startswith("#"):
-			if line.startswith("#CHROM"):
+			if line.startswith("#CHR"):
 				if lineComponents[2] != 'ID':
 					foundID = False
 				if len(lineComponents) < 8:
