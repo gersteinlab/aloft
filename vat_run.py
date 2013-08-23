@@ -14,12 +14,21 @@ from common import printError
 VAT_BIN_PATH = "vat/vat-2.0.1-install/bin/"
 
 def run_vat(arguments, forceVerbose=False):
+	snpMapperPath = os.path.join(VAT_BIN_PATH, 'snpMapper')
+	indelMapperPath = os.path.join(VAT_BIN_PATH, 'indelMapper')
+
+	if not os.path.exists(snpMapperPath) or not os.path.exists(indelMapperPath):
+		printError("VAT is not installed correctly - please see INSTALL")
+
 	#example as input path: '/net/gerstein/sb238/ftw/finnish/Finns.nogeno.vcf.gz'
 	# or a .vcf is fine too
-	inputPath = arguments[1]
-	vatOutputPath = arguments[2]
-	annotationIntervalPath = arguments[3]
-	annotationSequencePath = arguments[4]
+	try:
+		inputPath = arguments[1]
+		vatOutputPath = arguments[2]
+		annotationIntervalPath = arguments[3]
+		annotationSequencePath = arguments[4]
+	except:
+		printError("Failed to parse arguments\nUsage is <input_vcf> <vat_output> <annotation_interval_input> <annotation_sequence_input> <verbosity_level>\nThis program will take care of sorting the input_vcf file numerically.\nFor verbosity_level you must pass in 0 (indicating no verbosity) or 1 (indicating verbosity)")
 	verbose = False
 	if forceVerbose or (5 < len(arguments) and int(arguments[5]) > 0):
 		verbose = True
@@ -108,7 +117,7 @@ def run_vat(arguments, forceVerbose=False):
 	
 	if verbose: print("Running snpMapper...")
 	try:
-		snpMapperPipe = Popen([os.path.join(VAT_BIN_PATH, 'snpMapper'), annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=snpInputFile)
+		snpMapperPipe = Popen([snpMapperPath, annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=snpInputFile)
 	except:
 		printError("Failed to open snpMapper")
 	
@@ -132,7 +141,7 @@ def run_vat(arguments, forceVerbose=False):
 	
 	if verbose: print("Running indelMapper...")
 	try:
-		indelMapperPipe = Popen([os.path.join(VAT_BIN_PATH, 'indelMapper'), annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=indelInputFile)
+		indelMapperPipe = Popen([indelMapperPath, annotationIntervalPath, annotationSequencePath], stdout=PIPE, stdin=indelInputFile)
 	except:
 		printError("Failed to open indelMapper")
 	
