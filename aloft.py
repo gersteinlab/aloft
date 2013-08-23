@@ -48,6 +48,8 @@ def abortIfCannotWriteFile(filepath):
 def parseCommandLineArguments():
     parser = argparse.ArgumentParser(description='Run aloft predictions. You must at least provide a VCF (via --vcf) or VAT (via --vat) input file. If you provide a VCF file, it will be ran through VAT and then through aloft. If you provide a VAT file instead, it must be sorted numerically (use vcf_sort.py for this).', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+    parser.add_argument('--version', action='version', version="aloft 1.0")
+
     parser.add_argument('--vcf', help='Path to VCF input file. This can be a compressed .gz file. If not specified, then --vat must be specified.')
     parser.add_argument('--vat', help='Path to VAT input file. If not specified, then --vcf must be specified. This file must be sorted numerically.')
 
