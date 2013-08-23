@@ -20,6 +20,7 @@ from common import *
 import argparse
 import networkx as nx
 import pickle
+import distutils.spawn
 
 VERBOSE = None
 
@@ -135,6 +136,10 @@ def parseCommandLineArguments():
                 except:
                     printError("--%s: %s cannot be opened (insufficient read privileges?)" % (arg, path))
     return args
+
+def verifyUNIXUtility(utility):
+    if distutils.spawn.find_executable(utility) is None:
+        printError("Failed to find unix utility %s in PATH" % (utility))
 
 def getAncestorData(ancespath, chromosome):
     individualAncestorPath = os.path.join(ancespath, "homo_sapiens_ancestor_%s.fa" % (chromosome))
@@ -906,6 +911,10 @@ def getMatchingNagnagnagPositions(genomeSequence, start):
 
 if __name__ == "__main__":
     startProgramExecutionTime = datetime.datetime.now()
+
+    #getChromosomesPfamTable() function relies on these two dependencies
+    verifyUNIXUtility('sort')
+    verifyUNIXUtility('uniq')
 
     args = parseCommandLineArguments()
 
