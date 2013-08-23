@@ -1,4 +1,4 @@
-You will first have to have Python 2.7 or 3.x installed to run aloft. To check your python version:
+You will first have to have Python 2.7.x or 3.x installed to run aloft. To check your python version:
 python --version
 
 Run install.py to compile all dependencies that aloft requires:
@@ -7,11 +7,13 @@ python install.py
 
 aloft.py is the main script.
 This will prompt up the help screen:
-python aloft.py
+python aloft.py -h
 
-The input VCF file supplied by --vcf should have a header line starting with #CHROM like:
-#CHROM POS ID ALT REF ...
+The input VCF file supplied by --vcf should have a header line starting with #CHR like:
+#CHR POS ID ALT REF ...
 
-Only CHROM and POS are necessary to have, but the number of columns in this header line must match with the number of lines in the VCF file.
+Only CHR and POS are necessary to have, but the number of columns in this header line must match with the number of lines in the VCF file. Aloft will also accept if the line starts with #CHROM
 
 Then run python aloft.py with either of --vcf or --vat set, as well as all the data that aloft needs
+
+Note that you must run aloft in the current working directory since it relies on a few relative paths
