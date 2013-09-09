@@ -114,18 +114,18 @@ def getCodingExonIntervals(annotationIntervalPath):
 	codingExonIntervals = {}
 	
 	for line in open(annotationIntervalPath):
-		lineComponents = line.split("\t")
-		transcript = lineComponents[0].split("|")[1]
-		chromosome = lineComponents[1].split("chr")[-1]
-		intervalBeginComponents = lineComponents[6].split(",")
-		intervalEndComponents = lineComponents[7].split(",")
+		if not line.startswith("#"):
+			lineComponents = line.split("\t")
+			transcript = lineComponents[0].split("|")[1]
+			chromosome = lineComponents[1].split("chr")[-1]
+			intervalBeginComponents = lineComponents[6].split(",")
+			intervalEndComponents = lineComponents[7].split(",")
 
-		if not chromosome in codingExonIntervals:
-			codingExonIntervals[chromosome] = {}
-			
-		#convert intervals from 0-based starting to 1-based starting
-		intervals = [(int(intervalBeginComponents[intervalIndex])+1, int(intervalEndComponents[intervalIndex])) for intervalIndex in range(len(intervalBeginComponents))]
-		codingExonIntervals[chromosome][transcript] = intervals
+			if not chromosome in codingExonIntervals:
+				codingExonIntervals[chromosome] = {}
+			#convert intervals from 0-based starting to 1-based starting
+			intervals = [(int(intervalBeginComponents[intervalIndex])+1, int(intervalEndComponents[intervalIndex])) for intervalIndex in range(len(intervalBeginComponents))]
+			codingExonIntervals[chromosome][transcript] = intervals
 
 	return codingExonIntervals
 
