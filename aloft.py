@@ -424,6 +424,7 @@ def getCDSAndExonDictionaries(annotationPath, chrs):
         
         if annottype!='exon' and annottype!='transcript' and annottype!='CDS' and annottype!='stop_codon':
             continue
+
         if annottype=='transcript':
             transcript = data[8].split(';')[1].split('"')[1]
             transcript_strand[transcript]=data[6]
@@ -455,7 +456,9 @@ def getCDSAndExonDictionaries(annotationPath, chrs):
                 tlines.append(data)  ##append data for reanalysis (mRNA_start_NF cases)
             else:  ##stop codon
                 stop_codon[chr_num][transcript] = (begin,end)
-    if len(tlines)>0:
+
+    #this is really just copy of code above, todo: clean this up
+    if len(tlines)>0 and oldtr != '':
         if transcript_strand[oldtr]=='+':
             oldsort = sorted(tlines, key=lambda s: int(s[3]))
             first = oldsort[0]
@@ -601,7 +604,7 @@ def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
     numberOfNeighbors = sum(1 for gene in genes if gene != gene_name and gene in ppi.neighbors(gene_name))
     return dist, numberOfNeighbors
 
-def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, stop_codon, genomeSequences):
+def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, stop_codon, genomeSequences, CDS):
     nmdHash = {"NMD" : None, 'splice1' : None, 'splice2' : None, 'canonical' : None, 'newCDSpos' : None, 'stopCDS' : None, 'nextATG' : None, 'incrcodingpos' : None, 'issinglecodingexon' : None}
 
     l = sorted(CDS[chr_num][transcript])
@@ -816,7 +819,7 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
     return nmdHash
 
 #not exactly sure what this function does so not exactly sure what to call it
-def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
+def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS):
     newData = {'found' : None, 'new' : None, 'acceptor' : None, 'donor' : None, 'intronlength' : None}
     l = sorted(CDS[chr_num][transcript], reverse= not ispositivestr)
     found = False
@@ -1252,7 +1255,7 @@ if __name__ == "__main__":
                         
                         insertAncestralField(spliceOutputFile)
 
-                        spliceSearchData = searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start)
+                        spliceSearchData = searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS)
 
                         def writeSpliceOutput(failure):
                             spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
@@ -1365,7 +1368,7 @@ if __name__ == "__main__":
                         
                         insertAncestralField(lofOutputFile)
                         
-                        nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, chr_num, transcript, exon, stop_codon, genomeSequences)
+                        nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, chr_num, transcript, exon, stop_codon, genomeSequences, CDS)
 
                         if nmdData['NMD'] is None:
                             continue
