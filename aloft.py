@@ -604,7 +604,7 @@ def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
     numberOfNeighbors = sum(1 for gene in genes if gene != gene_name and gene in ppi.neighbors(gene_name))
     return dist, numberOfNeighbors
 
-def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, stop_codon, genomeSequences, CDS):
+def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, stop_codon, genomeSequences, CDS, subst):
     nmdHash = {"NMD" : None, 'splice1' : None, 'splice2' : None, 'canonical' : None, 'newCDSpos' : None, 'stopCDS' : None, 'nextATG' : None, 'incrcodingpos' : None, 'issinglecodingexon' : None}
 
     l = sorted(CDS[chr_num][transcript])
@@ -819,7 +819,7 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
     return nmdHash
 
 #not exactly sure what this function does so not exactly sure what to call it
-def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS):
+def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS, subst):
     newData = {'found' : None, 'new' : None, 'acceptor' : None, 'donor' : None, 'intronlength' : None}
     l = sorted(CDS[chr_num][transcript], reverse= not ispositivestr)
     found = False
@@ -1255,7 +1255,7 @@ if __name__ == "__main__":
                         
                         insertAncestralField(spliceOutputFile)
 
-                        spliceSearchData = searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS)
+                        spliceSearchData = searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS, subst)
 
                         def writeSpliceOutput(failure):
                             spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
@@ -1368,7 +1368,7 @@ if __name__ == "__main__":
                         
                         insertAncestralField(lofOutputFile)
                         
-                        nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, chr_num, transcript, exon, stop_codon, genomeSequences, CDS)
+                        nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, chr_num, transcript, exon, stop_codon, genomeSequences, CDS, subst)
 
                         if nmdData['NMD'] is None:
                             continue
