@@ -24,13 +24,13 @@ import distutils.spawn
 
 VERBOSE = None
 
-def abortIfPathDoesNotExist(path, shouldShowHelp=False):
+def abortIfPathDoesNotExist(parser, path, shouldShowHelp=False):
     if path is not None and not os.path.exists(path):
         if shouldShowHelp:
             parser.print_help()
         printError("%s does not exist" % (path))
 
-def abortIfCannotCreateDirectory(directory):
+def abortIfCannotCreateDirectory(parser, directory):
     if not os.path.exists(directory):
         try:
             os.mkdir(directory)
@@ -38,7 +38,7 @@ def abortIfCannotCreateDirectory(directory):
             parser.print_help()
             printError("Failed to create directory %s" % (directory))
 
-def abortIfCannotWriteFile(filepath):
+def abortIfCannotWriteFile(parser, filepath):
     try:
         newFile=open(filepath, 'w')
     except:
@@ -117,18 +117,18 @@ def parseCommandLineArguments():
         parser.print_help()
         printError("Both a VCF or VAT file were specified. You must supply only one of these as your input file, but not both")
 
-    abortIfPathDoesNotExist(args.vat)
-    abortIfPathDoesNotExist(args.vcf)
+    abortIfPathDoesNotExist(parser, args.vat)
+    abortIfPathDoesNotExist(parser, args.vcf)
 
-    abortIfCannotCreateDirectory(args.output)
-    abortIfCannotCreateDirectory(args.cache)
+    abortIfCannotCreateDirectory(parser, args.output)
+    abortIfCannotCreateDirectory(parser, args.cache)
 
-    abortIfCannotCreateDirectory(os.path.join(args.cache, "gerp"))
+    abortIfCannotCreateDirectory(parser, os.path.join(args.cache, "gerp"))
 
     #Try to see if we can detect and open all input files
     for arg, path in vars(args).items():
         if not any(map(lambda key: testArgumentEquality(args, arg, key), ['vat', 'vcf', 'output', 'cache', 'nmd_threshold', 'verbose'])):
-            abortIfPathDoesNotExist(path, True)
+            abortIfPathDoesNotExist(parser, path, True)
             if not os.path.isdir(path):
                 try:
                     f = open(path)
@@ -939,9 +939,9 @@ if __name__ == "__main__":
     tabbedOutputSplicePath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_splice")
     vcfOutputPath = os.path.join(args.output, os.path.basename(vatPath) + ".output.vcf")
 
-    lofOutputFile = abortIfCannotWriteFile(tabbedOutputLofPath)
-    spliceOutputFile = abortIfCannotWriteFile(tabbedOutputSplicePath)
-    vcfOutputFile = abortIfCannotWriteFile(vcfOutputPath)
+    lofOutputFile = abortIfCannotWriteFile(parser, tabbedOutputLofPath)
+    spliceOutputFile = abortIfCannotWriteFile(parser, tabbedOutputSplicePath)
+    vcfOutputFile = abortIfCannotWriteFile(parser, vcfOutputPath)
     
     chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
     
