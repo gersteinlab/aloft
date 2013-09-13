@@ -135,7 +135,7 @@ def parseCommandLineArguments():
                     f.close()
                 except:
                     printError("--%s: %s cannot be opened (insufficient read privileges?)" % (arg, path))
-    return args
+    return parser, args
 
 def verifyUNIXUtility(utility):
     if distutils.spawn.find_executable(utility) is None:
@@ -366,20 +366,21 @@ def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, doma
             if linesToSkip > 0:
                 linesToSkip -= 1
             else:
-                components = line.split("\t")
-                digitmatch = re.search("\d", components[domainTypeColumn])
-                if not digitmatch:
-                    domainType = components[domainTypeColumn].strip()
-                else:
-                    domainType = components[domainTypeColumn][:digitmatch.start()]
-                if domainType not in domainTypeList:
-                    continue
-                if len(components) >= 3:
-                    translationID = components[2].replace('(', '').replace(')', '').strip()
-                    if translationID in chromosomesPFam[domainType][chromosome]:
-                        chromosomesPFam[domainType][chromosome][translationID].append(components)
+                if not line.startswith("#"):
+                    components = line.split("\t")
+                    digitmatch = re.search("\d", components[domainTypeColumn])
+                    if not digitmatch:
+                        domainType = components[domainTypeColumn].strip()
                     else:
-                        chromosomesPFam[domainType][chromosome][translationID] = [components]
+                        domainType = components[domainTypeColumn][:digitmatch.start()]
+                    if domainType not in domainTypeList:
+                        continue
+                    if len(components) >= 3:
+                        translationID = components[2].replace('(', '').replace(')', '').strip()
+                        if translationID in chromosomesPFam[domainType][chromosome]:
+                            chromosomesPFam[domainType][chromosome][translationID].append(components)
+                        else:
+                            chromosomesPFam[domainType][chromosome][translationID] = [components]
 
         inputFile.close()
 
@@ -424,7 +425,7 @@ def getCDSAndExonDictionaries(annotationPath, chrs):
         
         if annottype!='exon' and annottype!='transcript' and annottype!='CDS' and annottype!='stop_codon':
             continue
-
+        
         if annottype=='transcript':
             transcript = data[8].split(';')[1].split('"')[1]
             transcript_strand[transcript]=data[6]
@@ -604,7 +605,7 @@ def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
     numberOfNeighbors = sum(1 for gene in genes if gene != gene_name and gene in ppi.neighbors(gene_name))
     return dist, numberOfNeighbors
 
-def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, stop_codon, genomeSequences, CDS, subst):
+def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, stop_codon, genomeSequences):
     nmdHash = {"NMD" : None, 'splice1' : None, 'splice2' : None, 'canonical' : None, 'newCDSpos' : None, 'stopCDS' : None, 'nextATG' : None, 'incrcodingpos' : None, 'issinglecodingexon' : None}
 
     l = sorted(CDS[chr_num][transcript])
@@ -819,7 +820,7 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
     return nmdHash
 
 #not exactly sure what this function does so not exactly sure what to call it
-def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS, subst):
+def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
     newData = {'found' : None, 'new' : None, 'acceptor' : None, 'donor' : None, 'intronlength' : None}
     l = sorted(CDS[chr_num][transcript], reverse= not ispositivestr)
     found = False
@@ -919,7 +920,7 @@ if __name__ == "__main__":
     verifyUNIXUtility('sort')
     verifyUNIXUtility('uniq')
 
-    args = parseCommandLineArguments()
+    parser, args = parseCommandLineArguments()
 
     if args.vcf:
         #run VAT
@@ -963,7 +964,10 @@ if __name__ == "__main__":
     transcriptToProteinHash = getTranscriptToProteinHash(args.ensembl_table)
 
     ##{'1':{'ENSP...':'PF...\t4-25\t(ENSP...)'}, '2':{...}, ...}
-    chromosomesPFam = dict(list(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items()) + list(getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"], 3).items()) + list(getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items()))
+    proteinFeaturesList = list(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items())
+    phosphorylationFeaturesList = list(getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"], 3).items())
+    transmembraneFeaturesList = list(getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items())
+    chromosomesPFam = dict(proteinFeaturesList + phosphorylationFeaturesList + transmembraneFeaturesList)
 
     #Scan 1000G file
     if VERBOSE: print("Scanning 1000G file")
@@ -1255,7 +1259,7 @@ if __name__ == "__main__":
                         
                         insertAncestralField(spliceOutputFile)
 
-                        spliceSearchData = searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS, subst)
+                        spliceSearchData = searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start)
 
                         def writeSpliceOutput(failure):
                             spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
@@ -1368,7 +1372,7 @@ if __name__ == "__main__":
                         
                         insertAncestralField(lofOutputFile)
                         
-                        nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, chr_num, transcript, exon, stop_codon, genomeSequences, CDS, subst)
+                        nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, chr_num, transcript, exon, stop_codon, genomeSequences)
 
                         if nmdData['NMD'] is None:
                             continue
