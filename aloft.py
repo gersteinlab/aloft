@@ -936,9 +936,9 @@ if __name__ == "__main__":
     except:
         printError("Failed to read %s" % (vatPath))
     
-    tabbedOutputLofPath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_lof")
-    tabbedOutputSplicePath = os.path.join(args.output, os.path.basename(vatPath) + ".tabbed_output_splice")
-    vcfOutputPath = os.path.join(args.output, os.path.basename(vatPath) + ".output.vcf")
+    tabbedOutputLofPath = os.path.join(args.output, os.path.basename(vatPath) + ".aloft.lof")
+    tabbedOutputSplicePath = os.path.join(args.output, os.path.basename(vatPath) + ".aloft.splice")
+    vcfOutputPath = os.path.join(args.output, os.path.basename(vatPath) + ".aloft.vcf")
 
     lofOutputFile = abortIfCannotWriteFile(parser, tabbedOutputLofPath)
     spliceOutputFile = abortIfCannotWriteFile(parser, tabbedOutputSplicePath)
