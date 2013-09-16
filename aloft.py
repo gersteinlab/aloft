@@ -1108,10 +1108,9 @@ if __name__ == "__main__":
                         'Ancestral':'Ancestral='+ancestral,\
                         'GERPscore':'GERPscore='+str(GERPscore),\
                         'GERPelement':'GERPelement='+GERPelementdata,\
-                        'GERPrejection':'GERPrejection='+GERPrejectiondata,\
                         'exoncounts':'exoncounts='+exonCountData,\
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
-            infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'GERPrejection', 'SegDup']
+            infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'SegDup']
     
             outdata["ancestral allele"] = ancesdata
             outdata["GERP score"] = str(GERPscore)
