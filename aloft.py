@@ -1107,7 +1107,7 @@ def main():
             lineinfo = {'AA':'AA='+ancesdata,\
                         'Ancestral':'Ancestral='+ancestral,\
                         'GERPscore':'GERPscore='+str(GERPscore),\
-                        'GERPelement':'GERPelement='+GERPelementdata,\
+                        'GERPelement':'GERPelement='+ "YES" if GERPelementdata != '.' else "NO",\
                         'exoncounts':'exoncounts='+exonCountData,\
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'SegDup']
