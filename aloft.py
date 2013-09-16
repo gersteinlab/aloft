@@ -153,7 +153,7 @@ def getAncestorData(ancespath, chromosome):
     f.close()
     return data
 
-def getGERPData(gerpCacheFile, GERPelements, exons, start, end, direction):
+def getGERPData(line, gerpCacheFile, GERPelements, exons, start, end, direction):
     truncatedExons = getTruncatedExons(exons, start, direction) if exons else None
     exonCountData = ":".join([str(len(truncatedExons)) if truncatedExons else ".", str(len(exons)) if exons else "."])
 
@@ -605,7 +605,7 @@ def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
     numberOfNeighbors = sum(1 for gene in genes if gene != gene_name and gene in ppi.neighbors(gene_name))
     return dist, numberOfNeighbors
 
-def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, stop_codon, genomeSequences):
+def findNMDForIndelsAndPrematureStop(nmdThreshold, data, chr_num, transcript, start, end, exon, stop_codon, genomeSequences, CDS, subst, transcript_strand):
     nmdHash = {"NMD" : None, 'splice1' : None, 'splice2' : None, 'canonical' : None, 'newCDSpos' : None, 'stopCDS' : None, 'nextATG' : None, 'incrcodingpos' : None, 'issinglecodingexon' : None}
 
     l = sorted(CDS[chr_num][transcript])
@@ -820,7 +820,7 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, chr_num, transcript, exon, st
     return nmdHash
 
 #not exactly sure what this function does so not exactly sure what to call it
-def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
+def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS, subst):
     newData = {'found' : None, 'new' : None, 'acceptor' : None, 'donor' : None, 'intronlength' : None}
     l = sorted(CDS[chr_num][transcript], reverse= not ispositivestr)
     found = False
@@ -891,7 +891,7 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start):
 
     return newData
 
-def getMatchingNagnagnagPositions(genomeSequence, start):
+def getMatchingNagnagnagPositions(genomeSequences, start, ispositivestr):
     #NAGN <snp>AG NAG
     nagnagSequence = genomeSequences[start-4:start+5]
     if not ispositivestr:
@@ -913,7 +913,7 @@ def getMatchingNagnagnagPositions(genomeSequence, start):
 
     return nagNagPositions
 
-if __name__ == "__main__":
+def main():
     startProgramExecutionTime = datetime.datetime.now()
 
     #getChromosomesPfamTable() function relies on these two dependencies
@@ -1101,7 +1101,7 @@ if __name__ == "__main__":
             gerpTranscript = gerpVariant[7]
 
             GERPscore = getGerpScore(gerpCacheFile, start, end - start + 1)
-            GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(gerpCacheFile, GERPelements, codingExonIntervals[chr_num][gerpTranscript] if gerpTranscript in codingExonIntervals[chr_num] else None, start, end, gerpDirection)
+            GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(line, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][gerpTranscript] if gerpTranscript in codingExonIntervals[chr_num] else None, start, end, gerpDirection)
             
             ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
             lineinfo = {'AA':'AA='+ancesdata,\
@@ -1249,7 +1249,7 @@ if __name__ == "__main__":
                         outdata["longest transcript?"] = "YES" if int(outdata["transcript length"])==longesttranscript else "NO"
                         ispositivestr = transcript_strand[transcript]=='+'
 
-                        nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, start)
+                        nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, start, ispositivestr)
                         outdata['nagnag positions'] = '/'.join(map(str, nagNagPositions)) if len(nagNagPositions) > 0 else '.'
     
                         outdata["# pseudogenes associated to transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
@@ -1258,7 +1258,7 @@ if __name__ == "__main__":
                         
                         insertAncestralField(spliceOutputFile)
 
-                        spliceSearchData = searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start)
+                        spliceSearchData = searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS, subst)
 
                         def writeSpliceOutput(failure):
                             spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
@@ -1371,7 +1371,7 @@ if __name__ == "__main__":
                         
                         insertAncestralField(lofOutputFile)
                         
-                        nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, chr_num, transcript, exon, stop_codon, genomeSequences)
+                        nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, data, chr_num, transcript, start, end, exon, stop_codon, genomeSequences, CDS, subst, transcript_strand)
 
                         if nmdData['NMD'] is None:
                             continue
@@ -1438,3 +1438,6 @@ if __name__ == "__main__":
         printError("Failed to write PPI cache, skipping..", False)
 
     if VERBOSE: print("Finished execution in %d seconds" % ((datetime.datetime.now() - startProgramExecutionTime).seconds))
+
+if __name__ == "__main__":
+    main()
