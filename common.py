@@ -23,6 +23,46 @@ def getTruncatedExons(exons, start, direction):
 		stopExonIndex += 1
 	return truncatedExons
 
+def mergeElements(elements):
+	mergedElements = list(elements)
+	while True:
+		mergedElements, didMerge = _mergeElements(mergedElements)
+		if not didMerge:
+			break
+	return mergedElements
+
+def _mergeElements(elements):
+	didMerge = False
+	mergedElements = []
+	for elementIndex, element in enumerate(elements):
+		if elementIndex+1 < len(elements):
+			nextElement = elements[elementIndex+1]
+			#skip next element since it's same as current one
+			if nextElement[0] == element[0] and nextElement[1] == element[1]:
+				mergedElements.append(element)
+				didMerge = True
+				if elementIndex+2 < len(elements):
+					mergedElements += elements[elementIndex+2:]
+				break
+			#merge next element with current one since they intersect
+			elif nextElement[0] <= element[1]:
+				didMerge = True
+				if nextElement[1] < element[1]:
+					mergedElements.append(element)
+				else:
+					#arbitrarily choose one of the elements to merge the last field from
+					mergedElements.append([element[0], nextElement[1]] + element[2:])
+				if elementIndex+2 < len(elements):
+					mergedElements += elements[elementIndex+2:]
+				break
+			#no intersection
+			else:
+				mergedElements.append(element)
+		#last element
+		else:
+			mergedElements.append(element)
+	return mergedElements, didMerge
+
 def getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, GERPelementIndex, direction):
 	rejectedElements = []
 
@@ -58,7 +98,8 @@ def getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, GER
 					distanceCovered = relevantElement[1] - truncatedExon[0] + 1
 	
 				#append exon number (1 based), rejection score, distance element is covered inside exon, percentage element is 	inside exon
-				rejectedElements.append((exons.index(truncatedExon)+1, relevantElement[2], distanceCovered, exonLength, 100.0 * distanceCovered / exonLength))
+				formatArguments = (exons.index(truncatedExon)+1, relevantElement[2], distanceCovered, exonLength, 100.0 * distanceCovered / exonLength)
+				rejectedElements.append(formatArguments)
 
 	return rejectedElements
 

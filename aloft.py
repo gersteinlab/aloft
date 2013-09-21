@@ -1081,7 +1081,7 @@ def main():
             exomesChromosomeInfo = getESP6500ExomeChromosomeInfo(args.exomes, chr_num) #Scan ESP6500 (exome) fields
             genomeSequences = getGenomeSequences(args.genome, chr_num)
             gerpCacheFile = buildGerpRates(args.rates, os.path.join(args.cache, "gerp"), chr_num)
-            GERPelements = getGERPelements(open(os.path.join(args.elements, "hg19_chr%s_elems.txt" % (chr_num))))
+            GERPelements = mergeElements(getGERPelements(open(os.path.join(args.elements, "hg19_chr%s_elems.txt" % (chr_num)))))
             currentLoadedChromosome = chr_num
         
         #Filter lines
@@ -1251,6 +1251,7 @@ def main():
 
                         nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, start, ispositivestr)
                         outdata['nagnag positions'] = '/'.join(map(str, nagNagPositions)) if len(nagNagPositions) > 0 else '.'
+                        alternateAcceptorSite = 'YES' if len(nagNagPositions) > 0 else 'NO'
     
                         outdata["# pseudogenes associated to transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
                         outdata["dN/dS (macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "N/A"
@@ -1311,9 +1312,15 @@ def main():
                         if intronlength < 15:
                             filters_failed = filters_failed+1
                             failed_filters.append('short_intron')
+                            smallIntron = 'YES'
+                        else:
+                            smallIntron = 'NO'
                         if segdupdata[counter].count('(') > 3:
                             filters_failed = filters_failed+1
                             failed_filters.append('heavily_duplicated')
+                            heavilyDuplicated = 'YES'
+                        else:
+                            heavilyDuplicated = 'NO'
     
                         outdata["# failed filters"] = str(filters_failed)
                         outdata["filters failed"] = ','.join(failed_filters)
@@ -1321,7 +1328,7 @@ def main():
     ########################################################
                         spliceOutputFile.write("\t"+"\t".join(outdata[i] for i in spliceparams)+"\n")
     #########################################################
-                        splicevariants[-1]+=':'+':'.join([donor+'/'+acceptor, isCanonical, otherCanonical, str(intronlength)])
+                        splicevariants[-1]+=':'+':'.join([donor+'/'+acceptor, isCanonical, otherCanonical, str(intronlength), 'small_intron=' + smallIntron, 'heavily_duplicated=' + heavilyDuplicated, 'alternate_acceptor_site=' + alternateAcceptorSite])
                         
                 else:   ##deletionFS, insertionFS, or prematureStop
                     LOFvariants.append(':'.join(details[:6]))
@@ -1342,13 +1349,18 @@ def main():
     		  #calculation of filters
                         filters_failed = 0
                         failed_filters = []
+
+                        nearStart = 'NO'
+                        nearEnd = 'NO'
                         try:	#since LOFposition may not be provided
                             if float(LOFposition)/float(tlength) <= 0.05:
                                 filters_failed = filters_failed+1
                                 failed_filters.append('near_start')
+                                nearStart = 'YES'
                             if float(LOFposition)/float(tlength) >= 0.95:
                                 filters_failed = filters_failed+1
                                 failed_filters.append('near_stop')
+                                nearEnd = 'YES'
                         except:
                             pass
                         if ancesdata==subst:
@@ -1410,7 +1422,7 @@ def main():
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
     #########################################################
                             
-                        LOFvariants[-1]+=':'+':'.join([nmdData['splice1']+'/'+nmdData['splice2'], str(nmdData['newCDSpos']), str(lofPosition), nmdData['nextATG'], nmdData['NMD'], nmdData['incrcodingpos'], disorderPredictionData]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
+                        LOFvariants[-1]+=':'+':'.join(['nearstart=' + nearStart, 'nearend=' + nearEnd, nmdData['splice1']+'/'+nmdData['splice2'], str(nmdData['newCDSpos']), str(lofPosition), nmdData['nextATG'], nmdData['NMD'], nmdData['incrcodingpos'], disorderPredictionData]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
     
             vcfOutputFile.write('\t'.join(data[k] for k in range(0,7))+'\t')
             allvariants = []
