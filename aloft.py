@@ -321,7 +321,9 @@ def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domain
     if pfamVerboseDescription is None:
         pfamVerboseDescription = ["NO_"+domainType, "NO_"+domainType]
 
-    return pfamDescription, pfamVerboseDescription
+    pfamShortDescription = ":" + domainType + "=" + ("NO" if pfamDescription.startswith(":NO") else "YES")
+
+    return pfamShortDescription, pfamVerboseDescription
         
 # Get a mapping of Transcript ID's (ENST) -> Proteins ID's (ENSP)
 def getTranscriptToProteinHash(transcriptToProteinFilePath):
@@ -1107,7 +1109,7 @@ def main():
             lineinfo = {'AA':'AA='+ancesdata,\
                         'Ancestral':'Ancestral='+ancestral,\
                         'GERPscore':'GERPscore='+str(GERPscore),\
-                        'GERPelement':'GERPelement='+ "YES" if GERPelementdata != '.' else "NO",\
+                        'GERPelement':'GERPelement='+ ("YES" if GERPelementdata != '.' else "NO"),\
                         'exoncounts':'exoncounts='+exonCountData,\
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'SegDup']
@@ -1411,7 +1413,11 @@ def main():
                         stopPositionInAminoSpace = int(entry[2].split('_')[2]) if "prematureStop" in variant else (lofPosition - 1) // 3 + 1
                         for paramKey in pfamParams:
                             newDescriptions = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPositionInAminoSpace, chromosomesPFam, paramKey)
-                            vcfPfamDescriptions[paramKey] = newDescriptions[0]
+                            #we just want a select few domain types for VCF output
+                            if paramKey in ['PF', 'Sigp', 'Tmhmm', 'SSF']:
+                                vcfPfamDescriptions[paramKey] = newDescriptions[0]
+                            else:
+                                vcfPfamDescriptions[paramKey] = ''
                             outdata[paramKey] = newDescriptions[1][0]
                             outdata[pfamParamsWithTruncations[pfamParamsWithTruncations.index(paramKey)+1]] = newDescriptions[1][1]
                         
@@ -1422,8 +1428,8 @@ def main():
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
     #########################################################
                             
-                        LOFvariants[-1]+=':'+':'.join(['nearstart=' + nearStart, 'nearend=' + nearEnd, nmdData['splice1']+'/'+nmdData['splice2'], str(nmdData['newCDSpos']), str(lofPosition), nmdData['nextATG'], nmdData['NMD'], nmdData['incrcodingpos'], disorderPredictionData]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
-    
+                        LOFvariants[-1]+=':'+':'.join(['nearstart=' + nearStart, 'nearend=' + nearEnd, nmdData['splice1']+'/'+nmdData['splice2'], str(nmdData['newCDSpos']), str(lofPosition), nmdData['nextATG'], 'nmd=' + nmdData['NMD'], nmdData['incrcodingpos'], disorderPredictionData]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
+
             vcfOutputFile.write('\t'.join(data[k] for k in range(0,7))+'\t')
             allvariants = []
             for variant in LOFvariants:
