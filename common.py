@@ -138,11 +138,9 @@ def getRejectionElementIntersectionPercentage(exons, truncatedExons, GERPelement
 				elif relevantElement[1] < truncatedExon[1]:
 					distanceCovered += relevantElement[1] - truncatedExon[0] + 1
 
-	exonsLength = 0
-	for block in exons:
-		exonsLength += block[1] - block[0] + 1
+	truncatedExonsLength = sum([block[1] - block[0] + 1 for block in truncatedExons])
 
-	return float(distanceCovered) / exonsLength * 100.0
+	return float(distanceCovered) / truncatedExonsLength * 100.0
 
 def getDisopredData(disopredSequencesPath, transcriptID, stopPosition):
 	newData = "."
