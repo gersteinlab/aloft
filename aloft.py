@@ -157,21 +157,16 @@ def getGERPData(line, gerpCacheFile, GERPelements, exons, start, end, direction)
     truncatedExons = getTruncatedExons(exons, start, direction) if exons else None
     exonCountData = ":".join([str(len(truncatedExons)) if truncatedExons else ".", str(len(exons)) if exons else "."])
 
+    rejectionData = "."
     elementIndex = findGERPelementIndex(GERPelements, start, end)
     if elementIndex == -1:
         elementData = "."
-        rejectionData = "."
     else:
         elementData = str(GERPelements[elementIndex])
 
-        rejectedElements = []
         if exons and truncatedExons and ('prematureStop' in line or 'insertionFS' in line or 'deletionFS' in line):
-            rejectedElements = getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, elementIndex, direction)
-
-        if len(rejectedElements) > 0:
-            rejectionData = ",".join(["%d/%.2f/%d/%d/%.2f" % rejectedElement for rejectedElement in rejectedElements])
-        else:
-            rejectionData = "."
+            rejectedPercentage = getRejectionElementIntersectionPercentage(exons, truncatedExons, GERPelements, elementIndex, direction)
+            rejectionData = "%.2f" % rejectedPercentage
 
     return elementData, rejectionData, exonCountData
 

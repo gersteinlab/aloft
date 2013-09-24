@@ -63,6 +63,7 @@ def _mergeElements(elements):
 			mergedElements.append(element)
 	return mergedElements, didMerge
 
+#not used by aloft anymore but may be useful to keep around
 def getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, GERPelementIndex, direction):
 	rejectedElements = []
 
@@ -90,7 +91,8 @@ def getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, GER
 					distanceCovered = exonLength
 				#if exon completely contains element
 				elif truncatedExon[0] <= relevantElement[0] and truncatedExon[1] >= relevantElement[1]:
-					distanceCovered = (relevantElement[0] - truncatedExon[0] + 1) + (truncatedExon[1] - relevantElement[1] + 1)
+					#distanceCovered = (relevantElement[0] - truncatedExon[0] + 1) + (truncatedExon[1] - relevantElement[1] + 1)
+					distanceCovered = relevantElement[1] - relevantElement[0] + 1
 				#otherwise find the partial overlap
 				elif relevantElement[0] > truncatedExon[0]:
 					distanceCovered = truncatedExon[1] - relevantElement[0] + 1
@@ -102,6 +104,45 @@ def getRejectionElementIntersectionData(exons, truncatedExons, GERPelements, GER
 				rejectedElements.append(formatArguments)
 
 	return rejectedElements
+
+def getRejectionElementIntersectionPercentage(exons, truncatedExons, GERPelements, GERPelementIndex, direction):
+	elementIndex = GERPelementIndex
+
+	#Make a list of elements that may be relevant to the truncated exons
+	relevantElements = []
+	while elementIndex >= 0 and elementIndex < len(GERPelements) and ((direction == '-' and GERPelements[elementIndex][1] >= truncatedExons[0][0]) or (direction == '+' and GERPelements[elementIndex][0] <= truncatedExons[-1][1])):
+		relevantElements.append(GERPelements[elementIndex])
+		if direction == '+':
+			elementIndex += 1
+		elif direction == '-':
+			elementIndex -= 1
+
+	#find all truncated exons and elements that intersect
+	distanceCovered = 0
+	intersections = []
+	for truncatedExon in truncatedExons:
+		for relevantElement in relevantElements:
+			#check if they overlap in any way
+			if truncatedExon[0] <= relevantElement[1] and truncatedExon[1] >= relevantElement[0]:
+				exonLength = truncatedExon[1] - truncatedExon[0] + 1
+	
+				#see if element completly contains exon
+				if relevantElement[0] <= truncatedExon[0] and relevantElement[1] >= truncatedExon[1]:
+					distanceCovered += truncatedExon[1] - truncatedExon[0] + 1
+				#if exon completely contains element
+				elif truncatedExon[0] <= relevantElement[0] and truncatedExon[1] >= relevantElement[1]:
+					distanceCovered += relevantElement[1] - relevantElement[0] + 1
+				#otherwise find the partial overlap
+				elif relevantElement[0] > truncatedExon[0]:
+					distanceCovered += truncatedExon[1] - relevantElement[0] + 1
+				elif relevantElement[1] < truncatedExon[1]:
+					distanceCovered += relevantElement[1] - truncatedExon[0] + 1
+
+	exonsLength = 0
+	for block in exons:
+		exonsLength += block[1] - block[0] + 1
+
+	return float(distanceCovered) / exonsLength * 100.0
 
 def getDisopredData(disopredSequencesPath, transcriptID, stopPosition):
 	newData = "."
