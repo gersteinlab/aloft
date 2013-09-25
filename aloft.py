@@ -316,7 +316,8 @@ def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domain
     if pfamVerboseDescription is None:
         pfamVerboseDescription = ["NO_"+domainType, "NO_"+domainType]
 
-    pfamShortDescription = ":" + domainType + "=" + ("NO" if pfamDescription.startswith(":NO") else "YES")
+    #pfamShortDescription = ":" + domainType + "=" + ("NO" if pfamDescription.startswith(":NO") else "YES")
+    pfamShortDescription = "NO" if pfamDescription.startswith(":NO") else "YES"
 
     return pfamShortDescription, pfamVerboseDescription
         
@@ -962,7 +963,8 @@ def main():
 
     ##{'1':{'ENSP...':'PF...\t4-25\t(ENSP...)'}, '2':{...}, ...}
     proteinFeaturesList = list(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items())
-    phosphorylationFeaturesList = list(getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"], 3).items())
+    phosphorylationTags = ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"]
+    phosphorylationFeaturesList = list(getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", phosphorylationTags, 3).items())
     transmembraneFeaturesList = list(getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items())
     chromosomesPFam = dict(proteinFeaturesList + phosphorylationFeaturesList + transmembraneFeaturesList)
 
@@ -1405,17 +1407,30 @@ def main():
                         outdata["stop position in CDS"] = str(lofPosition)
 
                         vcfPfamDescriptions = {}
+                        phosphorylationResults = {}
+
+                        for paramKey in phosphorylationTags:
+                            vcfPfamDescriptions[paramKey] = ""
+
                         stopPositionInAminoSpace = int(entry[2].split('_')[2]) if "prematureStop" in variant else (lofPosition - 1) // 3 + 1
                         for paramKey in pfamParams:
                             newDescriptions = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPositionInAminoSpace, chromosomesPFam, paramKey)
                             #we just want a select few domain types for VCF output
                             if paramKey in ['PF', 'Sigp', 'Tmhmm', 'SSF']:
-                                vcfPfamDescriptions[paramKey] = newDescriptions[0]
+                                vcfPfamDescriptions[paramKey] = ":%s=%s" % (paramKey, newDescriptions[0])
+                            elif paramKey in phosphorylationTags:
+                                if newDescriptions[0] == "YES":
+                                    phosphorylationResults[paramKey] = newDescriptions[0]
                             else:
                                 vcfPfamDescriptions[paramKey] = ''
                             outdata[paramKey] = newDescriptions[1][0]
                             outdata[pfamParamsWithTruncations[pfamParamsWithTruncations.index(paramKey)+1]] = newDescriptions[1][1]
                         
+                        if len(phosphorylationResults) == 0:
+                            vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=NO'
+                        else:
+                            vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=' + ','.join([key + "/" + value for key, value in phosphorylationResults.items()])
+
                         disorderPredictionData = getDisopredData(args.disopred_sequences, transcript, stopPositionInAminoSpace)
                         outdata["Disorder prediction"] = disorderPredictionData
 
