@@ -1091,10 +1091,8 @@ def main():
             lineinfo = {'AA':'AA='+ancesdata,\
                         'Ancestral':'Ancestral='+ancestral,\
                         'GERPscore':'GERPscore='+str(GERPscore),\
-                        'GERPelement' : '.',
-                        'exoncounts' : '.',
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
-            infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'SegDup']
+            infotypes = ['AA', 'Ancestral', 'GERPscore', 'SegDup']
     
             outdata["ancestral allele"] = ancesdata
             outdata["GERP score"] = str(GERPscore)
