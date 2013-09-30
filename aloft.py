@@ -188,7 +188,7 @@ def getSegDupData(vatFile, segdupPath, chrs):
         segdups[chr_num].append((int(data[1]),int(data[2])))
         line = segdupfile.readline()
     for i in chrs:
-        segdups[i] = mergeElements(sorted(segdups[i]))
+        segdups[i] = sorted(segdups[i])
         maxsofar = 0
         for interval in segdups[i]:
             maxsofar = max(interval[1], maxsofar)
