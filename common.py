@@ -17,10 +17,13 @@ def getTruncatedExons(exons, start, direction):
 		if block[0] <= start and block[1] >= start:
 			if direction == '+':
 				truncatedExons = exons[stopExonIndex:]
+				break
 			elif direction == '-':
 				truncatedExons = exons[0:stopExonIndex+1]
+		elif truncatedExons is not None:
 			break
 		stopExonIndex += 1
+
 	return truncatedExons
 
 def mergeElements(elements):
@@ -51,7 +54,7 @@ def _mergeElements(elements):
 					mergedElements.append(element)
 				else:
 					#arbitrarily choose one of the elements to merge the last field from
-					mergedElements.append([element[0], nextElement[1]] + element[2:])
+					mergedElements.append((element[0], nextElement[1]))
 				if elementIndex+2 < len(elements):
 					mergedElements += elements[elementIndex+2:]
 				break
@@ -178,7 +181,7 @@ def getDisopredData(disopredSequencesPath, transcriptID, stopPosition):
 			else:
 				disorderedResiduesAfterPrematureStopPercentage = "%.2f" % (100.0 * disorderedResiduesAfterPrematureStop / residueCountAfterPrematureStop)
 
-			newData = "/".join([str(disorderedResidues), str(residueCount), str(disorderedResiduesAfterPrematureStop), str(residueCountAfterPrematureStop), "%.2f" % (100.0 * disorderedResidues / residueCount), disorderedResiduesAfterPrematureStopPercentage, str(stopPosition)])
+			newData = "/".join(["%.2f" % (100.0 * disorderedResidues / residueCount), disorderedResiduesAfterPrematureStopPercentage])
 		else:
 			newData = "/".join([str(disorderedResidues), str(residueCount), "%.2f" % (100.0 * disorderedResidues / residueCount)])
 	except IOError:

@@ -73,8 +73,6 @@ def parseCommandLineArguments():
 
     parser.add_argument('--thousandG', help='Path to 1000G file', default='data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.gencode16.SNPS.vat.vcf')
 
-    parser.add_argument('--haplo_score', help='Path to haploinsufficiency disease scores', default='data/imputed.hi.scores')
-
     parser.add_argument('--ppi', help='Path to protein-protein interaction network file', default='data/BIOGRID-ORGANISM-Homo_sapiens-3.2.95.tab.txt')
     parser.add_argument('--dominant_genes', help='Path to list of dominant genes', default='data/dominantonly.list')
     parser.add_argument('--recessive_genes', help='Path to list of recessive genes', default='data/science_lofpaper_omim_recessive_filtered.list')
@@ -190,7 +188,7 @@ def getSegDupData(vatFile, segdupPath, chrs):
         segdups[chr_num].append((int(data[1]),int(data[2])))
         line = segdupfile.readline()
     for i in chrs:
-        segdups[i] = sorted(segdups[i])
+        segdups[i] = mergeElements(sorted(segdups[i]))
         maxsofar = 0
         for interval in segdups[i]:
             maxsofar = max(interval[1], maxsofar)
@@ -312,14 +310,19 @@ def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domain
 
     #If no ENST or ENSP ID could be matched
     if pfamDescription == "":
-        pfamDescription = ":NO_"+domainType+":NA:NA:0:0"
+        pfamDescription = ":NA_"+domainType+":NA:NA:0:0"
     if pfamVerboseDescription is None:
-        pfamVerboseDescription = ["NO_"+domainType, "NO_"+domainType]
+        pfamVerboseDescription = ["NA_"+domainType, "NO_"+domainType]
 
-    #pfamShortDescription = ":" + domainType + "=" + ("NO" if pfamDescription.startswith(":NO") else "YES")
-    pfamShortDescription = "NO" if pfamDescription.startswith(":NO") else "YES"
+    #pfamShortDescription = "NO" if pfamDescription.startswith(":NO") else "YES"
+    if pfamDescription.startswith(":NO"):
+        pfamShortDescription = 'NO'
+    elif pfamDescription.startswith(":NA"):
+        pfamShortDescription = 'NA'
+    else:
+        pfamShortDescription = 'YES'
 
-    return pfamShortDescription, pfamVerboseDescription
+    return pfamDescription, pfamShortDescription, pfamVerboseDescription
         
 # Get a mapping of Transcript ID's (ENST) -> Proteins ID's (ENSP)
 def getTranscriptToProteinHash(transcriptToProteinFilePath):
@@ -988,15 +991,6 @@ def main():
     if VERBOSE: print("Reading dominant genes list")
     dgenes = [line.strip() for line in open(args.dominant_genes)]
     
-    if VERBOSE: print("Reading haploinsufficiency disease genes list")
-    haploscores = getScores(args.haplo_score, 1)
-    
-    if VERBOSE: print("Reading LOF disease scores")
-    LOFscores = getScores(args.LOF_score, 1)
-    
-    if VERBOSE: print("Reading netSNP disease scores")
-    netSNPscores = getScores(args.netSNP_score, -1)
-    
     if VERBOSE: print("Reading pseudogene data")
     numpseudogenes = getPseudogeneData(args.pseudogenes)
     
@@ -1006,11 +1000,13 @@ def main():
     if VERBOSE: print("Reading dNdS data")
     dNdSmacaque, dNdSmouse = getdNdSData(args.dNdS)
 
+    ptmParams = ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc","PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"]
+
     #params for PF, SSF, SM, etc
     #this variable could use a better name since it's not just PFAM, but not sure what to call it
-    pfamParams = ["PF", "SSF", "SM", "Tmhmm", "Sigp", "ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc","PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"]
+    pfamParams = ["PF", "SSF", "SM", "Tmhmm", "Sigp"]
 
-    pfamParamsWithTruncations = sum([[param, param + "truncated"] for param in pfamParams], []) #using sum to flatten the list
+    pfamParamsWithTruncations = sum([[param, param + "truncated"] for param in pfamParams + ptmParams], []) #using sum to flatten the list
 
     ##list of output parameters for LOF and splice variants
     basicparams = ["gene", "gene_id", "partial/full", "transcript", "transcript length", "longest transcript?"]
@@ -1026,8 +1022,6 @@ def main():
                 ["1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
-                "haploinsufficiency disease score",\
-                "LOF disease score", "netSNP disease score",\
                 "# pseudogenes associated to transcript",\
                 "# paralogs associated to gene",\
                 "dN/dS (macaque)", "dN/dS (mouse)"]
@@ -1041,8 +1035,6 @@ def main():
                 "segmental duplications", "1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
-                "haploinsufficiency disease score",\
-                "LOF disease score", "netSNP disease score",\
                 "# pseudogenes associated to transcript",\
                 "# paralogs associated to gene",\
                 "dN/dS (macaque)", "dN/dS (mouse)"]
@@ -1093,29 +1085,19 @@ def main():
             else:
                 ancestral = "Neither"
 
-            gerpVariantIndex = line.index("VA=") + len("VA=")
-            gerpVariants = line[gerpVariantIndex:].split(",")
-            gerpVariant = gerpVariants[0].split(":")
-            gerpDirection = gerpVariant[3]
-            gerpTranscript = gerpVariant[7]
-
             GERPscore = getGerpScore(gerpCacheFile, start, end - start + 1)
-            GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(line, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][gerpTranscript] if gerpTranscript in codingExonIntervals[chr_num] else None, start, end, gerpDirection)
             
             ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
             lineinfo = {'AA':'AA='+ancesdata,\
                         'Ancestral':'Ancestral='+ancestral,\
                         'GERPscore':'GERPscore='+str(GERPscore),\
-                        'GERPelement':'GERPelement='+ ("YES" if GERPelementdata != '.' else "NO"),\
-                        'exoncounts':'exoncounts='+exonCountData,\
+                        'GERPelement' : '.',
+                        'exoncounts' : '.',
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'GERPelement', 'SegDup']
     
             outdata["ancestral allele"] = ancesdata
             outdata["GERP score"] = str(GERPscore)
-            outdata["GERP element"] = GERPelementdata
-            outdata["GERP rejection"] = GERPrejectiondata
-            outdata["exon counts"] = exonCountData
             outdata["segmental duplications"] = '.' if segdupdata[counter].count('(') == '0' else segdupdata[counter]
     
             #Adding 1000G fields
@@ -1226,9 +1208,6 @@ def main():
                     outdata["shortest path to dominant gene"] = 'N/A'
                     outdata["dominant neighbors"] = 'N/A'
     
-                outdata["haploinsufficiency disease score"] = haploscores[gene_name.upper()] if gene_name.upper() in haploscores else "N/A"
-                outdata["LOF disease score"] = LOFscores[gene_name.upper()] if gene_name.upper() in LOFscores else "N/A"
-                outdata["netSNP disease score"] = netSNPscores[gene_name.upper()] if gene_name.upper() in netSNPscores else "N/A"
                 outdata["# paralogs associated to gene"] = str(len(paralogs[outdata["gene_id"].split('.')[0]])) if outdata["gene_id"].split('.')[0] in paralogs else "0"
     
                 ##number of associated pseudogenes computation goes here
@@ -1247,6 +1226,12 @@ def main():
                         outdata["transcript length"] = entry[2]
                         outdata["longest transcript?"] = "YES" if int(outdata["transcript length"])==longesttranscript else "NO"
                         ispositivestr = transcript_strand[transcript]=='+'
+
+                        GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(line, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, start, end, transcript_strand[transcript])
+
+                        outdata['GERP element'] = GERPelementdata
+                        outdata['GERP rejection'] = GERPrejectiondata
+                        outdata['exon counts'] = exonCountData
 
                         nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, start, ispositivestr)
                         outdata['nagnag positions'] = '/'.join(map(str, nagNagPositions)) if len(nagNagPositions) > 0 else '.'
@@ -1300,34 +1285,41 @@ def main():
                             outdata["alt acceptor"] = new[1].upper()
     
     		  #calculation of filters
-                        filters_failed = 0
                         failed_filters = []
                         if isCanonical == 'NO':
-                            filters_failed = filters_failed+1
                             failed_filters.append('noncanonical')
+                            if new[0] == 0 and new[1].upper() != 'GT': #snp is in donor, and alt donor is not GT
+                                failed_filters.append('alt_noncanonical')
+                                failed_filters.append('ref_noncanonical')
+                            elif new[0] != 0 and new[1].upper() != 'AG': #snp is in acceptor, and alt acceptor is not AG
+                                failed_filters.append('alt_noncanonical')
+                                failed_filters.append('ref_noncanonical')
+
                         if otherCanonical == 'NO':
-                            filters_failed = filters_failed+1
                             failed_filters.append('other_noncanonical')
                         if intronlength < 15:
-                            filters_failed = filters_failed+1
                             failed_filters.append('short_intron')
                             smallIntron = 'YES'
                         else:
                             smallIntron = 'NO'
                         if segdupdata[counter].count('(') > 3:
-                            filters_failed = filters_failed+1
                             failed_filters.append('heavily_duplicated')
                             heavilyDuplicated = 'YES'
                         else:
                             heavilyDuplicated = 'NO'
+
+                        isLofAnc = 'NO'
+                        if ancesdata==subst:
+                            failed_filters.append('lof_anc')
+                            isLofAnc = 'YES'
     
-                        outdata["# failed filters"] = str(filters_failed)
+                        outdata["# failed filters"] = str(len(failed_filters))
                         outdata["filters failed"] = ','.join(failed_filters)
-    					
+
     ########################################################
                         spliceOutputFile.write("\t"+"\t".join(outdata[i] for i in spliceparams)+"\n")
     #########################################################
-                        splicevariants[-1]+=':'+':'.join([donor+'/'+acceptor, isCanonical, otherCanonical, str(intronlength), 'small_intron=' + smallIntron, 'heavily_duplicated=' + heavilyDuplicated, 'alternate_acceptor_site=' + alternateAcceptorSite])
+                        splicevariants[-1]+=':'+':'.join(['GERPelement='+("YES" if GERPelementdata != '.' else "NO"), 'exoncounts='+exonCountData, donor+'/'+acceptor, 'is_canonical=' + isCanonical, 'other_noncanonical=' + otherCanonical, 'intron_length=' + str(intronlength), 'small_intron=' + smallIntron, 'heavily_duplicated=' + heavilyDuplicated, 'lof_anc=' + isLofAnc, 'alternate_acceptor_site=' + alternateAcceptorSite])
                         
                 else:   ##deletionFS, insertionFS, or prematureStop
                     LOFvariants.append(':'.join(details[:6]))
@@ -1362,12 +1354,19 @@ def main():
                                 nearEnd = 'YES'
                         except:
                             pass
+                        
+                        isLofAnc = 'NO'
                         if ancesdata==subst:
                             filters_failed = filters_failed+1
                             failed_filters.append('lof_anc')
+                            isLofAnc = 'YES'
+                        
+                        heavilyDuplicated = 'NO'
                         if segdupdata[counter].count('(') > 3:
                             filters_failed = filters_failed+1
                             failed_filters.append('heavily_duplicated')
+                            heavilyDuplicated = 'YES'
+
                         outdata["# failed filters"] = str(filters_failed)
                         outdata["filters failed"] = ','.join(failed_filters)
     
@@ -1409,27 +1408,50 @@ def main():
                         vcfPfamDescriptions = {}
                         phosphorylationResults = {}
 
-                        for paramKey in phosphorylationTags:
-                            vcfPfamDescriptions[paramKey] = ""
+                        oneNA = False
+                        oneNO = False
+                        oneYES = False
 
                         stopPositionInAminoSpace = int(entry[2].split('_')[2]) if "prematureStop" in variant else (lofPosition - 1) // 3 + 1
-                        for paramKey in pfamParams:
+
+                        GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(line, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, stopPositionInAminoSpace, stopPositionInAminoSpace + len(data[3]) - 1, transcript_strand[transcript])
+
+                        outdata['GERP element'] = GERPelementdata
+                        outdata['GERP rejection'] = GERPrejectiondata
+                        outdata['exon counts'] = exonCountData
+
+                        for paramKey in pfamParams + ptmParams:
                             newDescriptions = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPositionInAminoSpace, chromosomesPFam, paramKey)
                             #we just want a select few domain types for VCF output
-                            if paramKey in ['PF', 'Sigp', 'Tmhmm', 'SSF']:
-                                vcfPfamDescriptions[paramKey] = ":%s=%s" % (paramKey, newDescriptions[0])
+                            if paramKey in pfamParams:
+                                vcfPfamDescriptions[paramKey] = ":%s=%s" % (paramKey, newDescriptions[1])
                             elif paramKey in phosphorylationTags:
-                                if newDescriptions[0] == "YES":
-                                    phosphorylationResults[paramKey] = newDescriptions[0]
+                                if newDescriptions[1] == "YES":
+                                    phosphorylationResults[paramKey] = newDescriptions[1]
+
+                                if newDescriptions[1] == 'YES':
+                                    oneYES = True
+                                elif newDescriptions[1] == 'NO':
+                                    oneNO = True
+                                elif newDescriptions[1] == 'NA':
+                                    oneNA = True
                             else:
                                 vcfPfamDescriptions[paramKey] = ''
-                            outdata[paramKey] = newDescriptions[1][0]
-                            outdata[pfamParamsWithTruncations[pfamParamsWithTruncations.index(paramKey)+1]] = newDescriptions[1][1]
-                        
+
+                            outdata[paramKey] = newDescriptions[2][0]
+                            outdata[pfamParamsWithTruncations[pfamParamsWithTruncations.index(paramKey)+1]] = newDescriptions[2][1]
+
                         if len(phosphorylationResults) == 0:
-                            vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=NO'
+                            if oneNA and oneNO:
+                                vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=NO/NA'
+                            elif oneNA:
+                                vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=NA'
+                            else:
+                                vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=NO'
+                            #outdata["PTM"] = "PTM=NO"
                         else:
                             vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=' + ','.join([key + "/" + value for key, value in phosphorylationResults.items()])
+                            #outdata["PTM"] = "PTM=" + ','.join([key + "/" + value for key, value in phosphorylationResults.items()])
 
                         disorderPredictionData = getDisopredData(args.disopred_sequences, transcript, stopPositionInAminoSpace)
                         outdata["Disorder prediction"] = disorderPredictionData
@@ -1437,8 +1459,7 @@ def main():
     #########################################################
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
     #########################################################
-                            
-                        LOFvariants[-1]+=':'+':'.join(['nearstart=' + nearStart, 'nearend=' + nearEnd, nmdData['splice1']+'/'+nmdData['splice2'], str(nmdData['newCDSpos']), str(lofPosition), nmdData['nextATG'], 'nmd=' + nmdData['NMD'], nmdData['incrcodingpos'], disorderPredictionData]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams])
+                        LOFvariants[-1]+=':'+':'.join(['GERPelement='+("YES" if GERPelementdata != '.' else "NO"), 'exoncounts='+exonCountData, 'nearstart=' + nearStart, 'nearend=' + nearEnd, 'canonical='+nmdData['canonical'], nmdData['splice1']+'/'+nmdData['splice2'], str(nmdData['newCDSpos']), 'lofposition='+str(lofPosition), nmdData['nextATG'], 'nmd=' + nmdData['NMD'], nmdData['incrcodingpos'], 'lof_anc=' + isLofAnc, 'heavilyduplicated='+heavilyDuplicated, 'disorder_prediction='+disorderPredictionData]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams + [phosphorylationTags[0]]])
 
             vcfOutputFile.write('\t'.join(data[k] for k in range(0,7))+'\t')
             allvariants = []
