@@ -3,6 +3,7 @@ import re
 import struct
 import subprocess
 import sys
+from subprocess import Popen, PIPE
 
 def printError(error, exit=True):
 	sys.stderr.write("Error: %s\n" % error)
@@ -20,8 +21,7 @@ def getTruncatedExons(exons, start, direction):
 				break
 			elif direction == '-':
 				truncatedExons = exons[0:stopExonIndex+1]
-		elif truncatedExons is not None:
-			break
+				break
 		stopExonIndex += 1
 
 	return truncatedExons
@@ -189,6 +189,73 @@ def getDisopredData(disopredSequencesPath, transcriptID, stopPosition):
 		pass
 	
 	return newData
+
+# Get a mapping of Transcript ID's (ENST) -> Proteins ID's (ENSP)
+def getTranscriptToProteinHash(transcriptToProteinFilePath):
+	try:
+		inputFile = open(transcriptToProteinFilePath, "r")
+	except:
+		printError("Failed to open %s" % (transcriptToProteinFilePath))
+
+	transcriptToProteinHash = {}
+	firstLine = True
+	for line in inputFile:
+		if firstLine:
+			firstLine = False
+		else:
+			components = line.split('\t')
+			if components[1].strip() and components[2].strip():
+				transcriptToProteinHash[components[1]] = components[2]
+
+	inputFile.close()
+	return transcriptToProteinHash
+
+def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, domainTypeColumn=0):
+	# Get a mapping of Protein ID's -> Pfam information, for each chromosome
+	chromosomesPFam = {i:{} for i in domainTypeList}
+	for chromosome in chrs:
+		for domainType in domainTypeList:
+			chromosomesPFam[domainType][chromosome] = {}
+		path = os.path.join(pfamDirectory, strformat % (chromosome))
+
+		if not os.path.exists(path):
+			printError("Couldn't read %s, skipping %s" % (path, chromosome), False)
+			continue
+
+		#Get rid of duplicate lines
+		try:
+			pipe1 = Popen(['sort', path], stdout=PIPE)
+			pipe2 = Popen(['uniq'], stdin=pipe1.stdout, stdout=PIPE)
+			inputFile = pipe2.stdout
+		except:
+			printError("Couldn't read %s, skipping %s" % (path, chromosome), False)
+			continue
+
+		linesToSkip = 2
+		for lineBytes in inputFile:
+			line = lineBytes.decode()
+			if linesToSkip > 0:
+				linesToSkip -= 1
+			else:
+				if not line.startswith("#"):
+					components = line.split("\t")
+					digitmatch = re.search("\d", components[domainTypeColumn])
+					if not digitmatch:
+						domainType = components[domainTypeColumn].strip()
+					else:
+						domainType = components[domainTypeColumn][:digitmatch.start()]
+					if domainType not in domainTypeList:
+						continue
+					if len(components) >= 3:
+						translationID = components[2].replace('(', '').replace(')', '').strip()
+						if translationID in chromosomesPFam[domainType][chromosome]:
+							chromosomesPFam[domainType][chromosome][translationID].append(components)
+						else:
+							chromosomesPFam[domainType][chromosome][translationID] = [components]
+
+		inputFile.close()
+
+	return chromosomesPFam
 
 def getGERPelements(elementFile):
 	return [(int(eline.split('\t')[0]),int(eline.split('\t')[1]), float(eline.split('\t')[3])) for eline in elementFile]

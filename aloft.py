@@ -66,7 +66,7 @@ def parseCommandLineArguments():
 
     parser.add_argument('--verbose', '-v', help='Verbose mode', action='store_true')
 
-    parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/ens67_gtpcgtpolymorphic.txt')
+    parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/prot-features/ensIDs.ens70.txt')
     parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens70.txt files', default='data/prot-features/')
     parser.add_argument('--phosphorylation', help='Path to directory containing ptm.phosphorylation.chr*.txt files', default='data/ptm')
     parser.add_argument('--transmembrane', help='Path to directory containing transmembrane chr*.tmsigpcoilslc.ens70.txt', default='data/tm_ens70/')
@@ -151,9 +151,9 @@ def getAncestorData(ancespath, chromosome):
     f.close()
     return data
 
-def getGERPData(line, gerpCacheFile, GERPelements, exons, start, end, direction):
-    truncatedExons = getTruncatedExons(exons, start, direction) if exons else None
-    exonCountData = ":".join([str(len(truncatedExons)) if truncatedExons else ".", str(len(exons)) if exons else "."])
+def getGERPData(isSplice, gerpCacheFile, GERPelements, exons, start, end, direction):
+    truncatedExons = getTruncatedExons(exons, start, direction) if exons and not isSplice else None
+    exonCountData = ":".join([str(len(truncatedExons)) if truncatedExons else ("." if not isSplice else "NA"), str(len(exons)) if exons else "."])
 
     rejectionData = "."
     elementIndex = findGERPelementIndex(GERPelements, start, end)
@@ -162,7 +162,7 @@ def getGERPData(line, gerpCacheFile, GERPelements, exons, start, end, direction)
     else:
         elementData = str(GERPelements[elementIndex])
 
-        if exons and truncatedExons and ('prematureStop' in line or 'insertionFS' in line or 'deletionFS' in line):
+        if exons and truncatedExons and not isSplice:
             rejectedPercentage = getRejectionElementIntersectionPercentage(exons, truncatedExons, GERPelements, elementIndex, direction)
             rejectionData = "%.2f" % rejectedPercentage
 
@@ -206,6 +206,10 @@ def getSegDupData(vatFile, segdupPath, chrs):
         start = int(data[1])
         length = len(data[3])
         end = start + length-1  ##inclusive endpoint
+
+        if chr_num not in segdups:
+            line = vatFile.readline()
+            continue
 
         ##find right endpoint of interval search 
         low = 0; high = len(segdups[chr_num])-1
@@ -323,69 +327,6 @@ def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domain
         pfamShortDescription = 'YES'
 
     return pfamDescription, pfamShortDescription, pfamVerboseDescription
-        
-# Get a mapping of Transcript ID's (ENST) -> Proteins ID's (ENSP)
-def getTranscriptToProteinHash(transcriptToProteinFilePath):
-    try:
-        inputFile = open(transcriptToProteinFilePath, "r")
-    except:
-        printError("Failed to open %s" % (transcriptToProteinFilePath))
-
-    transcriptToProteinHash = {}
-    firstLine = True
-    for line in inputFile:
-        if firstLine:
-            firstLine = False
-        else:
-            components = line.split('\t')
-            if components[1].strip() and components[2].strip():
-                transcriptToProteinHash[components[1]] = components[2]
-
-    inputFile.close()
-    return transcriptToProteinHash
-
-def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, domainTypeColumn=0):
-   # Get a mapping of Protein ID's -> Pfam information, for each chromosome
-    chromosomesPFam = {i:{} for i in domainTypeList}
-    for chromosome in chrs:
-        for domainType in domainTypeList:
-            chromosomesPFam[domainType][chromosome] = {}
-        path = os.path.join(pfamDirectory, strformat % (chromosome))
-
-        #Get rid of duplicate lines
-        try:
-            pipe1 = Popen(['sort', path], stdout=PIPE)
-            pipe2 = Popen(['uniq'], stdin=pipe1.stdout, stdout=PIPE)
-            inputFile = pipe2.stdout
-        except:
-            printError("Couldn't read %s, skipping %s" % (path, chromosome), False)
-            continue
-
-        linesToSkip = 2
-        for lineBytes in inputFile:
-            line = lineBytes.decode()
-            if linesToSkip > 0:
-                linesToSkip -= 1
-            else:
-                if not line.startswith("#"):
-                    components = line.split("\t")
-                    digitmatch = re.search("\d", components[domainTypeColumn])
-                    if not digitmatch:
-                        domainType = components[domainTypeColumn].strip()
-                    else:
-                        domainType = components[domainTypeColumn][:digitmatch.start()]
-                    if domainType not in domainTypeList:
-                        continue
-                    if len(components) >= 3:
-                        translationID = components[2].replace('(', '').replace(')', '').strip()
-                        if translationID in chromosomesPFam[domainType][chromosome]:
-                            chromosomesPFam[domainType][chromosome][translationID].append(components)
-                        else:
-                            chromosomesPFam[domainType][chromosome][translationID] = [components]
-
-        inputFile.close()
-
-    return chromosomesPFam
 
 def getGenomeSequences(genomePath, chromosome):
     individualSequencePath = os.path.join(genomePath, "chr%s.fa" % (chromosome))
@@ -914,6 +855,24 @@ def getMatchingNagnagnagPositions(genomeSequences, start, ispositivestr):
 
     return nagNagPositions
 
+#find stop position to use for GERP calculations by using relative stop position in CDS and mapping it against the coding exon intervals for the transcript
+def calculateAbsolutePosition(lofPosition, codingExonIntervals, direction):
+    distanceLeft = lofPosition
+    exonIntervals = codingExonIntervals if direction == '+' else reversed(codingExonIntervals)
+    absoluteStopPosition = 0
+    for exonInterval in exonIntervals:
+        zeroBasedExonInterval = (exonInterval[0]-1, exonInterval[1])
+        exonDistance = zeroBasedExonInterval[1] - zeroBasedExonInterval[0]
+        if distanceLeft > exonDistance:
+            distanceLeft -= exonDistance
+        else:
+            if direction == '+':
+                absoluteStopPosition = distanceLeft + zeroBasedExonInterval[0]
+            else:
+                absoluteStopPosition = zeroBasedExonInterval[1] - distanceLeft + 1
+            break
+    return absoluteStopPosition
+
 def main():
     startProgramExecutionTime = datetime.datetime.now()
 
@@ -1225,7 +1184,7 @@ def main():
                         outdata["longest transcript?"] = "YES" if int(outdata["transcript length"])==longesttranscript else "NO"
                         ispositivestr = transcript_strand[transcript]=='+'
 
-                        GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(line, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, start, end, transcript_strand[transcript])
+                        GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(True, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, start, end, transcript_strand[transcript])
 
                         outdata['GERP element'] = GERPelementdata
                         outdata['GERP rejection'] = GERPrejectiondata
@@ -1412,7 +1371,12 @@ def main():
 
                         stopPositionInAminoSpace = int(entry[2].split('_')[2]) if "prematureStop" in variant else (lofPosition - 1) // 3 + 1
 
-                        GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(line, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, stopPositionInAminoSpace, stopPositionInAminoSpace + len(data[3]) - 1, transcript_strand[transcript])
+                        if "prematureStop" not in variant:
+                            stopPositionForGERP = calculateAbsolutePosition(lofPosition, codingExonIntervals[chr_num][transcript], transcript_strand[transcript])
+                        else:
+                            stopPositionForGERP = start
+                        
+                        GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(False, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, stopPositionForGERP, stopPositionForGERP + len(data[3]) - 1, transcript_strand[transcript])
 
                         outdata['GERP element'] = GERPelementdata
                         outdata['GERP rejection'] = GERPrejectiondata
