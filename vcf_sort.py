@@ -14,21 +14,17 @@ def alphanum_key(s):
 def sort_nicely(l):
 	l.sort(key=alphanum_key)
 
-if __name__ == "__main__":
-	if len(sys.argv) < 3:
-		print("Usage: <input_path> <output_path>\n")
-		print("Takes input_path and sorts it numerically to output_path. Input is a VCF file.")
-		sys.exit(1)
-	inputPath = sys.argv[1]
-	outputPath = sys.argv[2]
-	
+def sort_file(inputPath, outputPath):
 	headerLines = []
 	regularLines = []
-	for line in open(inputPath):
+	inputFile = open(inputPath)
+	for line in inputFile:
 		if line.startswith("#"):
 			headerLines.append(line.rstrip("\n"))
 		else:
 			regularLines.append(line.rstrip("\n"))
+
+	inputFile.close()
 	
 	outputFile = open(outputPath, "w")
 	
@@ -41,3 +37,13 @@ if __name__ == "__main__":
 		outputFile.write("\n".join(regularLines) + "\n")
 	
 	outputFile.close()
+
+if __name__ == "__main__":
+	if len(sys.argv) < 3:
+		print("Usage: <input_path> <output_path>\n")
+		print("Takes input_path and sorts it numerically to output_path. Input is a VCF file.")
+		sys.exit(1)
+	inputPath = sys.argv[1]
+	outputPath = sys.argv[2]
+	
+	sort_file(inputPath, outputPath)

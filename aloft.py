@@ -21,6 +21,7 @@ import argparse
 import networkx as nx
 import pickle
 import distutils.spawn
+import gzip
 
 VERBOSE = None
 
@@ -66,12 +67,12 @@ def parseCommandLineArguments():
 
     parser.add_argument('--verbose', '-v', help='Verbose mode', action='store_true')
 
-    parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/prot-features/ensIDs.ens70.txt')
-    parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens70.txt files', default='data/prot-features/')
+    parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/ensIDs.ens70.txt')
+    parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens70.txt files', default='data/ens73_all_domain_features/')
     parser.add_argument('--phosphorylation', help='Path to directory containing ptm.phosphorylation.chr*.txt files', default='data/ptm')
-    parser.add_argument('--transmembrane', help='Path to directory containing transmembrane chr*.tmsigpcoilslc.ens70.txt', default='data/tm_ens70/')
+    parser.add_argument('--transmembrane', help='Path to directory containing transmembrane chr*.tmsigpcoilslc.ens70.txt', default='data/ens73_all_domain_features/')
 
-    parser.add_argument('--thousandG', help='Path to 1000G file', default='data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.gencode16.SNPS.vat.vcf')
+    parser.add_argument('--thousandG', help='Path to 1000G file', default='data/1000G.vat')
 
     parser.add_argument('--ppi', help='Path to protein-protein interaction network file', default='data/BIOGRID-ORGANISM-Homo_sapiens-3.2.95.tab.txt')
     parser.add_argument('--dominant_genes', help='Path to list of dominant genes', default='data/dominantonly.list')
@@ -87,7 +88,7 @@ def parseCommandLineArguments():
     parser.add_argument('--netSNP_score', help='Path to netSNP disease scores', default='data/Supplementary_Table8.20Jul2012.txt')
     parser.add_argument('--segdup', help='Path to segdup annotation file', default='data/hg19-segdup.txt')
     parser.add_argument('--annotation', help='Path to .gtf annotation file', default='data/gencode.v16.annotation.gtf')
-    parser.add_argument('--exomes', help='Path to directory containing ESP6500.chr*.snps.vcf files', default='data/ESP6500/')
+    parser.add_argument('--exomes', help='Path to directory containing ESP6500.chr*.snps.vcf files', default='data/new_esp6500/')
     parser.add_argument('--pseudogenes', help='Path to pseudogenes file', default='data/gencode.v7.pgene.parents')
     parser.add_argument('--disopred_sequences', help='Path to disorder prediction sequences', default='data/disopred_sequences')
 
@@ -316,7 +317,7 @@ def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domain
     if pfamDescription == "":
         pfamDescription = ":NA_"+domainType+":NA:NA:0:0"
     if pfamVerboseDescription is None:
-        pfamVerboseDescription = ["NA_"+domainType, "NO_"+domainType]
+        pfamVerboseDescription = ["NA_"+domainType, "NA_"+domainType]
 
     #pfamShortDescription = "NO" if pfamDescription.startswith(":NO") else "YES"
     if pfamDescription.startswith(":NO"):
@@ -422,7 +423,12 @@ def getCDSAndExonDictionaries(annotationPath, chrs):
 def get1000GChromosomeInfo(thousandGPath):
     thousandGChromosomeInfo = {}
 
-    for thousandGLine in open(thousandGPath):
+    if thousandGPath.endswith(".gz"):
+        thousandGFile = gzip.open(thousandGPath)
+    else:
+        thousandGFile = open(thousandGPath)
+
+    for thousandGLine in thousandGFile:
         if not thousandGLine.startswith("#"):
             thousandGLineComponents = thousandGLine.rstrip("\n").split("\t")
             thousandGChromosomeNumber = thousandGLineComponents[0].replace("chr", "")
@@ -504,7 +510,8 @@ def calculateExomeCoordinate(component):
 
 def getESP6500ExomeChromosomeInfo(exomesPath, chromosome):
     exomesChromosomeInfo = {}
-    exomePath = os.path.join(exomesPath, 'ESP6500.chr%s.snps.vcf' % (chromosome))
+    #exomePath = os.path.join(exomesPath, 'ESP6500.chr%s.snps.vcf' % (chromosome))
+    exomePath = os.path.join(exomesPath, 'ESP6500SI-V2-SSA137.updatedRsIds.chr%s.snps_indels.vcf' % (chromosome))
     try:
         exomeInputFile = open(exomePath)
     except:
@@ -679,7 +686,7 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, data, chr_num, transcript, st
     try:
         nextATG = str(3*(alt_aa[:1].index('M')+1))
     except:
-        nextATG = 'N/A'
+        nextATG = 'NA'
 
     nmdHash['nextATG'] = nextATG
     
@@ -780,7 +787,7 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, 
 
     newData['found'] = found
     if not found:
-        spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
+        spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest_path_to_recessive_gene", "recessive_neighbors"]))
         spliceOutputFile.write("\tCDS match not found: pos="+str(start)+' transcript='+transcript+'\n')
         return newData
 
@@ -924,10 +931,16 @@ def main():
     transcriptToProteinHash = getTranscriptToProteinHash(args.ensembl_table)
 
     ##{'1':{'ENSP...':'PF...\t4-25\t(ENSP...)'}, '2':{...}, ...}
-    proteinFeaturesList = list(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items())
+    #proteinFeaturesList = list(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items())
+    #phosphorylationTags = ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"]
+    #phosphorylationFeaturesList = list(getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", phosphorylationTags, 3).items())
+    #transmembraneFeaturesList = list(getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items())
+
+    proteinFeaturesList = list(getChromosomesPfamTable(chrs, args.protein_features, r"%s.ens73.alldomainfeatures.txt", ["PF", "SSF", "SM"]).items())
     phosphorylationTags = ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"]
     phosphorylationFeaturesList = list(getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", phosphorylationTags, 3).items())
-    transmembraneFeaturesList = list(getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items())
+    transmembraneFeaturesList = list(getChromosomesPfamTable(chrs, args.transmembrane, r"%s.ens73.alldomainfeatures.txt", ["Tmhmm", "Sigp"]).items())
+
     chromosomesPFam = dict(proteinFeaturesList + phosphorylationFeaturesList + transmembraneFeaturesList)
 
     #Scan 1000G file
@@ -968,35 +981,35 @@ def main():
     pfamParamsWithTruncations = sum([[param, param + "truncated"] for param in pfamParams + ptmParams], []) #using sum to flatten the list
 
     ##list of output parameters for LOF and splice variants
-    basicparams = ["gene", "gene_id", "partial/full", "transcript", "transcript length", "longest transcript?"]
-    LOFparams = ["shortest path to recessive gene", "recessive neighbors",\
-                "shortest path to dominant gene", "dominant neighbors",\
-                "is single coding exon?",\
-                "indel position in CDS", "stop position in CDS",\
-                "causes NMD?", "5' flanking splice site",\
-                "3' flanking splice site", "canonical?",\
-                "# failed filters", "filters failed",\
-                "ancestral allele", "GERP score", "GERP element", "GERP rejection", "exon counts",\
-                "segmental duplications", "Disorder prediction"] + pfamParamsWithTruncations +\
+    basicparams = ["gene", "gene_id", "partial/full", "transcript", "transcript_length", "longest_transcript?"]
+    LOFparams = ["shortest_path_to_recessive_gene", "recessive_neighbors",\
+                "shortest_path_to_dominant_gene", "dominant_neighbors",\
+                "is_single_coding_exon?",\
+                "indel_position_in_CDS", "stop_position_in_CDS",\
+                "causes_NMD?", "5'_flanking_splice_site",\
+                "3'_flanking_splice_site", "canonical?",\
+                "#_failed_filters", "filters_failed",\
+                "ancestral_allele", "GERP_score", "GERP_element", "percentage_gerp_elements_in_truncated_exons", "truncated_exons:total_exons",\
+                "segmental_duplications", "disorder_prediction"] + pfamParamsWithTruncations +\
                 ["1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
-                "# pseudogenes associated to transcript",\
-                "# paralogs associated to gene",\
-                "dN/dS (macaque)", "dN/dS (mouse)"]
-    spliceparams = ["shortest path to recessive gene", "recessive neighbors",\
-                "shortest path to dominant gene", "dominant neighbors",\
+                "#_pseudogenes_associated_to_transcript",\
+                "#_paralogs_associated_to_gene",\
+                "dN/dS_(macaque)", "dN/dS_(mouse)"]
+    spliceparams = ["shortest path_to_recessive_gene", "recessive_neighbors",\
+                "shortest_path_to_dominant_gene", "dominant_neighbors",\
                 "donor", "acceptor",\
-                "SNP in canonical site?", "other splice site canonical?",\
-                "SNP location", "alt donor", "alt acceptor", "nagnag positions",\
-                "intron length", "# failed filters", "filters failed",\
-                "GERP score", "GERP element", "GERP rejection", "exon counts",\
-                "segmental duplications", "1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
+                "SNP_in_canonical_site?", "other_splice_site_canonical?",\
+                "SNP_location", "alt_donor", "alt_acceptor", "nagnag_positions",\
+                "intron_length", "#_failed_filters", "filters_failed",\
+                "GERP_score", "GERP_element", "percentage_gerp_elements_in_truncated_exons", "truncated_exons:total_exons",\
+                "segmental_duplications", "1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
-                "# pseudogenes associated to transcript",\
-                "# paralogs associated to gene",\
-                "dN/dS (macaque)", "dN/dS (mouse)"]
+                "#_pseudogenes_associated_to_transcript",\
+                "#_paralogs_associated_to_gene",\
+                "dN/dS_(macaque)", "dN/dS_(mouse)"]
     outdata = {i : "" for i in set(basicparams) | set(LOFparams) | set(spliceparams)}
 
     lofOutputFile.write('chr\tpos\trsID\tref\talt\tscore\tPASS?\tdetails\t')
@@ -1024,6 +1037,10 @@ def main():
         start = int(data[1])
         end = start+len(data[3])-1
 
+        if chr_num not in chrs:
+            line = vatFile.readline()
+            continue
+
         if not currentLoadedChromosome or currentLoadedChromosome != chr_num:
             #This is where we get a chance to data that is unique to a chromosome
             if VERBOSE: print("Reading data from chromosome %s..." % (chr_num))
@@ -1049,13 +1066,13 @@ def main():
             ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
             lineinfo = {'AA':'AA='+ancesdata,\
                         'Ancestral':'Ancestral='+ancestral,\
-                        'GERPscore':'GERPscore='+str(GERPscore),\
+                        'GERPscore':'GERPscore='+"%.2f" % GERPscore,\
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'SegDup']
     
-            outdata["ancestral allele"] = ancesdata
-            outdata["GERP score"] = str(GERPscore)
-            outdata["segmental duplications"] = '.' if segdupdata[counter].count('(') == '0' else segdupdata[counter]
+            outdata["ancestral_allele"] = ancesdata
+            outdata["GERP_score"] = "%.2f" % GERPscore
+            outdata["segmental_duplications"] = '.' if segdupdata[counter].count('(') == '0' else segdupdata[counter]
     
             #Adding 1000G fields
             thousandGTags = ['1000GPhase1_AF', '1000GPhase1_ASN_AF', '1000GPhase1_AFR_AF', '1000GPhase1_EUR_AF']
@@ -1065,12 +1082,11 @@ def main():
             
             if chr_num in thousandGChromosomeInfo and start in thousandGChromosomeInfo[chr_num]:
                 for info in thousandGChromosomeInfo[chr_num][start].split(";"):
-                    infotype = info.split('=')[0]
-                    
+                    infotype = info.split('=')[0]  
                     newComponent = "1000GPhase1_" + info
                     thousandGComponentIndex = -1
                     for findIndex in range(len(thousandGTags)):
-                        if infotype == "_range".join(thousandGTags[findIndex].split("_")[1:]):
+                        if infotype == "_".join(thousandGTags[findIndex].split("_")[1:]):
                             thousandGComponentIndex = findIndex
                             break
                     
@@ -1150,22 +1166,20 @@ def main():
                 gene_name = outdata["gene"]
                 if gene_name in ppi:
                     dominantdist, numberOfDominantNeighbors = parsePPI(ppi, ppiHash, "dgenes", gene_name, dgenes)
-                    outdata["shortest path to dominant gene"] = 'N/A' if dominantdist is None else str(dominantdist)
-                    outdata["dominant neighbors"] = str(numberOfDominantNeighbors)
+                    outdata["shortest_path_to_dominant_gene"] = 'NA' if dominantdist is None else str(dominantdist)
+                    outdata["dominant_neighbors"] = str(numberOfDominantNeighbors)
 
                     recessdist, numberOfRecessiveNeighbors = parsePPI(ppi, ppiHash, "rgenes", gene_name, rgenes)
-                    if recessdist is None and numberOfRecessiveNeighbors > 0:
-                        print(gene_name)
-                    outdata["shortest path to recessive gene"] = 'N/A' if recessdist is None else str(recessdist)
-                    outdata["recessive neighbors"] = str(numberOfRecessiveNeighbors)
+                    outdata["shortest_path_to_recessive_gene"] = 'NA' if recessdist is None else str(recessdist)
+                    outdata["recessive_neighbors"] = str(numberOfRecessiveNeighbors)
                 else:
-                    outdata["shortest path to recessive gene"] = 'N/A'
-                    outdata["recessive neighbors"] = 'N/A'
+                    outdata["shortest_path_to_recessive_gene"] = 'NA'
+                    outdata["recessive_neighbors"] = 'NA'
     
-                    outdata["shortest path to dominant gene"] = 'N/A'
-                    outdata["dominant neighbors"] = 'N/A'
+                    outdata["shortest_path_to_dominant_gene"] = 'NA'
+                    outdata["dominant_neighbors"] = 'NA'
     
-                outdata["# paralogs associated to gene"] = str(len(paralogs[outdata["gene_id"].split('.')[0]])) if outdata["gene_id"].split('.')[0] in paralogs else "0"
+                outdata["#_paralogs_associated_to_gene"] = str(len(paralogs[outdata["gene_id"].split('.')[0]])) if outdata["gene_id"].split('.')[0] in paralogs else "0"
     
                 ##number of associated pseudogenes computation goes here
     
@@ -1180,30 +1194,42 @@ def main():
                         splicevariants[-1]+=':' + ':'.join(entry[0:1] + [pf] + entry[1:])
                         transcript = entry[1]
                         outdata["transcript"] = transcript
-                        outdata["transcript length"] = entry[2]
-                        outdata["longest transcript?"] = "YES" if int(outdata["transcript length"])==longesttranscript else "NO"
+                        outdata["transcript_length"] = entry[2]
+                        outdata["longest_transcript?"] = "YES" if int(outdata["transcript_length"])==longesttranscript else "NO"
                         ispositivestr = transcript_strand[transcript]=='+'
 
                         GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(True, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, start, end, transcript_strand[transcript])
 
-                        outdata['GERP element'] = GERPelementdata
-                        outdata['GERP rejection'] = GERPrejectiondata
-                        outdata['exon counts'] = exonCountData
+                        outdata['GERP_element'] = GERPelementdata
+                        outdata['percentage_gerp_elements_in_truncated_exons'] = GERPrejectiondata
+                        outdata['truncated_exons:total_exons'] = exonCountData
 
                         nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, start, ispositivestr)
-                        outdata['nagnag positions'] = '/'.join(map(str, nagNagPositions)) if len(nagNagPositions) > 0 else '.'
+                        outdata['nagnag_positions'] = '/'.join(map(str, nagNagPositions)) if len(nagNagPositions) > 0 else '.'
                         alternateAcceptorSite = 'YES' if len(nagNagPositions) > 0 else 'NO'
     
-                        outdata["# pseudogenes associated to transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
-                        outdata["dN/dS (macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "N/A"
-                        outdata["dN/dS (mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "N/A"
+                        outdata["#_pseudogenes_associated_to_transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
+
+                        macaque = 'NA'
+                        if transcript.split('.')[0] in dNdSmacaque:
+                            if dNdSmacaque[transcript.split('.')[0]] != 'N/A':
+                                macaque = "%.3f" % float(dNdSmacaque[transcript.split('.')[0]])
+
+                        outdata["dN/dS_(macaque)"] =  macaque
+
+                        mouse = 'NA'
+                        if transcript.split('.')[0] in dNdSmouse:
+                            if dNdSmouse[transcript.split('.')[0]] != 'N/A':
+                                mouse = "%.3f" % float(dNdSmouse[transcript.split('.')[0]])
+
+                        outdata["dN/dS_(mouse)"] = mouse
                         
                         insertAncestralField(spliceOutputFile)
 
                         spliceSearchData = searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS, subst)
 
                         def writeSpliceOutput(failure):
-                            spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest path to recessive gene", "recessive neighbors"]))
+                            spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest_path_to_recessive_gene", "recessive_neighbors"]))
                             spliceOutputFile.write("\t%s: pos=" % (failure) +str(start)+' transcript='+transcript+'\n')
 
                         if not spliceSearchData['found']:
@@ -1221,7 +1247,7 @@ def main():
 
                         outdata["donor"] = donor
                         outdata["acceptor"] = acceptor
-                        outdata["intron length"] = str(intronlength)
+                        outdata["intron_length"] = str(intronlength)
                         ##write to output
                         if new[0]==0:
                             isCanonical = 'YES' if donor=='GT' else 'NO'
@@ -1229,17 +1255,17 @@ def main():
                         elif new[0]==1:
                             isCanonical = 'YES' if acceptor=='AG' else 'NO'
                             otherCanonical = 'YES' if donor=='GT' else 'NO'
-                        outdata["SNP in canonical site?"] = isCanonical
-                        outdata["other splice site canonical?"] = otherCanonical
+                        outdata["SNP_in_canonical_site?"] = isCanonical
+                        outdata["other_splice_site_canonical?"] = otherCanonical
                         
                         if new[0]==0:
-                            outdata["SNP location"] = "donor"
-                            outdata["alt donor"] = new[1].upper()
-                            outdata["alt acceptor"] = acceptor
+                            outdata["SNP_location"] = "donor"
+                            outdata["alt_donor"] = new[1].upper()
+                            outdata["alt_acceptor"] = acceptor
                         else:
-                            outdata["SNP location"] = "acceptor"
-                            outdata["alt donor"] = donor
-                            outdata["alt acceptor"] = new[1].upper()
+                            outdata["SNP_location"] = "acceptor"
+                            outdata["alt_donor"] = donor
+                            outdata["alt_acceptor"] = new[1].upper()
     
     		  #calculation of filters
                         failed_filters = []
@@ -1270,8 +1296,8 @@ def main():
                             failed_filters.append('lof_anc')
                             isLofAnc = 'YES'
     
-                        outdata["# failed filters"] = str(len(failed_filters))
-                        outdata["filters failed"] = ','.join(failed_filters)
+                        outdata["#_failed_filters"] = str(len(failed_filters))
+                        outdata["filters_failed"] = ','.join(failed_filters)
 
     ########################################################
                         spliceOutputFile.write("\t"+"\t".join(outdata[i] for i in spliceparams)+"\n")
@@ -1285,12 +1311,12 @@ def main():
                         LOFvariants[-1]+=':'+':'.join(entry[0:1] + [pf] + entry[1:])
                         
                         tlength = entry[2].split('_')[0]
-                        outdata["transcript length"] = tlength
+                        outdata["transcript_length"] = tlength
                         try:
                             LOFposition = entry[2].split('_')[1]
                         except:
                             LOFposition = '.'
-                        outdata["longest transcript?"] = "YES" if int(tlength)==longesttranscript else "NO"
+                        outdata["longest_transcript?"] = "YES" if int(tlength)==longesttranscript else "NO"
                         transcript = entry[1]
                         outdata["transcript"]=transcript
                        
@@ -1324,17 +1350,17 @@ def main():
                             failed_filters.append('heavily_duplicated')
                             heavilyDuplicated = 'YES'
 
-                        outdata["# failed filters"] = str(filters_failed)
-                        outdata["filters failed"] = ','.join(failed_filters)
+                        outdata["#_failed_filters"] = str(filters_failed)
+                        outdata["filters_failed"] = ','.join(failed_filters)
     
-                        outdata["indel position in CDS"] = "N/A"
-                        outdata["stop position in CDS"] = "N/A"
-                        outdata["5' flanking splice site"] = "N/A"
-                        outdata["3' flanking splice site"] = "N/A"
-                        outdata["canonical?"] = "N/A"
-                        outdata["# pseudogenes associated to transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
-                        outdata["dN/dS (macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "N/A"
-                        outdata["dN/dS (mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "N/A"
+                        outdata["indel_position_in_CDS"] = "NA"
+                        outdata["stop_position_in_CDS"] = "NA"
+                        outdata["5'_flanking_splice_site"] = "NA"
+                        outdata["3'_flanking_splice _site"] = "NA"
+                        outdata["canonical?"] = "NA"
+                        outdata["#_pseudogenes_associated_to_transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
+                        outdata["dN/dS_(macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "NA"
+                        outdata["dN/dS_(mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "NA"
                         
                         insertAncestralField(lofOutputFile)
                         
@@ -1343,13 +1369,14 @@ def main():
                         if nmdData['NMD'] is None:
                             continue
 
-                        outdata['causes NMD?'] = nmdData['NMD']
+                        outdata['causes_NMD?'] = nmdData['NMD']
 
                         if nmdData['issinglecodingexon']:
-                            outdata["is single coding exon?"] = nmdData['issinglecodingexon']
+                            outdata["is_single_coding_exon?"] = nmdData['issinglecodingexon']
 
-                        if nmdData['newCDSpos']:
-                            outdata['indel position in CDS'] = str(nmdData['newCDSpos'])
+                        #NA for premature SNPs
+                        if nmdData['newCDSpos'] and not ('prematureStop' in variant and (len(data[3])>1 or len(subst)>1)):
+                            outdata['indel_position_in_CDS'] = str(nmdData['newCDSpos'])
 
                         if nmdData['NMD'] not in ['YES', 'NO']:
                             lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
@@ -1357,10 +1384,10 @@ def main():
 
                         lofPosition = nmdData['newCDSpos'] if "prematureStop" in variant else nmdData['stopCDS']
 
-                        outdata["5' flanking splice site"] = nmdData['splice1']
-                        outdata["3' flanking splice site"] = nmdData['splice2']
+                        outdata["5'_flanking_splice_site"] = nmdData['splice1']
+                        outdata["3'_flanking_splice_site"] = nmdData['splice2']
                         outdata["canonical?"] = nmdData['canonical']
-                        outdata["stop position in CDS"] = str(lofPosition)
+                        outdata["stop_position_in_CDS"] = str(lofPosition)
 
                         vcfPfamDescriptions = {}
                         phosphorylationResults = {}
@@ -1378,9 +1405,9 @@ def main():
                         
                         GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(False, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, stopPositionForGERP, stopPositionForGERP + len(data[3]) - 1, transcript_strand[transcript])
 
-                        outdata['GERP element'] = GERPelementdata
-                        outdata['GERP rejection'] = GERPrejectiondata
-                        outdata['exon counts'] = exonCountData
+                        outdata['GERP_element'] = GERPelementdata
+                        outdata['percentage_gerp_elements_in_truncated_exons'] = GERPrejectiondata
+                        outdata['truncated_exons:total_exons'] = exonCountData
 
                         for paramKey in pfamParams + ptmParams:
                             newDescriptions = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPositionInAminoSpace, chromosomesPFam, paramKey)
@@ -1412,11 +1439,11 @@ def main():
                                 vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=NO'
                             #outdata["PTM"] = "PTM=NO"
                         else:
-                            vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=' + ','.join([key + "/" + value for key, value in phosphorylationResults.items()])
+                            vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=' + '|'.join([key + "/" + value for key, value in phosphorylationResults.items()])
                             #outdata["PTM"] = "PTM=" + ','.join([key + "/" + value for key, value in phosphorylationResults.items()])
 
                         disorderPredictionData = getDisopredData(args.disopred_sequences, transcript, stopPositionInAminoSpace)
-                        outdata["Disorder prediction"] = disorderPredictionData
+                        outdata["disorder_prediction"] = disorderPredictionData
 
     #########################################################
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
@@ -1432,7 +1459,11 @@ def main():
             for variant in othervariants:
                 allvariants.append(variant)
             lineinfo['VA']+=','.join(allvariants) 
-            vcfOutputFile.write(';'.join(lineinfo[infotype] for infotype in infotypes)+'\n')
+            vcfOutputFile.write(';'.join(lineinfo[infotype] for infotype in infotypes))
+            if len(data[8:]) > 0:
+                vcfOutputFile.write('\t' + '\t'.join(data[8:]) + '\n')
+            else:
+                vcfOutputFile.write('\n')
         
         line=vatFile.readline()
         counter+=1
