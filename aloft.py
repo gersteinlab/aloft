@@ -1271,16 +1271,18 @@ def main():
                             outdata['nagnag_positions'] = 'NA'
                             alternateAcceptorSite = 'NA'
     
-    		  #calculation of filters
+    	       	        #calculation of filters
                         failed_filters = []
                         if isCanonical == 'NO':
-                            failed_filters.append('noncanonical')
+                            failed_filters.append('noncanonical') #delete
+                            #failed_filters.append('ref_noncanonical')
+                            # move below if conditional up one level (left one tab) #
                             if new[0] == 0 and new[1].upper() != 'GT': #snp is in donor, and alt donor is not GT
                                 failed_filters.append('alt_noncanonical')
-                                failed_filters.append('ref_noncanonical')
+                                failed_filters.append('ref_noncanonical') #delete
                             elif new[0] != 0 and new[1].upper() != 'AG': #snp is in acceptor, and alt acceptor is not AG
                                 failed_filters.append('alt_noncanonical')
-                                failed_filters.append('ref_noncanonical')
+                                failed_filters.append('ref_noncanonical') #delete
 
                         if otherCanonical == 'NO':
                             failed_filters.append('other_noncanonical')
