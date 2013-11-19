@@ -1280,7 +1280,7 @@ def main():
                                 failed_filters.append('alt_noncanonical')
                                 failed_filters.append('ref_noncanonical') #delete
 
-                        if otherCanonical == '':
+                        if otherCanonical == 'NO':
                             failed_filters.append('other_noncanonical')
                         if intronlength < 15:
                             failed_filters.append('short_intron')
