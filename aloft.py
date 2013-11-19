@@ -336,8 +336,8 @@ def getGenomeSequences(genomePath, chromosome):
     except:
         printError("%s could not be opened" % (individualSequencePath))
 
-    f.readline()    ##first >chr* line
-    genomeSequences = '0' + f.read().replace("\n", "")
+    f.next() ##first >chr* line
+    genomeSequences = '0' + ''.join([line.strip() for line in f])
     f.close()
 
     return genomeSequences
@@ -842,7 +842,7 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, 
 
 def getMatchingNagnagnagPositions(genomeSequences, start, ispositivestr):
     #NAGN <snp>AG NAG
-    nagnagSequence = genomeSequences[start-4:start+5]
+    nagnagSequence = genomeSequences[start-4:start+5].upper()
     if not ispositivestr:
         nagnagSequence = compstr(nagnagSequence)
 
@@ -997,7 +997,7 @@ def main():
                 "#_pseudogenes_associated_to_transcript",\
                 "#_paralogs_associated_to_gene",\
                 "dN/dS_(macaque)", "dN/dS_(mouse)"]
-    spliceparams = ["shortest path_to_recessive_gene", "recessive_neighbors",\
+    spliceparams = ["shortest_path_to_recessive_gene", "recessive_neighbors",\
                 "shortest_path_to_dominant_gene", "dominant_neighbors",\
                 "donor", "acceptor",\
                 "SNP_in_canonical_site?", "other_splice_site_canonical?",\
@@ -1203,10 +1203,6 @@ def main():
                         outdata['GERP_element'] = GERPelementdata
                         outdata['percentage_gerp_elements_in_truncated_exons'] = GERPrejectiondata
                         outdata['truncated_exons:total_exons'] = exonCountData
-
-                        nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, start, ispositivestr)
-                        outdata['nagnag_positions'] = '/'.join(map(str, nagNagPositions)) if len(nagNagPositions) > 0 else '.'
-                        alternateAcceptorSite = 'YES' if len(nagNagPositions) > 0 else 'NO'
     
                         outdata["#_pseudogenes_associated_to_transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
 
@@ -1250,11 +1246,11 @@ def main():
                         outdata["intron_length"] = str(intronlength)
                         ##write to output
                         if new[0]==0:
-                            isCanonical = 'YES' if donor=='GT' else 'NO'
-                            otherCanonical = 'YES' if acceptor=='AG' else 'NO'
+                            isCanonical = 'YES' if (donor in ['GT', 'GC'] or (donor == 'AT' and acceptor == 'AC')) else 'NO'
+                            otherCanonical = 'YES' if (acceptor=='AG' or (acceptor == 'AC' and donor == 'AT')) else 'NO'
                         elif new[0]==1:
-                            isCanonical = 'YES' if acceptor=='AG' else 'NO'
-                            otherCanonical = 'YES' if donor=='GT' else 'NO'
+                            isCanonical = 'YES' if (acceptor=='AG' or (acceptor == 'AC' and donor == 'AT')) else 'NO'
+                            otherCanonical = 'YES' if (donor in ['GT', 'GC'] or (donor == 'AT' and acceptor == 'AC')) else 'NO'
                         outdata["SNP_in_canonical_site?"] = isCanonical
                         outdata["other_splice_site_canonical?"] = otherCanonical
                         
@@ -1266,6 +1262,14 @@ def main():
                             outdata["SNP_location"] = "acceptor"
                             outdata["alt_donor"] = donor
                             outdata["alt_acceptor"] = new[1].upper()
+
+                        if new[0] == 1: #acceptor snp location
+                            nagNagPositions = getMatchingNagnagnagPositions(genomeSequences, start, ispositivestr)
+                            outdata['nagnag_positions'] = '/'.join(map(str, nagNagPositions)) if len(nagNagPositions) > 0 else '.'
+                            alternateAcceptorSite = 'YES' if len(nagNagPositions) > 0 else 'NO'
+                        else:
+                            outdata['nagnag_positions'] = 'NA'
+                            alternateAcceptorSite = 'NA'
     
     		  #calculation of filters
                         failed_filters = []
