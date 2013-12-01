@@ -1,15 +1,20 @@
 ALOFT TODO:
 
-Segdups - merge redundant blocks
-Name change NMD_predictor -> aloft._v1_0.py
-Split ALOFT code into modules based on feature type
-Remove the 'sort' dependency for vat input/output
-Running VAT from within ALOFT script is not parsing indels correctly (need to verify if fixed)
-Output files in <basename>.aloft.vcf format which would simplify things for users (somewhat done)
-y/n VAT option -> I cannot run this with batch script -> remove this feature (done)
-Progress and cleaner status updates to stdout
-Update all data (PFAM descriptions are now in VCF)
-Segdup data is blank (done)
-PTM output - fewer columns, display positions instead of gene ids
-Clear dependencies
-Passing in VCF or VAT files is tedious, have one query (improved)
+Updated: 12/1/2013
+
+For Source Code:
+Feature names should not be space separated, but separated by underscores
+	e.g. indel_position_in_CDS not "indel position in CDS"
+Phosphorylation option should be changed to post_translational_modifications
+VCF File Metaheader Data needs to be updated and changed to reflect the 
+features that ALOFT adds.
+
+For Documentation:
+INSTALL Provide options for installation, i.e. alternative location install (Mayur)
+INSTALL Download instructions
+README Verify recessive neighbors and dominant neighbors descriptions
+README Haploinsufficiency, Lof disease score, netSNP still present or removed? 
+README Acknowledgements
+README Verify what the Ancestral= tag does in ALOFT VCF output
+QUICK_START 1000genomes data download instructions
+QUICK_START Need the stdout messages output by aloft during runtime

@@ -1,170 +1,336 @@
 ###############################################################################
  
-ALoFT - Automated Loss of Function Tool
-Version 1.0
-Released 2013	
-Gerstein Lab - Yale University
+                       ALoFT Automated Loss of Function Tool
+                               README DOCUMENTATION
+ 
+               Version 1.0                           Gerstein Lab
+              Released 2013                Molecular Biophysics & Biochemistry
+                                                    Yale University
 Citation: 
 Contact: Dr. Suganthi Balasubramanian (suganthi.bala@yale.edu)
-		 Mayur Pawashe (mayur.pawashe@yale.edu)
+		 ##Mayur Pawashe (mayur.pawashe@yale.edu)
 		 Jeremy Liu (jeremy.liu@yale.edu)
-
-TODOs: Update Feature List, Update Reference File List, Package
 
 ###############################################################################
 
-I. Description
+
+Table of Contents
+A. Preface
+B. Description
+C. System Requirements
+D. Installation
+E. Usage
+F. Input Files
+G. Output Files
+H. ALoFT Features in VCF Output
+I. ALoFT Features in Tabbed Delineated Output
+J. Command Line Options
+K. ALoFT Package Components
+L. Acknowledgements
+
+
+A. Preface
+Installation instructions can be found in INSTALL.
+Quick Start instructions can be found in QUICK START.
+
+
+B. Description
 ALoFT takes as input an VCF (variant call format) file, runs it through the 
 variant annotation tool (VAT) tools snpMapper and indelMapper, and runs 
-the sorted VAT output through aloft.py, which calculates many 
-other variant-specific features that give functional, evolutionary, probable 
-mismapping, and other information. ALoFT only calculates these 
-parameters for frameshift indels, loss-of-function (LoF) SNPs, and for SNPs 
-located in splice sites. ALoFT is split into separate modules based on features.
-See section VIII Features for a detailed description of the features in ALoFT.
+the sorted VAT output through aloft.py, which calculates other variant-
+specific features that give functional, evolutionary, mismapping, and other
+information. ALoFT only calculates these parameters for frameshift indels, 
+loss-of-function (LoF) SNPs, and for SNPs located in splice sites. ALoFT 
+is split into separate modules based on features.
 
 
-II. System Requirements
+C. System Requirements
 Python 2.7.x or Python 3.x
-Linux
-NOT compatible with Windows systems
+Linux or Mac OSX 10.6 and up
 
 
-III. Installation:
+D. Installation:
+$ cd aloft
+$ /path/to/python/ install.py
 
-cd aloft
-/path/to/python/interpreter install.py
-
-This will install VAT, our gerp score caching module, and the networkx module required to run aloft.
+This will install VAT, our gerp score caching module, and the networkx module
+required to run aloft.
 
 
-IV. Input Files (Required):
-
+E. Input Files (Required):
 1) VCF file containing unannotated variants, passed in using the --vcf option.
 Alternatively, an annotated VCF file output by a separate manual run of VAT 
 should be passed in with the --vat option. See options section below.
 
-2) Reference files (defaults already in place). 
+2) Reference files (defaults already in place after installation). 
 For complete list, see section below regarding options and default values.
 
 
-V. Output Files (may be overridden, see Section V Options):
+F. Output Files:
+An output directory may be specified with the --output option.
+Otherwise the output files will be written in the ./aloft_output directory.
 
-Pass an output directory via --output
+Four files (may|will) be created in this output directory:
 
-Four files may be created into this output directory:
+1) A vcf file that VAT generates if --vcf is supplied called vat_output.vcf.
+This intermediate file is then run through aloft.py to produce the following 
+three files. The variants in this file are listed in order, starting with
+the lowest position on chromosome 1.
 
-1) A vcf file that VAT generates if --vcf is supplied.
-This intermediate file is then run through
-aloft.py to produce the following three files.
+2) Output VCF file named <input_file_name>.aloft.vcf
+Contains a culled list of formatted information calculated by VAT and 
+features calculated by ALoFT in Variant Call Format for both lof variants
+and spice site variants.
 
-2) Output VCF file. Includes all information output by VAT and all features in ALOFT.
+3) Tab-delimited file named <input_file_name>.aloft.lof
+Contains the subset of VAT output associated with LoF SNPs and frameshift 
+indels. All information from the VAT file is included, plus ALL features 
+calculated by aloft.py for LoF variants.
+Variants in the input file that intersect coding exons are included.
+For variants with multiple transcripts, the variant data is calculated and 
+output on different lines for each transcript.
 
-3) Tab-delimited file (labeled lof) containing the subset of VAT output associated with LoF 
-SNPs and frameshift indels. All information from the VAT file is included, 
-plus ALL features calculated by aloft.py for LoF variants.  
-Each variant is output on multiple rows, one for each combination of alternate 
-allele and affected transcript.
-
-4) Tab-delimited file (labeled splice) containing the subset of VAT output associated with splice 
-site SNPs.  All information from the VAT file is included, plus ALL features 
-calculated by aloft.py for splice site SNPs.  Each variant is 
-output on multiple rows, one for each combination of alternate allele and 
-affected transcript.
+4) Tab-delimited file named <input_file_name>.aloft.splice
+Contains the subset of VAT output associated with splice site SNPs.  
+All information from the VAT file is included, plus ALL features 
+calculated by aloft.py for splice site SNPs.  Variants with multiple 
+transcripts are output on multiple rows, one for each combination of 
+alternate allele and affected transcript.
+Variants in the input file that intersect splice sites are included.
 
 
-VII. Usage
+G. Usage
 ALoFT can be invoked as follows:
-cd aloft
-python aloft.py [--option1=arg1] [--option2=arg2]...
+ $ cd aloft
+ $ python aloft.py --vcf=/path/to/file --output=path/to/dir [--option3=arg1]...
 
 Example:
-python aloft.py --vcf=vcf_file.vcf
+ $ python aloft.py --vcf=vcf_file.vcf	(unannotated vcf file)
 OR 
-python aloft.py --vat=vat_file.vcf         (for specifying VAT input instead of unannotated vcf file)
+ $ python aloft.py --vat=vat_file.vcf	(VAT annotated vcf file)
 OR 
-python aloft.py --vcf=vcf_file.vcf --output=/path/to/directory    (for specifying output destination)
+ $ python aloft.py --vcf=vcf_file.vcf --output=/path/to/directory   
+   (VAT annotated vcf file and custom output destination)
 
 
-VIII. ALoFT Features
-ALOFT calculates the following features for all variants:
+H. ALoFT Features in VCF Output
+ALoFT retains input file VCF metaheader and variant information and details.
+ALoFT appends a subset of the features listed in Tabbed Delineated Output
+into vcf form.
+
+1) The following features are listed for all variants (lof and splice):
+- AA, Ancestral, AF, AMR_AF, ASN_AF, AFR_AF, EUR_AF, VT, SNPSOURCE, AC, AF,
+AN AVGPOST, ERATE, LDAF, RSQ, THETA, VA are annotations from VAT.
+These should be listed and described in the first portion of the VCF metadata.
+- Ancestral: Determines whether ancestral allele is the same as reference
+[VERIFY THIS]
+- GERPscore: Gives the GERP score associated with the variant position
+- SegDup: Gives the number of segmental duplications associated with the 
+variant position.
+- 1000GPhase1(|_AF|_ASN_AF|_AFR_AF|_EUR_AF): 1000Genomes Phase 1 allele freqs
+	blank: Yes or No if associated 1000 Genomes allele frequencies
+	AF: overall allele frequences
+	ASN_AF: asian subset allele frequences
+	AFR_AF: african subset allele frequences
+	EUR_AF: european subset allele frequencies
+- ESP6500(|_AAF): ESP6500 allele frequences
+	blank: Yes or No if associated ESP6500 allele frequencies
+	AAF: ancestral allele frequencies
+- GERPelement: YES if variant/transcript has associated GERPelement and
+no otherwise.
+- exoncounts: Gives the number of exons in the transcript and the number
+of exons truncated by the premature stop, inclusive. For splice site variants
+the number of exons truncated is replaced with the string "NA".
+
+2) These features are listed for lof variants, in addition to those in 1):
+- nearstart: YES if variant in first coding exon, NO otherwise.
+- nearend: YES if variant in last coding exon, NO otherwise.
+- canonical: YES if the 5' flanking splice site and the 3' flanking splice 
+site are both canonical, NO otherwise.
+- XX/XX: <5' flanking splice site>:<3' flanking splice site of the exon that
+the variant intersect, as reported in the reference genome.
+- lofposition: calculated one indexed coding sequence position in which the
+premature stop occurs in the alternate sequence.
+- nmd: YES if the premature stop leads to nonsense mediated decay, NO if not.
+- lof_anc: YES if ancestral allele alternate sequence leads to premature stop
+and NO otherwise.
+- heavilyduplicated: YES if the number of duplicated regions (that the variant
+is in) is high, NO otherwise
+- disorder_prediction: Gives the percentage of residues that are disordered in
+the reference sequence and the percetageof residues that are disordered in the
+truncated alternate sequence (after the premature stop) as <%>:<%>. If the
+transcript is not associated with disordered regions, "." is output.
+- PF: PFAM protein domains. YES if variant intersects region, NO if no 
+intersection and NA if no regions exist for the particular transcript.
+- SSF: SSF protein domains. YES if variant intersects region, NO if no 
+intersection and NA if no regions exist for the particular transcript.
+- SM: SM protein domains. YES if variant intersects region, NO if no 
+intersection and NA if no regions exist for the particular transcript.
+- Tmhmm: Transmembrane helix domains. YES if variant intersects region, NO if
+no intersection and NA if no regions exist for the particular transcript.
+- Sigp: Signal peptide domains. YES if variant intersects region, NO if no 
+intersection and NA if no regions exist for the particular transcript.
+- PTM: Post translational modifications. YES if variant intersects any 
+post translational modification regions, NO if no intersections and NA 
+if no regions exist for the particular transcript.
+
+3) These features are listed for splice variants, in addition to those in 2):
+- XX/XX: <acceptor_site>:<donor_site> splice sites in reference genome. 
+- is_canonical: YES if variant intersecting splice site is canonical, NO if not
+- other_canonical: YES if other splice site in the intron, not the splice site
+intersected by the variant is canonical, NO otherwise.
+- intron_length: Gives the length of the intron that the varint intersects the
+splice site.
+- small_intron: YES if the length of intron is less than 15bp, NO otherwise.
+- heavily_duplicated: YES if the variant region is heavily duplicated, NO
+otherwise.
+- lof_anc: YES if the ancestral alternate sequence leads to a premature stop
+and NO otherwise.
+- alternate_acceptor_site: YES if there are potential neighboring splice sites
+that could replace a malfunctioning splice site at the variant location and
+NO otherwise. This is the NAGNAG case.
+
+
+I. ALoFT Features in Tabbed Delineated Output
+1) ALOFT calculates the following features for all variants:
 - VAT Features: includes all features from VAT snpMapper and indelMapper
-- Partial/full: full if all transcripts of the affected gene are affected, 
+This includes allele frequencies, variant type, etc. This is the "details"
+column in the tabbed delineated output and the first part of the details
+section of each transcript in the vcf output.
+- partial/full: full if all transcripts of the affected gene are affected, 
 partial otherwise
-- Transcript length: length of affected transcript in nucleotides
-- Longest transcript: YES if transcript is the longest transcript affected by 
+- transcript length: length of affected transcript in nucleotides
+- longest transcript?: YES if transcript is the longest transcript affected by 
 variant, NO otherwise
-- Shortest path to recessive gene: minimum length of a shortest path to a 
+- shortest path to recessive gene: minimum length of a shortest path to a 
 recessive gene in protein interaction network
-- Recessive Neighbors: 
-- Shortest path to dominant gene: minimum of length of a shortest path to a dominant
-gene in the protein interaction network
-- Dominant Neighbors: 
-- Number of Failed Filters: number of call filters failed associated with the variant
-- Filters Failed: list of the call filters failed associated with the variant
-- GERP Score: associated GERP score of the variant position
-- GERP Element: associated GERP element of the variant position
-- GERP Rejection: associated GERP rejection score of the variant position
-- Exon Counts:
-- Segmental Duplications: Gives the position of associated segdups as a bracketed list,
-or a period if none exist.
-- 1000Genomes Phase 1: blank, AF, ASN_AF, AFR_AF, EUR_AF
-- ESP6500: AF, AAF
-- Haploinsufficiency disease score:
-- LoF disease score
-- netSNP disease score
-- Number of pseudogenes associated with transcript
-- Number of paralogs associated with identified gene
-- dN/dS (macaque)
-- dN/dS (mouse)
+- recessive neighbors: gives the gene id of the closest recessive gene
+[THIS NEEDS VERIFICATION]
+- shortest path to dominant gene: minimum of length of a shortest path to a 
+dominant gene in the protein interaction network
+- dominant neighbors: gives the gene id of the closest dominant gene
+[THIS NEEDS VERIFICATION]
+- GERP score: associated GERP score of the variant position
+- GERP element: associated GERP element of the variant position
+- GERP rejection: associated GERP rejection score of the variant position
+- exon counts: number of exons associated with the variant transcript
+- Segmental duplications: Gives the position of associated segdups as a 
+bracketed list, or a period if none exist.
+- 1000GPhase1(|_AF|_ASN_AF|_AFR_AF|_EUR_AF): 1000Genomes Phase 1 allele freqs
+	blank: Yes or No if associated 1000 Genomes allele frequencies
+	AF: overall allele frequences
+	ASN_AF: asian subset allele frequences
+	AFR_AF: african subset allele frequences
+	EUR_AF: european subset allele frequencies
+- ESP6500(|_AAF): ESP6500 allele frequences
+	blank: Yes or No if associated ESP6500 allele frequencies
+	AAF: ancestral allele frequencies
+- Haploinsufficiency disease score: [REMOVED - DESCRIPTION NEEDED]
+- LoF disease score: [REMOVED - DESCRIPTION NEEDED]
+- netSNP disease score: [REMOVED - DESCRIPTION NEEDED]
+- # pseudogenes associated to transcript: 
+number of pseudogenes or a period if none.
+- # paralogs associated to gene: number of paralogs or a period if needed
+- dN/dS (macaque): Evolutionary score in comparison to macaque species
+- dN/dS (mouse): Evolutionary score in comparison to mouse species
 
-For Loss of Function SNPs/indels only:
-- Is single coding exon?: YES if the variant intersects a transcript with only one coding
-exon, NO if the variant does not.
-- Indel position in CDS:
-- Causes NMD?: Nonsense Mediated Decay prediction based on proximity to the end of the last
-exon. Default cutoff distance is 50 base pairs.
-- 5' flanking splice site:
-- 3' flanking splice site:
-- Canonical?:
-- Ancestral Allele:
-- Disorder Prediction: Gives the percentage of disordered residues in the translated
-nucleotide sequence. Also gives the percentage of disordered residues in the translated
-nucleotide sequence after the truncation caused by a premature stop.
-- PFAM intersection and truncation: 
-- SSF intersection and truncation:
-- SM intersection and truncation:
-- Tmhmm intersection and truncation:
-- Sigp intersection and truncation:
-- Post translational modifications (intersection and truncations): includes acetylation,
-(mono/di/tri)methylation, O-GlcNAc, phophorylation, sumolyation, ubiquitination
+2) ALoFT calculates the following features for lof snps and indels:
+- is single coding exon?: YES if the variant intersects a transcript with 
+only one coding exon, NO if the variant does not.
+- indel position in CDS: gives the one indexed position of the indel in 
+the coding sequence
+- stop position in CDS: gives the one indexed position of the premature stop
+in the coding sequence
+- causes NMD?: YES if the variant causes nonsense mediated decay, calculated 
+by default 50 base pair proximity of the premature stop to the last coding 
+exon. NO if the variant does not lead to nonsense mediated decay.
+- 5' flanking splice site: Gives the upstream 5' splice site of the exon that
+the variant intersects
+- 3' flanking splice site: Gives the downstream 3' splice site of the exon 
+that the variant intersects
+- canonical?: YES if the 5' flanking splice site is 'AG' and the 3' flanking 
+splice site is 'GT', NO otherwise if neither of the splice sites matches 
+'AG' and 'GT', respectively.
+- # of failed filters: number of call filters failed associated with the 
+loss of function variant
+- filters failed: list of the call filters failed associated with the variant
+	heavily_duplicated: if many segmental duplications exist
+	lof_anc: the ancestral allele leads to loss of function
+	near_start: variant is in the first coding exon of the transcript
+- ancestral allele: Gives the nucleotide at the variant position in
+the ancestral reference genome
+- Disorder prediction: Gives the percentage of disordered residues in the 
+translated nucleotide sequence. Also gives the percentage of disordered
+residues in the translated nucleotide sequence after the truncation caused 
+by a premature stop. Or a . if variant does not have disorder regions.
 
-For splice SNPs only:
-- Donor:
-- Acceptor:
-- SNP in canonical site?
-- Other splice site canonical?
-- SNP location:
-- Alt donor:
-- Alt acceptor:
-- NAGNAG positions:
-- Intron length:
+** Protein Families & Post Translational Modifications **
+For the following features, 
+	the region_id:count is output if variant intersects feature region
+	NO_<feature> is output if variant does not intersect feature regions
+	NA_<feature> is output if variant's transcript has no feature regions
+- PF and PFtrunacated: Determines whether the variant intersects or truncates 
+a PFAM protein segment.
+- SSF and SSFtruncated: Determines whether the variant intersects or 
+truncates a SFF protein segment.
+- SM and SMtruncated: Determines whether the variant intersects or truncates 
+a SM protein segment.
+- Tmhmm and Tmhmmtruncationed: Determines whether the variant intersects or 
+truncates a Tmhmm protein segment.
+- Sigp and Sigptruncated: Determines whether the variant intersects or
+truncates a Sigp protein segment.
+- ACETYLATION(truncated), METHYLATION(truncated), PHOSPHORYLATION(truncated):
+Post translational modifications determined from Phophosite. 
+Determines whether the premature stop variant intersects or truncates 
+post translational modification sites. 
+Site types include acetylation, (mono/di/tri)methylation, O-GlcNAc, 
+phophorylation, sumolyation, and ubiquitination. 
+
+3) For splice SNPs only:
+- Donor: Gives the nucleotide sequence of the donor splice site
+- Acceptor: Gives the nucleotide sequence of the acceptor splice site
+- SNP in canonical site?: Determines whether the splice site that the SNP
+intersects is canonical (YES/NO)
+- Other splice site canonical?: Determines whether the other splice site,
+that the SNP does not intersect, is canonical (YES/NO)
+- SNP location: Determines whether the snp intersects the donor or acceptor
+- Alt donor: Gives the nucleotide seqeunce of the donor splice site after
+the SNP change has been made
+- Alt acceptor: Gives the nucleotide sequence of the acceptor splice site 
+after the SNP change has been made
+- NAGNAG positions: The NAGNAG case. Determines possible nearby canonical 
+splice sites to the SNP location. Alternative splice sites.
+- Intron length: Gives the length of the intron bracked by the donor and
+acceptor splice site.
+- # filters failed: number of call filters failed associated with the splice
+site variant
+- Filters failed: list of the call filters failed associated with the variant
+	ref_noncanonical: reference splice site, that the variant intersects, 
+		is noncanonical
+	alt_noncanonical: alternate splice site, that the variant intersects, 
+		is noncanonical
+	other_noncanonical: other reference splice site, that the variant does
+		not intersect, is noncanonical
+	heavily_duplicated: variant flagged if the variant intersects a 
+		heavily duplicated region
+	short_intron: variant flagged if the intron is shorter than 15bp
 
 
-IX. Options
-aloft.py recognizes the following options for altering input and reference files (default values given):
+J. Options
+aloft.py recognizes the following options for altering input and reference
+files (default values given):
 ALOFT will come packaged with most of the necessary reference files.
+
+--version
+Will output the ALoFT version number.
 
 --vcf=""
 Specifies path to VCF input file.  Set to empty string by default.  If none 
 specified, NMD_predictor will try to skip VAT and run directly on the file 
 given to the --vat option. This or --vat option is needed for proper execution.
 
---vat=/path/to/vat_output.vcf
+--vat=aloft_output/vat_output.vcf
 Specifies path to VAT output file to run aloft on.
-
---output=/path/to/output_directory
-Specifies path to tabbed output files and VCF file from ALOFT.
 
 --annotation_interval=data/gencode.v16.pc.interval
 Specifies path to genome annotation interval file. The interval file is
@@ -176,49 +342,91 @@ http://info.gersteinlab.org/VAT#Interval.
 Specifies path to annotation sequence file in FASTA format. The fasta file
 is extracted from the interval file by the VAT utility interval2sequences.
 
+--output=aloft_output/
+Specifies path to tabbed output files and VCF file from ALOFT.
+
 --cache=cache/
-Specifies path to directory containing cache of GERP score information and protein-protein interaction information.  
+Specifies path to directory containing cache of GERP score information and 
+protein-protein interaction information.  
 Directory will be created if it doesn't already exist.
 
---elements=data/elements/
-Specifies path to directory containing GERP element information.  Files must 
-be named hg19_chr*_elems.txt, where * is 1-22/X/Y.
+--nmd_threshold=50
+Distance from premature stop to last exon-exon junction; used to predict
+NMD. Default distance is 50bp.
 
---annotation=data/gencode.v16.annotation.gtf
-Specifies path to GENCODE genome annotation file.
+--verbose
+Will run ALoFT in verbose mode.
+
+--ensembl_table=data/ensIDs.ens70.txt
+Specifies path to a table file that relates transcript ids to protein ids
+Obtained from ensembl biomart.
+
+--protein_features=data/ens73_all_domain_features/
+Path to directory containing protein domain information.  Files must be named
+chr*.prot-features-ens70.txt, where * is 1-22/X/Y.
+
+--phosphorylation=data/ptm/
+Path to directory containing post translational modification information.
+Files are named ptm.phosphosite.chr*.txt, where * is 1-22/X/Y
+
+--transmembrane=data/ens73_all_domain_features/
+Path to directory containing transmembrane protein family database.
+
+--thousandG=data/1000G.vat
+Path to 1000 genomes vat output file. Used for 1000G allele frequencies.
+
+--ppi=data/BIOGRID-ORGANISM-Homo_sapiens-3.2.95.tab.txt
+Path to protein-protein interaction network file.
+
+--dominant_genes=data/dominantonly.list
+Path to text file containing list of dominant genes.
+
+--recessive_genes=data/data/science_lofpaper_omim_recessive_filtered.list
+Path to text file containing list of recessive genes.
 
 --rates=data/bases/
 Specifies path to directory containing GERP score information.  Files must be 
 named chr*.maf.rates, where * is 1-22/X/Y.
 
+--elements=data/elements/
+Specifies path to directory containing GERP element information.  Files must 
+be named hg19_chr*_elems.txt, where * is 1-22/X/Y.
+
+--dNdS=data/dndS_avgs.txt
+Path to a file containing dNdS data for macaque and mouse.
+
+--paralogs=data/within_species_geneparalogs.ens70
+Path to a file containing list of paralogs.
+
+--LOF_score=data/prob_recessive_disease_scores.txt
+Path to a file containing LOF disease associated scores
+
 --ancestor=data/homo_sapiens_ancestor_GRCh37_e71/
 Path to directory containing ancestral chromosome files.  Files must 
 be named homo_sapiens_ancestor_*.fa, where * is 1-22/X/Y.
 
+--netSNP_score=data/Supplementary_Table8.20Jul2012.txt
+Path to file containing netSNP data.
+
 --segdup=data/hg19-segdup.txt
 Path to file containing genome segmental duplication regions.
 
---thousandG=data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.gencode16.SNPS.vat.vcf
-Path to file containing 1000Genomes variant data.
+--annotation=data/gencode.v16.annotation.gtf
+Specifies path to GENCODE genome annotation file.
 
---exomes=data/ESP6500/
-Path to directory containing ESP6500 SNP data.  Files must be named ESP6500.chr*.snps.vcf, where * is 1-22/X/Y.
+--exomes=data/new_esp6500/
+Path to directory containing ESP6500 SNP data.  Files must be named ESP6500.
+chr*.snps.vcf, where * is 1-22/X/Y.
 
---ensembl_table=data/ens67_gtpcgtpolymorphic.txt
-Path to file containing mappings between Ensembl gene and protein IDs.
+--pseudogenes=data/gencode.v7.pgene.parents
+Path to file containing pseudogene listings.
 
---protein_features=data/prot_features/
-Path to directory containing protein domain information.  Files must be named chr*.prot-features-ens70.txt, where * is 1-22/X/Y.
-
---transmembrane=tm_ens70/
-Path to directory containing transmembrane protein family database.
-
---nmd_threshold=50
-Distance from premature stop to last exon-exon junction; used to find NMD cause. By default, this is 50.
+--disopred_sequences=data/disopred_sequences/
+Path to directory containing disordered regions separated by chromosome.
+This is for calculated disordered regions of loss of funtion variants.
 
 
-X. Components
-
+K. Components
 aloft.py: Contains the main body of code.  If a VCF file is not 
 passed in, Reads information from all relevant input files into memory, and 
 
@@ -226,13 +434,22 @@ common.py: Auxiliary file that contains common functions used by ALoFT.
 
 data: Directory for the default reference files used by ALoFT
 
-gerprate.c:
+gerprate.c: File for creating compressed GERP rate cache
 
-install.py: Installation script for the GERP cache and network cache used by ALoFT to improve efficiency.
+install.py: Installation script for the GERP cache and network cache used by
+ALoFT to improve efficiency.
 
-sequencing.py: Auxiliary file that contains methods used to translate nucleotide sequence to amino acids.
+networkx-1.7.tar.gz: Package needed by aloft for networking module/cache.
+
+sequencing.py: Auxiliary file that contains methods used to translate 
+nucleotide sequence to amino acids.
 
 vat_run.py: Contains run_vat(), a function called by aloft.py to run 
 VAT automatically. 
 
-vcf_sort.py: Contains the functions to sort VAT output by increasing chromosome and position number.
+vcf_sort.py: Contains the functions to sort VAT output by increasing 
+chromosome and position number.
+
+
+L. Acknowledgements
+[INSERT TEXT]

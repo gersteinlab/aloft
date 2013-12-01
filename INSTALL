@@ -1,19 +1,38 @@
-You will first have to have Python 2.7.x or 3.x installed to run aloft. To check your python version:
-python --version
+###############################################################################
+ 
+                       ALoFT Automated Loss of Function Tool
+                            INSTALLATION DOCUMENTATION
+ 
+               Version 1.0                           Gerstein Lab
+              Released 2013                Molecular Biophysics & Biochemistry
+                                                    Yale University
+Citation: 
+Contact: Dr. Suganthi Balasubramanian (suganthi.bala@yale.edu)
+		 ##Mayur Pawashe (mayur.pawashe@yale.edu)
+		 Jeremy Liu (jeremy.liu@yale.edu)
 
-Run install.py to compile all dependencies that aloft requires:
-cd aloft
-python install.py
+###############################################################################
 
-aloft.py is the main script.
-This will prompt up the help screen:
-python aloft.py -h
+1. Python 2.7.x or 3.x is required to run aloft. 
+To check your python version:
+	$ python --version
 
-The input VCF file supplied by --vcf should have a header line starting with #CHR like:
-#CHR POS ID ALT REF ...
+To download the latest version of Python, visit www.python.org
 
-Only CHR and POS are necessary to have, but the number of columns in this header line must match with the number of lines in the VCF file. Aloft will also accept if the line starts with #CHROM
+2. Download the ALoFT package from [???].
+	$ wget [FTP SITE HERE]
+	$ gunzip aloft
 
-Then run python aloft.py with either of --vcf or --vat set, as well as all the data that aloft needs
+3. Run install.py to compile all dependencies that aloft requires:
+    $ cd aloft
+    $ python install.py
+This will install VAT, our gerp score caching module, the networkx module, 
+and the reference files (located in aloft/data) required to run aloft.
 
-Note that you must run aloft in the current working directory since it relies on a few relative paths
+4. After compiling, aloft.py is the main script to run.
+To see the help screen:
+	$ python aloft.py -h
+
+For more complete information on running ALoFT, see QUICKSTART or README.
+
+5. Installation Options. [I AM NOT CLEAR ON THIS, MAYUR WILL HAVE TO DO]
