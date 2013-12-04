@@ -1,6 +1,17 @@
 ALOFT TODO:
 
-Updated: 12/1/2013
+Updated: 12/3/2013
+
+Options for Hosting:
+	1) Source code on github, provide link to data directory hosted on our machine
+		- A: Easy to track changes, users will like format/submit issues
+		- D: Cannot store data (multiple GB), github data limitations
+	2) Package everything into one compressed file on our machine
+	http://vat.gersteinlab.org/
+	http://funseq.gersteinlab.org/
+	https://github.com/mlin/PhyloCSF
+	http://galaxyproject.org/
+	https://code.google.com/
 
 For Source Code:
 Feature names should not be space separated, but separated by underscores
@@ -8,13 +19,27 @@ Feature names should not be space separated, but separated by underscores
 Phosphorylation option should be changed to post_translational_modifications
 VCF File Metaheader Data needs to be updated and changed to reflect the 
 features that ALOFT adds.
+Update installation methods (bundle VAT executables) then update documentation
+Ensure gencode18 files work with VAT
+GERP rate will be changed, input file source change to bed files
+	gerp cache will likely not be necessary
+Networkx module optional install, update documentation
+PTM files update and check
+Test minimum vcf input column numbers, add dummy columns
+Splice changes implemented, check
 
 For Documentation:
+ALL Title is "Annotation of Loss-of-Function Transcripts"
+ALL Email address changes
 INSTALL Provide options for installation, i.e. alternative location install (Mayur)
 INSTALL Download instructions
 README Verify recessive neighbors and dominant neighbors descriptions
 README Haploinsufficiency, Lof disease score, netSNP still present or removed? 
 README Acknowledgements
 README Verify what the Ancestral= tag does in ALOFT VCF output
+README Components 
+README Maybe remove acknowledgements
 QUICK_START 1000genomes data download instructions
 QUICK_START Need the stdout messages output by aloft during runtime
+QUICK_START Standard workflow and then followed by options, need url
+QUICK_START provide example directory with example files or instruct download?
