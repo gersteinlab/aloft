@@ -279,28 +279,6 @@ def getCodingExonIntervals(annotationIntervalPath):
 
 	return codingExonIntervals
 
-def buildGerpRates(GERPratepath, GERPratecachepath, chromosome):
-	ratefilepath = os.path.join(GERPratepath,'chr' +chromosome+'.maf.rates')
-	cachepath = os.path.join(GERPratecachepath, chromosome+'.maf.rates_cached')
-	try:
-		#build cache file if it does not already exist using our gerprate utility
-		if not os.path.exists(cachepath):
-			programName = "./gerprate"
-			exit_status = subprocess.check_call([programName, ratefilepath, cachepath])
-			if exit_status != 0:
-				printError("Exit status for following command was nonzero: %s %s %s - was aloft properly installed?" % (programName, ratefilepath, cachepath))
-		return open(cachepath, "rb")
-	except:
-		print(ratefilepath + " could not be opened.")
-		print("Exiting program.")
-		sys.exit(1)
-
-#the gerp cache files are 1-indexed
-def getGerpScore(cacheFile, start, length):
-	cacheFile.seek(start*4, 0)
-	GERPrates = struct.unpack("<%df" % (length), cacheFile.read(length*4))
-	return sum(GERPrates) / length
-
 #binary search to find GERP element
 def findGERPelementIndex(elements, start, end):
 	low = 0

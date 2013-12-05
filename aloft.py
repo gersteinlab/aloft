@@ -21,6 +21,7 @@ import argparse
 import pickle
 import distutils.spawn
 import gzip
+import vcf2bigwigbed
 
 VERBOSE = None
 
@@ -60,7 +61,7 @@ def parseCommandLineArguments():
     
     parser.add_argument('--output', help='Path to output directory; directory is created if it does not exist', default='aloft_output/')
 
-    parser.add_argument('--cache', help='Output to directory for cached files; directory is created if it does not exist', default='cache/')
+    parser.add_argument('--cache', help='Output to directory for cached files; directory is created if it does not exist. Only needed for networkx module.', default='cache/')
 
     parser.add_argument('--nmd_threshold', help='Distance from premature stop to last exon-exon junction; used to find NMD cause', type=int, default=50)
 
@@ -77,6 +78,7 @@ def parseCommandLineArguments():
     parser.add_argument('--dominant_genes', help='Path to list of dominant genes', default='data/dominantonly.list')
     parser.add_argument('--recessive_genes', help='Path to list of recessive genes', default='data/science_lofpaper_omim_recessive_filtered.list')
 
+    parser.add_argument('--scores', help='Path to binary bw (bigwig) file containing GERP scores', default='data/All_hg19_RS.bw')
     parser.add_argument('--rates', help='Path to directory containing chr*.maf.rates files', default='data/bases/')
     parser.add_argument('--elements', help='Path to directory containing hg19_chr*_elems.txt files', default='data/elements/')
 
@@ -119,9 +121,11 @@ def parseCommandLineArguments():
     abortIfPathDoesNotExist(parser, args.vcf)
 
     abortIfCannotCreateDirectory(parser, args.output)
-    abortIfCannotCreateDirectory(parser, args.cache)
-
-    abortIfCannotCreateDirectory(parser, os.path.join(args.cache, "gerp"))
+    try:
+        import networkx
+        abortIfCannotCreateDirectory(parser, args.cache)
+    except:
+        pass
 
     #Try to see if we can detect and open all input files
     for arg, path in vars(args).items():
@@ -151,7 +155,7 @@ def getAncestorData(ancespath, chromosome):
     f.close()
     return data
 
-def getGERPData(isSplice, gerpCacheFile, GERPelements, exons, start, end, direction):
+def getGERPData(isSplice, GERPelements, exons, start, end, direction):
     truncatedExons = getTruncatedExons(exons, start, direction) if exons and not isSplice else None
     exonCountData = ":".join([str(len(truncatedExons)) if truncatedExons else ("." if not isSplice else "NA"), str(len(exons)) if exons else "."])
 
@@ -911,6 +915,33 @@ def main():
     vcfOutputFile = abortIfCannotWriteFile(parser, vcfOutputPath)
     
     chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
+
+    gerpScoresHash = {}
+    bigWigAverageOverBedPath = os.path.join(os.path.join('bigwig-bin', platform.system() + "_" + platform.machine()), 'bigWigAverageOverBed')
+    bigWigTabOutputPath = os.path.join(args.output, 'bigwig.tab')
+    bigWigBedInputPath = os.path.join(args.output, 'bigwig_input.bed')
+    bigWigBedOutputPath = os.path.join(args.output, 'bigwig_output.bed')
+    try:
+        vcf2bigwigbed.writeBed(vatPath, bigWigBedInputPath)
+        if VERBOSE: print("Running bigWigAverageOver...\n")
+        subprocess.call([bigWigAverageOverBedPath, args.scores, bigWigBedInputPath, bigWigTabOutputPath, '-bedOut=%s' % bigWigBedOutputPath])
+
+        with open(bigWigBedOutputPath) as bigWigFile:
+            for line in bigWigFile:
+                data = line.strip().split("\t")
+                chromosome = data[0]
+                if chromosome not in gerpScoresHash:
+                    gerpScoresHash[chromosome] = {}
+
+                position = int(data[1])+1 #to 1 based coordinate
+                score = float(data[4])
+                gerpScoresHash[chromosome][position] = score
+
+        os.remove(bigWigBedInputPath)
+        os.remove(bigWigTabOutputPath)
+        os.remove(bigWigBedOutputPath)
+    except:
+        printError("Failed to call bigWigAverageOverBed")
     
     #Load exon intervals from .interval file, used later for intersecting with gerp elements
     codingExonIntervals = getCodingExonIntervals(args.annotation_interval)
@@ -1055,7 +1086,6 @@ def main():
             ancestorData = getAncestorData(args.ancestor, chr_num)
             exomesChromosomeInfo = getESP6500ExomeChromosomeInfo(args.exomes, chr_num) #Scan ESP6500 (exome) fields
             genomeSequences = getGenomeSequences(args.genome, chr_num)
-            gerpCacheFile = buildGerpRates(args.rates, os.path.join(args.cache, "gerp"), chr_num)
             GERPelements = mergeElements(getGERPelements(open(os.path.join(args.elements, "hg19_chr%s_elems.txt" % (chr_num)))))
             currentLoadedChromosome = chr_num
         
@@ -1069,7 +1099,7 @@ def main():
             else:
                 ancestral = "Neither"
 
-            GERPscore = getGerpScore(gerpCacheFile, start, end - start + 1)
+            GERPscore = gerpScoresHash[data[0]][start]
             
             ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
             lineinfo = {'AA':'AA='+ancesdata,\
@@ -1206,7 +1236,7 @@ def main():
                         outdata["longest_transcript?"] = "YES" if int(outdata["transcript_length"])==longesttranscript else "NO"
                         ispositivestr = transcript_strand[transcript]=='+'
 
-                        GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(True, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, start, end, transcript_strand[transcript])
+                        GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(True, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, start, end, transcript_strand[transcript])
 
                         outdata['GERP_element'] = GERPelementdata
                         outdata['percentage_gerp_elements_in_truncated_exons'] = GERPrejectiondata
@@ -1413,7 +1443,7 @@ def main():
                         else:
                             stopPositionForGERP = start
                         
-                        GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(False, gerpCacheFile, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, stopPositionForGERP, stopPositionForGERP + len(data[3]) - 1, transcript_strand[transcript])
+                        GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(False, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, stopPositionForGERP, stopPositionForGERP + len(data[3]) - 1, transcript_strand[transcript])
 
                         outdata['GERP_element'] = GERPelementdata
                         outdata['percentage_gerp_elements_in_truncated_exons'] = GERPrejectiondata
