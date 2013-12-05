@@ -10,10 +10,11 @@ import re
 from vcf_sort import *
 import gzip
 from common import printError
-
-VAT_BIN_PATH = "vat/vat-2.0.1-install/bin/"
+import platform
 
 def run_vat(arguments, forceVerbose=False):
+	VAT_BIN_PATH = os.path.join('vat-bin', platform.system() + "_" + platform.machine())
+	
 	snpMapperPath = os.path.join(VAT_BIN_PATH, 'snpMapper')
 	indelMapperPath = os.path.join(VAT_BIN_PATH, 'indelMapper')
 

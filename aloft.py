@@ -18,7 +18,6 @@ from vat_run import *
 from sequencing import *
 from common import *
 import argparse
-import networkx as nx
 import pickle
 import distutils.spawn
 import gzip
@@ -439,8 +438,8 @@ def get1000GChromosomeInfo(thousandGPath):
 
     return thousandGChromosomeInfo
 
-def getPPINetwork(ppiPath):
-    ppi = nx.Graph()
+def getPPINetwork(networkx, ppiPath):
+    ppi = networkx.Graph()
     ppifile = open(ppiPath)
     ppifile.readline()
     for line in ppifile:
@@ -537,14 +536,14 @@ def getESP6500ExomeChromosomeInfo(exomesPath, chromosome):
         exomeInputFile.close()
     return exomesChromosomeInfo
 
-def parsePPI(ppi, ppiHash, hashKey, gene_name, genes):
+def parsePPI(networkx, ppi, ppiHash, hashKey, gene_name, genes):
     dist = None
     if gene_name in ppiHash[hashKey]:
         dist = ppiHash[hashKey][gene_name]
     else:
         for gene in genes:
-            if gene != gene_name and gene in ppi and nx.has_path(ppi, gene_name, gene):
-                shortestPathLength = nx.shortest_path_length(ppi, gene_name, gene)
+            if gene != gene_name and gene in ppi and networkx.has_path(ppi, gene_name, gene):
+                shortestPathLength = networkx.shortest_path_length(ppi, gene_name, gene)
                 if dist is None:
                     dist = shortestPathLength
                 else:
@@ -947,15 +946,24 @@ def main():
     if VERBOSE: print("Scanning 1000G file")
     thousandGChromosomeInfo = get1000GChromosomeInfo(args.thousandG)
     
-    if VERBOSE: print("Reading PPI network")
-    ppi = getPPINetwork(args.ppi)
-    ppiHashPath = os.path.join(args.cache, "ppi")
+    ppi = None
+    ppiHashPath = None
 
-    #ppiHash will contain cached values of shortest paths to genes
-    if os.path.exists(ppiHashPath):
-        ppiHash = pickle.load(open(ppiHashPath, "rb"))
-    else:
-        ppiHash = {"dgenes" : {}, "rgenes" : {}}
+    try:
+        import networkx
+        if VERBOSE: print("Reading PPI network")
+        ppi = getPPINetwork(networkx, args.ppi)
+        ppiHashPath = os.path.join(args.cache, "ppi")
+    except:
+        if VERBOSE: print("Skipping PPI network, since no networkx module found")
+
+    ppiHash = None
+    if ppiHashPath is not None:
+        #ppiHash will contain cached values of shortest paths to genes
+        if os.path.exists(ppiHashPath):
+            ppiHash = pickle.load(open(ppiHashPath, "rb"))
+        else:
+            ppiHash = {"dgenes" : {}, "rgenes" : {}}
     
     if VERBOSE: print("Reading recessive genes list")
     rgenes = [line.strip() for line in open(args.recessive_genes)]
@@ -1164,12 +1172,12 @@ def main():
     
                 ##calculate distance to dominant and recessive genes
                 gene_name = outdata["gene"]
-                if gene_name in ppi:
-                    dominantdist, numberOfDominantNeighbors = parsePPI(ppi, ppiHash, "dgenes", gene_name, dgenes)
+                if ppi is not None and gene_name in ppi:
+                    dominantdist, numberOfDominantNeighbors = parsePPI(networkx, ppi, ppiHash, "dgenes", gene_name, dgenes)
                     outdata["shortest_path_to_dominant_gene"] = 'NA' if dominantdist is None else str(dominantdist)
                     outdata["dominant_neighbors"] = str(numberOfDominantNeighbors)
 
-                    recessdist, numberOfRecessiveNeighbors = parsePPI(ppi, ppiHash, "rgenes", gene_name, rgenes)
+                    recessdist, numberOfRecessiveNeighbors = parsePPI(networkx, ppi, ppiHash, "rgenes", gene_name, rgenes)
                     outdata["shortest_path_to_recessive_gene"] = 'NA' if recessdist is None else str(recessdist)
                     outdata["recessive_neighbors"] = str(numberOfRecessiveNeighbors)
                 else:
@@ -1475,11 +1483,12 @@ def main():
     spliceOutputFile.close()
     vatFile.close()
 
-    try:
-        #save shortest path values to cache file
-        pickle.dump(ppiHash, open(ppiHashPath, "wb"), protocol=2)
-    except:
-        printError("Failed to write PPI cache, skipping..", False)
+    if ppiHash is not None:
+        try:
+            #save shortest path values to cache file
+            pickle.dump(ppiHash, open(ppiHashPath, "wb"), protocol=2)
+        except:
+            printError("Failed to write PPI cache, skipping..", False)
 
     if VERBOSE: print("Finished execution in %d seconds" % ((datetime.datetime.now() - startProgramExecutionTime).seconds))
 
