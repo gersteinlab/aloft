@@ -1,15 +1,15 @@
 ###############################################################################
  
-                       ALoFT Automated Loss of Function Tool
+                 ALoFT Annotation of Loss of Function Transcripts
                              QUICK START DOCUMENTATION
  
                Version 1.0                           Gerstein Lab
               Released 2013                Molecular Biophysics & Biochemistry
                                                     Yale University
 Citation: 
-Contact: Dr. Suganthi Balasubramanian (suganthi.bala@yale.edu)
-		 ##Mayur Pawashe (mayur.pawashe@yale.edu)
-		 Jeremy Liu (jeremy.liu@yale.edu)
+Contact: Dr. Suganthi Balasubramanian (suganthibala@gmail.com)
+         Mayur Pawashe (mayur.pawashe@gmail.com)
+         Jeremy Liu (jeremy.liu@yale.edu)
 
 ###############################################################################
 
@@ -21,8 +21,9 @@ The input VCF file supplied by the --vcf option should have a header line
 starting with #CHR or #CHROM. For example:
 #CHR POS ID ALT REF ...  (precedes any variant data)
 
-Only CHR and POS are necessary to have, but the number of columns in this
-header line must match with the number of lines in the VCF file.
+Only the first five columns are necessary to have, but the number of columns in 
+this header line must match with the number of lines in the VCF file. ALoFT 
+will replace missing columns with 'dummy' entries and compute as usual.
 
 Note that you must run aloft in the current working directory since it relies
 on a few relative paths.
@@ -33,22 +34,25 @@ Obtain variant calls and vcf files from 1000 Genomes ftp site.
 Download to home directory and uncompress.
 	$ wget [URL NEEDED]
 	$ [gunzip FILE]
-[HOW CAN I DO THIS]
 
 Run the vcf file through aloft, which is installed in the directory aloft
-in the home directory. In addion, store the output files in the directory
+in the home directory and output this to the default directory aloft_output/
+	$ cd aloft
+	$ python aloft.py --vcf=../[FILE NAME]
+	
+To see the aloft output, enter the output directory.
+	$ cd aloft_output
+	$ ls
+	[FILE NAME].aloft.lof     (tab delineated output for lof variants)
+	[FILE NAME].aloft.splice  (tab delineated output for splice variants)
+	[FILE NAME].aloft.vcf     (vcf formatted ouptut for all variants)
+
+Run a second time. This time, store the output files in the directory
 1000g_aloft_output in the home directory and specify 100bp for the nonsense
 mediated decay detection threshold.
 	$ cd aloft
-	$ python aloft.py --vcf=../[FILE NAME] --output=../1000g_aloft_output/ --nmd_threshold=100 
-[INSERT TRUNCATED ALOFT STDOUT MESSAGES]
-
-To see the aloft output
-	$ cd ../1000g_aloft_output
-	$ ls
-    [FILE NAME HERE].aloft.lof	   (tab delineated output for lof variants)
-	[FILE NAME HERE].aloft.splice  (tab delineated output for splice variants)
-	[FILE NAME HERE].aloft.vcf     (vcf formatted ouptut for all variants)
+	$ python aloft.py --vcf=../[FILE NAME] --output=../1000g_aloft_output/ 
+	  --nmd_threshold=100
 
 For more information on command line options and output interpretation,
 please visit the README.
