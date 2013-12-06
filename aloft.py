@@ -47,8 +47,8 @@ def abortIfCannotWriteFile(parser, filepath):
         printError("%s could not be written to" % (filepath))
     return newFile
 
-def parseCommandLineArguments():
-    parser = argparse.ArgumentParser(description='Run aloft predictions. You must at least provide a VCF (via --vcf) or VAT (via --vat) input file. If you provide a VCF file, it will be ran through VAT and then through aloft. If you provide a VAT file instead, it must be sorted numerically (use vcf_sort.py for this).', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def parseCommandLineArguments(programName, commandLineArguments):
+    parser = argparse.ArgumentParser(prog=programName, description='Run aloft predictions. You must at least provide a VCF (via --vcf) or VAT (via --vat) input file. If you provide a VCF file, it will be ran through VAT and then through aloft. If you provide a VAT file instead, it must be sorted numerically (use vcf_sort.py for this).', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('--version', action='version', version="aloft 1.0")
 
@@ -93,7 +93,7 @@ def parseCommandLineArguments():
     parser.add_argument('--pseudogenes', help='Path to pseudogenes file', default='data/gencode.v7.pgene.parents')
     parser.add_argument('--disopred_sequences', help='Path to disorder prediction sequences', default='data/disopred_sequences')
 
-    args = parser.parse_args()
+    args = parser.parse_args(commandLineArguments)
 
     global VERBOSE
     VERBOSE = args.verbose
@@ -883,19 +883,19 @@ def calculateAbsolutePosition(lofPosition, codingExonIntervals, direction):
             break
     return absoluteStopPosition
 
-def main():
+def main(programName, commandLineArguments):
     startProgramExecutionTime = datetime.datetime.now()
 
     #getChromosomesPfamTable() function relies on these two dependencies
     verifyUNIXUtility('sort')
     verifyUNIXUtility('uniq')
 
-    parser, args = parseCommandLineArguments()
+    parser, args = parseCommandLineArguments(programName, commandLineArguments)
 
     if args.vcf:
         #run VAT
         vatPath = os.path.join(args.output, os.path.basename(args.vcf) + ".vat")
-        run_vat([sys.argv[0], args.vcf, vatPath, args.annotation_interval, args.annotation_sequence], VERBOSE)
+        run_vat([programName, args.vcf, vatPath, args.annotation_interval, args.annotation_sequence], VERBOSE)
     else:
         vatPath = args.vat
     
@@ -1523,4 +1523,4 @@ def main():
     if VERBOSE: print("Finished execution in %d seconds" % ((datetime.datetime.now() - startProgramExecutionTime).seconds))
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[0], sys.argv[1:])
