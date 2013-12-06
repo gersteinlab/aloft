@@ -7,7 +7,7 @@
               Released 2013                Molecular Biophysics & Biochemistry
                                                     Yale University
 Citation: 
-Contact: Dr. Suganthi Balasubramanian (suganthi.bala@yale.edu)
+Contact: Dr. Suganthi Balasubramanian (suganthibala@gmail.com)
          Mayur Pawashe (mayur.pawashe@gmail.com)
          Jeremy Liu (jeremy.liu@yale.edu)
 
@@ -26,7 +26,6 @@ H. ALoFT Features in VCF Output
 I. ALoFT Features in Tabbed Delineated Output
 J. Command Line Options
 K. ALoFT Package Components
-L. Acknowledgements
 
 
 A. Preface
@@ -225,9 +224,6 @@ bracketed list, or a period if none exist.
 - ESP6500(|_AAF): ESP6500 allele frequences
 	blank: Yes or No if associated ESP6500 allele frequencies
 	AAF: ancestral allele frequencies
-- Haploinsufficiency disease score: [REMOVED - DESCRIPTION NEEDED]
-- LoF disease score: [REMOVED - DESCRIPTION NEEDED]
-- netSNP disease score: [REMOVED - DESCRIPTION NEEDED]
 - # pseudogenes associated to transcript: 
 number of pseudogenes or a period if none.
 - # paralogs associated to gene: number of paralogs or a period if needed
@@ -427,14 +423,13 @@ This is for calculated disordered regions of loss of funtion variants.
 
 
 K. Components
-aloft.py: Contains the main body of code.  If a VCF file is not 
-passed in, Reads information from all relevant input files into memory, and 
+aloft.py: Contains the main body of code and the main() function.
 
 common.py: Auxiliary file that contains common functions used by ALoFT.
 
 data: Directory for the default reference files used by ALoFT
 
-gerprate.c: File for creating compressed GERP rate cache
+gerprate.c: Source code for creating compressed GERP rate cache.
 
 install.py: Installation script for the GERP cache and network cache used by
 ALoFT to improve efficiency.
@@ -450,6 +445,3 @@ VAT automatically.
 vcf_sort.py: Contains the functions to sort VAT output by increasing 
 chromosome and position number.
 
-
-L. Acknowledgements
-[INSERT TEXT]
