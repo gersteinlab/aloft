@@ -923,8 +923,8 @@ def main():
     bigWigBedOutputPath = os.path.join(args.output, 'bigwig_output.bed')
     try:
         vcf2bigwigbed.writeBed(vatPath, bigWigBedInputPath)
-        if VERBOSE: print("Running bigWigAverageOver...\n")
-        subprocess.call([bigWigAverageOverBedPath, args.scores, bigWigBedInputPath, bigWigTabOutputPath, '-bedOut=%s' % bigWigBedOutputPath])
+        if VERBOSE: print("Running bigWigAverageOver...")
+        subprocess.check_output([bigWigAverageOverBedPath, args.scores, bigWigBedInputPath, bigWigTabOutputPath, '-bedOut=%s' % bigWigBedOutputPath], stderr=subprocess.STDOUT)
 
         with open(bigWigBedOutputPath) as bigWigFile:
             for line in bigWigFile:
