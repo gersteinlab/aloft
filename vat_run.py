@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 #You can just run VAT without running aloft if you want.
-#Usage is <input_vcf> <vat_output> <annotation_interval_input> <annotation_sequence_input> <verbosity_level>
-#This script will take care of sorting the input_vcf file numerically.
-#For verbosity_level you must pass in 0 (indicating no verbosity) or 1 (indicating verbosity)
 
 import os, sys
 from subprocess import Popen, PIPE
@@ -170,4 +167,9 @@ def run_vat(arguments, forceVerbose=False):
 	if verbose: print("Finishing VAT. There were %d snp lines and %d indel lines in the output" % (numSnp, numIndel))
 
 if __name__ == "__main__":
+	if len(sys.argv) < 6:
+		print("Usage: %s <input_vcf> <output_vat> <interval_file> <sequences_file> <verbosity_level>" % sys.argv[0])
+		print("%s will automatically take care of sorting the input_vcf file numerically" % sys.argv[0])
+		print("For verbosity_level you must pass in 0 (indicating no verbosity) or 1 (indicating verbosity)")
+		sys.exit(1)
 	run_vat(sys.argv)

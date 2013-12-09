@@ -1,6 +1,6 @@
 import shutil, os
 
-scripts = ['aloft.py', 'vcf_sort.py']
+scripts = ['aloft.py', 'vcf_sort.py', 'vat_run.py']
 for script in scripts:
 	executableName = script.rstrip(".py")
 	shutil.copy2(script, executableName)
