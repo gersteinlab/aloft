@@ -23,16 +23,12 @@ To download the latest version of Python, visit www.python.org
 	$ wget [FTP SITE HERE]
 	$ gunzip aloft
 
-3. Run install.py to compile all dependencies that aloft requires:
-    $ cd aloft
-    $ python install.py
-This will install VAT, our gerp score caching module, the networkx module, 
-and the reference files (located in aloft/data) required to run aloft.
+3. [Optional] Install networkx library for protein-protein interaction calculations
+    Install networkx - http://networkx.github.io
+    If installing locally, place 'networkx' installation directory into aloft folder
 
-4. After compiling, aloft.py is the main script to run.
+4. Run aloft
 To see the help screen:
-	$ python aloft.py -h
+	$ ./aloft -h
 
 For more complete information on running ALoFT, see QUICKSTART or README.
-
-5. Installation Options. [I AM NOT CLEAR ON THIS, MAYUR WILL HAVE TO DO]

@@ -18,14 +18,13 @@ Table of Contents
 A. Preface
 B. Description
 C. System Requirements
-D. Installation
-E. Usage
-F. Input Files
-G. Output Files
-H. ALoFT Features in VCF Output
-I. ALoFT Features in Tabbed Delineated Output
-J. Command Line Options
-K. ALoFT Package Components
+D. Usage
+E. Input Files
+F. Output Files
+G. ALoFT Features in VCF Output
+H. ALoFT Features in Tabbed Delineated Output
+I. Command Line Options
+J. ALoFT Package Components
 
 
 A. Preface
@@ -36,7 +35,7 @@ Quick Start instructions can be found in QUICK START.
 B. Description
 ALoFT takes as input an VCF (variant call format) file, runs it through the 
 variant annotation tool (VAT) tools snpMapper and indelMapper, and runs 
-the sorted VAT output through aloft.py, which calculates other variant-
+the sorted VAT output through aloft, which calculates other variant-
 specific features that give functional, evolutionary, mismapping, and other
 information. ALoFT only calculates these parameters for frameshift indels, 
 loss-of-function (LoF) SNPs, and for SNPs located in splice sites. ALoFT 
@@ -45,18 +44,9 @@ is split into separate modules based on features.
 
 C. System Requirements
 Python 2.7.x or Python 3.x
-Linux or Mac OSX 10.6 and up
+Linux (64-bit) or OSX 10.6 (64-bit) and up
 
-
-D. Installation:
-$ cd aloft
-$ /path/to/python/ install.py
-
-This will install VAT, our gerp score caching module, and the networkx module
-required to run aloft.
-
-
-E. Input Files (Required):
+D. Input Files (Required):
 1) VCF file containing unannotated variants, passed in using the --vcf option.
 Alternatively, an annotated VCF file output by a separate manual run of VAT 
 should be passed in with the --vat option. See options section below.
@@ -65,14 +55,14 @@ should be passed in with the --vat option. See options section below.
 For complete list, see section below regarding options and default values.
 
 
-F. Output Files:
+E. Output Files:
 An output directory may be specified with the --output option.
 Otherwise the output files will be written in the ./aloft_output directory.
 
 Four files (may|will) be created in this output directory:
 
 1) A vcf file that VAT generates if --vcf is supplied called vat_output.vcf.
-This intermediate file is then run through aloft.py to produce the following 
+This intermediate file is then run through aloft to produce the following 
 three files. The variants in this file are listed in order, starting with
 the lowest position on chromosome 1.
 
@@ -84,7 +74,7 @@ and spice site variants.
 3) Tab-delimited file named <input_file_name>.aloft.lof
 Contains the subset of VAT output associated with LoF SNPs and frameshift 
 indels. All information from the VAT file is included, plus ALL features 
-calculated by aloft.py for LoF variants.
+calculated by aloft for LoF variants.
 Variants in the input file that intersect coding exons are included.
 For variants with multiple transcripts, the variant data is calculated and 
 output on different lines for each transcript.
@@ -92,27 +82,27 @@ output on different lines for each transcript.
 4) Tab-delimited file named <input_file_name>.aloft.splice
 Contains the subset of VAT output associated with splice site SNPs.  
 All information from the VAT file is included, plus ALL features 
-calculated by aloft.py for splice site SNPs.  Variants with multiple 
+calculated by aloft for splice site SNPs.  Variants with multiple 
 transcripts are output on multiple rows, one for each combination of 
 alternate allele and affected transcript.
 Variants in the input file that intersect splice sites are included.
 
 
-G. Usage
+F. Usage
 ALoFT can be invoked as follows:
  $ cd aloft
- $ python aloft.py --vcf=/path/to/file --output=path/to/dir [--option3=arg1]...
+ $ ./aloft --vcf=/path/to/file --output=path/to/dir [--option3=arg1]...
 
 Example:
- $ python aloft.py --vcf=vcf_file.vcf	(unannotated vcf file)
+ $ ./aloft --vcf=vcf_file.vcf	(unannotated vcf file)
 OR 
- $ python aloft.py --vat=vat_file.vcf	(VAT annotated vcf file)
+ $ ./aloft --vat=vat_file.vcf	(VAT annotated vcf file)
 OR 
- $ python aloft.py --vcf=vcf_file.vcf --output=/path/to/directory   
+ $ ./aloft --vcf=vcf_file.vcf --output=/path/to/directory   
    (VAT annotated vcf file and custom output destination)
 
 
-H. ALoFT Features in VCF Output
+G. ALoFT Features in VCF Output
 ALoFT retains input file VCF metaheader and variant information and details.
 ALoFT appends a subset of the features listed in Tabbed Delineated Output
 into vcf form.
@@ -190,7 +180,7 @@ that could replace a malfunctioning splice site at the variant location and
 NO otherwise. This is the NAGNAG case.
 
 
-I. ALoFT Features in Tabbed Delineated Output
+H. ALoFT Features in Tabbed Delineated Output
 1) ALOFT calculates the following features for all variants:
 - VAT Features: includes all features from VAT snpMapper and indelMapper
 This includes allele frequencies, variant type, etc. This is the "details"
@@ -312,8 +302,8 @@ site variant
 	short_intron: variant flagged if the intron is shorter than 15bp
 
 
-J. Options
-aloft.py recognizes the following options for altering input and reference
+I. Options
+aloft recognizes the following options for altering input and reference
 files (default values given):
 ALOFT will come packaged with most of the necessary reference files.
 
@@ -422,19 +412,12 @@ Path to directory containing disordered regions separated by chromosome.
 This is for calculated disordered regions of loss of funtion variants.
 
 
-K. Components
+J. Components
 aloft.py: Contains the main body of code and the main() function.
 
 common.py: Auxiliary file that contains common functions used by ALoFT.
 
 data: Directory for the default reference files used by ALoFT
-
-gerprate.c: Source code for creating compressed GERP rate cache.
-
-install.py: Installation script for the GERP cache and network cache used by
-ALoFT to improve efficiency.
-
-networkx-1.7.tar.gz: Package needed by aloft for networking module/cache.
 
 sequencing.py: Auxiliary file that contains methods used to translate 
 nucleotide sequence to amino acids.

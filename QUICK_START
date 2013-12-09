@@ -15,7 +15,7 @@ Contact: Dr. Suganthi Balasubramanian (suganthibala@gmail.com)
 
 1. After installing, ALoFT can be run as follows.
 	$ cd /path/to/aloft_directory 
-	$ python aloft.py --vcf=/path/to/vcf_file --output=/path/to/output/dir
+	$ ./aloft --vcf=/path/to/vcf_file --output=/path/to/output/dir
 
 The input VCF file supplied by the --vcf option should have a header line
 starting with #CHR or #CHROM. For example:
@@ -38,7 +38,7 @@ Download to home directory and uncompress.
 Run the vcf file through aloft, which is installed in the directory aloft
 in the home directory and output this to the default directory aloft_output/
 	$ cd aloft
-	$ python aloft.py --vcf=../[FILE NAME]
+	$ ./aloft --vcf=../[FILE NAME]
 	
 To see the aloft output, enter the output directory.
 	$ cd aloft_output
@@ -51,7 +51,7 @@ Run a second time. This time, store the output files in the directory
 1000g_aloft_output in the home directory and specify 100bp for the nonsense
 mediated decay detection threshold.
 	$ cd aloft
-	$ python aloft.py --vcf=../[FILE NAME] --output=../1000g_aloft_output/ 
+	$ ./aloft --vcf=../[FILE NAME] --output=../1000g_aloft_output/ 
 	  --nmd_threshold=100
 
 For more information on command line options and output interpretation,

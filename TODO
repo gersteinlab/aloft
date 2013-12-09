@@ -19,15 +19,11 @@ Decisions:
 Decide whether example test files should be downloaded or in example directory
 
 For Source Code:
-Feature names should not be space separated, but separated by underscores
-	e.g. indel_position_in_CDS not "indel position in CDS"
 Phosphorylation option should be changed to post_translational_modifications
 VCF File Metaheader Data needs to be updated and changed to reflect the 
 features that ALOFT adds.
 Update installation methods (bundle VAT executables) then update documentation
 Ensure gencode18 files work with VAT
-GERP rate will be changed, input file source change to bed files
-	gerp cache will likely not be necessary
 Networkx module optional install, update documentation
 PTM files update and check
 Test minimum vcf input column numbers, add dummy columns
