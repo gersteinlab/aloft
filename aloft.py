@@ -449,7 +449,7 @@ def get1000GChromosomeInfo(thousandGPath):
 
 def getGerpScores(vatPath, outputDirectory, scoresPath):
     gerpScoresHash = {}
-    bigWigAverageOverBedPath = os.path.join(os.path.join('bigwig-bin', platform.system() + "_" + platform.machine()), 'bigWigAverageOverBed')
+    bigWigAverageOverBedPath = os.path.join(getScriptDirectory(), os.path.join(os.path.join('bigwig-bin', platformName()), 'bigWigAverageOverBed'))
     bigWigTabOutputPath = os.path.join(outputDirectory, 'bigwig.tab')
     bigWigBedInputPath = os.path.join(outputDirectory, 'bigwig_input.bed')
     bigWigBedOutputPath = os.path.join(outputDirectory, 'bigwig_output.bed')

@@ -6,11 +6,11 @@ from subprocess import Popen, PIPE
 import re
 from vcf_sort import *
 import gzip
-from common import printError
+from common import printError, platformName, getScriptDirectory
 import platform
 
 def run_vat(arguments, forceVerbose=False):
-	VAT_BIN_PATH = os.path.join('vat-bin', platform.system() + "_" + platform.machine())
+	VAT_BIN_PATH = os.path.join(getScriptDirectory(), os.path.join('vat-bin', platformName()))
 	
 	snpMapperPath = os.path.join(VAT_BIN_PATH, 'snpMapper')
 	indelMapperPath = os.path.join(VAT_BIN_PATH, 'indelMapper')

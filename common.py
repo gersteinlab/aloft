@@ -4,6 +4,13 @@ import struct
 import subprocess
 import sys
 from subprocess import Popen, PIPE
+import platform
+
+def getScriptDirectory():
+	return os.path.dirname(os.path.realpath(__file__))
+
+def platformName():
+	return platform.system() + "_" + platform.machine()
 
 def printError(error, exit=True):
 	sys.stderr.write("Error: %s\n" % error)
