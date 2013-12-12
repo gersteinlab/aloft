@@ -55,10 +55,6 @@ def parseCommandLineArguments(programName, commandLineArguments):
     parser.add_argument('--vcf', help='Path to VCF input file. This can be a compressed .gz file. If not specified, then --vat must be specified.')
     parser.add_argument('--vat', help='Path to VAT input file. If not specified, then --vcf must be specified. This file must be sorted numerically.')
 
-    parser.add_argument('--annotation_interval', help='Path to annotation interval file for VAT', default='data/gencode.v16.pc.interval')
-    parser.add_argument('--annotation_sequence', help='Path to annotation sequence file for VAT', default='data/gencode.v16.pc.fa')
-    parser.add_argument('--genome', help='Path to directory containing chr*.fa files', default='data/genome/')
-    
     parser.add_argument('--output', help='Path to output directory; directory is created if it does not exist', default='aloft_output/')
 
     parser.add_argument('--cache', help='Output to directory for cached files; directory is created if it does not exist. Only needed for networkx module.', default='cache/')
@@ -67,35 +63,46 @@ def parseCommandLineArguments(programName, commandLineArguments):
 
     parser.add_argument('--verbose', '-v', help='Verbose mode', action='store_true')
 
-    parser.add_argument('--chromosomes', help='List of chromosomes to parse', default='data/chromosomes.txt')
-
-    parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/ensIDs.ens70.txt')
-    parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens73.txt files', default='data/ens73_all_domain_features/')
-    parser.add_argument('--phosphorylation', help='Path to directory containing ptm.phosphorylation.chr*.txt files', default='data/ptm')
-    parser.add_argument('--transmembrane', help='Path to directory containing transmembrane chr*.prot-features-ens73.txt', default='data/ens73_all_domain_features/')
-
-    parser.add_argument('--thousandG', help='Path to 1000G file', default='data/1000G.vat')
-
-    parser.add_argument('--ppi', help='Path to protein-protein interaction network file', default='data/BIOGRID-ORGANISM-Homo_sapiens-3.2.95.tab.txt')
-    parser.add_argument('--dominant_genes', help='Path to list of dominant genes', default='data/dominantonly.list')
-    parser.add_argument('--recessive_genes', help='Path to list of recessive genes', default='data/science_lofpaper_omim_recessive_filtered.list')
-
-    parser.add_argument('--scores', help='Path to binary bw (bigwig) file containing GERP scores', default='data/All_hg19_RS.bw')
-    parser.add_argument('--rates', help='Path to directory containing chr*.maf.rates files', default='data/bases/')
-    parser.add_argument('--elements', help='Path to directory containing hg19_chr*_elems.txt files', default='data/elements/')
-
-    parser.add_argument('--dNdS', help='Path to dNdS file', default='data/dNdS_avgs.txt')
-    parser.add_argument('--paralogs', help='Path to paralogs file', default='data/within_species_geneparalogs.ens70')
-    parser.add_argument('--LOF_score', help='Path to LOF disease scores', default='data/prob_recessive_disease_scores.txt')
-    parser.add_argument('--ancestor', help='Path to directory containing homo_sapiens_ancestor_*.fa files', default='data/homo_sapiens_ancestor_GRCh37_e71/')
-    parser.add_argument('--netSNP_score', help='Path to netSNP disease scores', default='data/Supplementary_Table8.20Jul2012.txt')
-    parser.add_argument('--segdup', help='Path to segdup annotation file', default='data/hg19-segdup.txt')
-    parser.add_argument('--annotation', help='Path to .gtf annotation file', default='data/gencode.v16.annotation.gtf')
-    parser.add_argument('--exomes', help='Path to directory containing ESP6500.chr*.snps.vcf files', default='data/new_esp6500/')
-    parser.add_argument('--pseudogenes', help='Path to pseudogenes file', default='data/gencode.v7.pgene.parents')
-    parser.add_argument('--disopred_sequences', help='Path to disorder prediction sequences', default='data/disopred_sequences')
+    parser.add_argument('--data', help="Path to data directory containing data.txt which contains paths to all aloft data files", default='data')
 
     args = parser.parse_args(commandLineArguments)
+
+    dataListPath = os.path.join(args.data, 'data.txt')
+    abortIfPathDoesNotExist(parser, dataListPath)
+
+    requiredDataFiles = ['annotation', 'annotation_interval', 'annotation_sequence', 'genome', 'chromosomes', 'ensembl_table', 'phosphorylation', 'protein_features', 'transmembrane', 'thousandG', 'ppi', 'dominant_genes', 'recessive_genes', 'scores', 'rates', 'elements', 'dNdS', 'paralogs', 'LOF_score', 'netSNP_score', 'ancestor', 'segdup', 'exomes', 'pseudogenes', 'disopred_sequences']
+
+    dataFiles = {}
+    for line in open(dataListPath):
+        if line.startswith("#"):
+            continue
+        components = line.strip().split("=")
+        if len(components) < 2:
+            continue
+
+        if components[0] not in requiredDataFiles:
+            continue
+
+        path = os.path.join(args.data, components[1])
+        if not os.path.exists(path):
+            #use absolute path
+            path = os.path.expanduser(components[1])
+
+        if not os.path.exists(path):
+            abortIfPathDoesNotExist(parser, components[1], True)
+
+        if not os.path.isdir(path):
+                try:
+                    f = open(path)
+                    f.close()
+                except:
+                    printError("--%s: %s cannot be opened (insufficient read privileges?)" % (components[0], path))
+        
+        dataFiles[components[0]] = path
+
+    for dataFile in requiredDataFiles:
+        if dataFile not in dataFiles:
+            printError("%s is not specified by data file: %s" % (dataFile, dataListPath))
 
     global VERBOSE
     VERBOSE = args.verbose
@@ -129,16 +136,9 @@ def parseCommandLineArguments(programName, commandLineArguments):
     except:
         pass
 
-    #Try to see if we can detect and open all input files
-    for arg, path in vars(args).items():
-        if not any(map(lambda key: testArgumentEquality(args, arg, key), ['vat', 'vcf', 'output', 'cache', 'nmd_threshold', 'verbose'])):
-            abortIfPathDoesNotExist(parser, path, True)
-            if not os.path.isdir(path):
-                try:
-                    f = open(path)
-                    f.close()
-                except:
-                    printError("--%s: %s cannot be opened (insufficient read privileges?)" % (arg, path))
+    for dataFile, dataPath in dataFiles.items():
+        setattr(args, dataFile, dataPath)
+    
     return parser, args
 
 def verifyUNIXUtility(utility):
