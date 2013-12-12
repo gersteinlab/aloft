@@ -67,6 +67,8 @@ def parseCommandLineArguments(programName, commandLineArguments):
 
     parser.add_argument('--verbose', '-v', help='Verbose mode', action='store_true')
 
+    parser.add_argument('--chromosomes', help='List of chromosomes to parse', default='data/chromosomes.txt')
+
     parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/ensIDs.ens70.txt')
     parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens70.txt files', default='data/ens73_all_domain_features/')
     parser.add_argument('--phosphorylation', help='Path to directory containing ptm.phosphorylation.chr*.txt files', default='data/ptm')
@@ -186,7 +188,7 @@ def getSegDupData(vatFile, segdupPath, chrs):
     while line!="":
         data = line.split('\t')
         chr_num = data[0].split('chr')[-1]
-        if '_' in chr_num:
+        if '_' in chr_num or chr_num not in chrs:
             line = segdupfile.readline()
             continue
         segdups[chr_num].append((int(data[1]),int(data[2])))
@@ -369,6 +371,9 @@ def getCDSAndExonDictionaries(annotationPath, chrs):
         chr_num=data[0].split('chr')[-1]
         annottype = data[2]
         
+        if chr_num not in chrs:
+            continue
+
         if annottype!='exon' and annottype!='transcript' and annottype!='CDS' and annottype!='stop_codon':
             continue
         
@@ -914,7 +919,7 @@ def main(programName, commandLineArguments):
     spliceOutputFile = abortIfCannotWriteFile(parser, tabbedOutputSplicePath)
     vcfOutputFile = abortIfCannotWriteFile(parser, vcfOutputPath)
     
-    chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
+    chrs = [line.strip() for line in open(args.chromosomes)]
 
     gerpScoresHash = {}
     bigWigAverageOverBedPath = os.path.join(os.path.join('bigwig-bin', platform.system() + "_" + platform.machine()), 'bigWigAverageOverBed')
