@@ -447,6 +447,36 @@ def get1000GChromosomeInfo(thousandGPath):
 
     return thousandGChromosomeInfo
 
+def getGerpScores(vatPath, outputDirectory, scoresPath):
+    gerpScoresHash = {}
+    bigWigAverageOverBedPath = os.path.join(os.path.join('bigwig-bin', platform.system() + "_" + platform.machine()), 'bigWigAverageOverBed')
+    bigWigTabOutputPath = os.path.join(outputDirectory, 'bigwig.tab')
+    bigWigBedInputPath = os.path.join(outputDirectory, 'bigwig_input.bed')
+    bigWigBedOutputPath = os.path.join(outputDirectory, 'bigwig_output.bed')
+    try:
+        vcf2bigwigbed.writeBed(vatPath, bigWigBedInputPath)
+        if VERBOSE: print("Using bigWigAverageOver to fetch gerp scores...")
+        subprocess.check_output([bigWigAverageOverBedPath, scoresPath, bigWigBedInputPath, bigWigTabOutputPath, '-bedOut=%s' % bigWigBedOutputPath], stderr=subprocess.STDOUT) #ignore stderr
+
+        with open(bigWigBedOutputPath) as bigWigFile:
+            for line in bigWigFile:
+                data = line.strip().split("\t")
+                chromosome = data[0]
+                if chromosome not in gerpScoresHash:
+                    gerpScoresHash[chromosome] = {}
+
+                position = int(data[1])+1 #to 1 based coordinate
+                score = float(data[4])
+                gerpScoresHash[chromosome][position] = score
+
+        os.remove(bigWigBedInputPath)
+        os.remove(bigWigTabOutputPath)
+        os.remove(bigWigBedOutputPath)
+    except:
+        printError("Failed to call bigWigAverageOverBed")
+
+    return gerpScoresHash
+
 def getPPINetwork(networkx, ppiPath):
     ppi = networkx.Graph()
     ppifile = open(ppiPath)
@@ -920,36 +950,11 @@ def main(programName, commandLineArguments):
     vcfOutputFile = abortIfCannotWriteFile(parser, vcfOutputPath)
     
     chrs = [line.strip() for line in open(args.chromosomes)]
-
-    gerpScoresHash = {}
-    bigWigAverageOverBedPath = os.path.join(os.path.join('bigwig-bin', platform.system() + "_" + platform.machine()), 'bigWigAverageOverBed')
-    bigWigTabOutputPath = os.path.join(args.output, 'bigwig.tab')
-    bigWigBedInputPath = os.path.join(args.output, 'bigwig_input.bed')
-    bigWigBedOutputPath = os.path.join(args.output, 'bigwig_output.bed')
-    try:
-        vcf2bigwigbed.writeBed(vatPath, bigWigBedInputPath)
-        if VERBOSE: print("Running bigWigAverageOver...")
-        subprocess.check_output([bigWigAverageOverBedPath, args.scores, bigWigBedInputPath, bigWigTabOutputPath, '-bedOut=%s' % bigWigBedOutputPath], stderr=subprocess.STDOUT)
-
-        with open(bigWigBedOutputPath) as bigWigFile:
-            for line in bigWigFile:
-                data = line.strip().split("\t")
-                chromosome = data[0]
-                if chromosome not in gerpScoresHash:
-                    gerpScoresHash[chromosome] = {}
-
-                position = int(data[1])+1 #to 1 based coordinate
-                score = float(data[4])
-                gerpScoresHash[chromosome][position] = score
-
-        os.remove(bigWigBedInputPath)
-        os.remove(bigWigTabOutputPath)
-        os.remove(bigWigBedOutputPath)
-    except:
-        printError("Failed to call bigWigAverageOverBed")
     
     #Load exon intervals from .interval file, used later for intersecting with gerp elements
     codingExonIntervals = getCodingExonIntervals(args.annotation_interval)
+
+    gerpScoresHash = getGerpScores(vatPath, args.output, args.scores)
     
     segdupdata = getSegDupData(vatFile, args.segdup, chrs)
     
