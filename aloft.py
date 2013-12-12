@@ -70,9 +70,9 @@ def parseCommandLineArguments(programName, commandLineArguments):
     parser.add_argument('--chromosomes', help='List of chromosomes to parse', default='data/chromosomes.txt')
 
     parser.add_argument('--ensembl_table', help='Path to transcript to protein lookup table file', default='data/ensIDs.ens70.txt')
-    parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens70.txt files', default='data/ens73_all_domain_features/')
+    parser.add_argument('--protein_features', help='Path to directory containing chr*.prot-features-ens73.txt files', default='data/ens73_all_domain_features/')
     parser.add_argument('--phosphorylation', help='Path to directory containing ptm.phosphorylation.chr*.txt files', default='data/ptm')
-    parser.add_argument('--transmembrane', help='Path to directory containing transmembrane chr*.tmsigpcoilslc.ens70.txt', default='data/ens73_all_domain_features/')
+    parser.add_argument('--transmembrane', help='Path to directory containing transmembrane chr*.prot-features-ens73.txt', default='data/ens73_all_domain_features/')
 
     parser.add_argument('--thousandG', help='Path to 1000G file', default='data/1000G.vat')
 
