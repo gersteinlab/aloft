@@ -149,11 +149,7 @@ def getAncestorData(ancespath, chromosome):
     individualAncestorPattern = os.path.join(ancespath, "*_%s.fa" % (chromosome))
     individualAncestorPath = getFilePathMatchingPattern(individualAncestorPattern, True)
 
-    f = open(individualAncestorPath)
-    f.readline()    ##first >**** line
-    data = '0' + f.read().replace("\n", "")
-    f.close()
-    return data
+    return '0' + ''.join([line.strip() for line in open(individualAncestorPath)][1:])
 
 def getGERPData(isSplice, GERPelements, exons, start, end, direction):
     truncatedExons = getTruncatedExons(exons, start, direction) if exons and not isSplice else None
@@ -339,8 +335,8 @@ def getGenomeSequences(genomePath, chromosome):
     except:
         printError("%s could not be opened" % (individualSequencePath))
 
-    f.next() ##first >chr* line
-    genomeSequences = '0' + ''.join([line.strip() for line in f])
+    ##skip first >chr* line
+    genomeSequences = '0' + ''.join([line.strip() for line in f][1:])
     f.close()
 
     return genomeSequences
@@ -987,7 +983,7 @@ def main(programName, commandLineArguments):
         ppi = getPPINetwork(networkx, args.ppi)
         ppiHashPath = os.path.join(args.cache, "ppi")
     except:
-        if VERBOSE: print("Skipping PPI network, since no networkx module found")
+        if VERBOSE: print("Skipping PPI network, since no networkx module could be loaded")
 
     ppiHash = None
     if ppiHashPath is not None:
