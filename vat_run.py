@@ -18,8 +18,6 @@ def run_vat(arguments, forceVerbose=False):
 	if not os.path.exists(snpMapperPath) or not os.path.exists(indelMapperPath):
 		printError("VAT is not installed correctly - please see INSTALL")
 
-	#example as input path: '/net/gerstein/sb238/ftw/finnish/Finns.nogeno.vcf.gz'
-	# or a .vcf is fine too
 	try:
 		inputPath = arguments[1]
 		vatOutputPath = arguments[2]
