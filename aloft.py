@@ -70,7 +70,7 @@ def parseCommandLineArguments(programName, commandLineArguments):
     dataListPath = os.path.join(args.data, 'data.txt')
     abortIfPathDoesNotExist(parser, dataListPath)
 
-    requiredDataFiles = ['annotation', 'annotation_interval', 'annotation_sequence', 'genome', 'chromosomes', 'ensembl_table', 'phosphorylation', 'protein_features', 'transmembrane', 'thousandG', 'ppi', 'dominant_genes', 'recessive_genes', 'scores', 'elements', 'dNdS', 'paralogs', 'LOF_score', 'netSNP_score', 'ancestor', 'segdup', 'exomes', 'pseudogenes', 'disopred_sequences']
+    requiredDataFiles = ['annotation', 'annotation_interval', 'annotation_sequence', 'genome', 'chromosomes', 'ensembl_table', 'phosphorylation', 'protein_features', 'thousandG', 'ppi', 'dominant_genes', 'recessive_genes', 'scores', 'elements', 'dNdS', 'paralogs', 'LOF_score', 'netSNP_score', 'ancestor', 'segdup', 'exomes', 'pseudogenes', 'disopred_sequences']
 
     dataFiles = {}
     for line in open(dataListPath):
@@ -146,12 +146,10 @@ def verifyUNIXUtility(utility):
         printError("Failed to find unix utility %s in PATH" % (utility))
 
 def getAncestorData(ancespath, chromosome):
-    individualAncestorPath = os.path.join(ancespath, "homo_sapiens_ancestor_%s.fa" % (chromosome))
-    try:
-        f=open(individualAncestorPath)
-    except:
-        printError("%s could not be opened... Exiting program" % (individualAncestorPath))
+    individualAncestorPattern = os.path.join(ancespath, "*_%s.fa" % (chromosome))
+    individualAncestorPath = getFilePathMatchingPattern(individualAncestorPattern, True)
 
+    f = open(individualAncestorPath)
     f.readline()    ##first >**** line
     data = '0' + f.read().replace("\n", "")
     f.close()
@@ -546,17 +544,16 @@ def calculateExomeCoordinate(component):
         return 0.0
     return int(values[0]) * 1.0 / (int(values[0]) + int(values[1]))
 
-def getESP6500ExomeChromosomeInfo(exomesPath, chromosome):
+def getESPExomeChromosomeInfo(exomesPath, chromosome):
     exomesChromosomeInfo = {}
-    #exomePath = os.path.join(exomesPath, 'ESP6500.chr%s.snps.vcf' % (chromosome))
-    exomePath = os.path.join(exomesPath, 'ESP6500SI-V2-SSA137.updatedRsIds.chr%s.snps_indels.vcf' % (chromosome))
-    try:
-        exomeInputFile = open(exomePath)
-    except:
+    exomeFiles = os.listdir(exomesPath)
+
+    exomeInputPath = getFilePathMatchingPattern(os.path.join(exomesPath, '*.chr%s.*.vcf' % chromosome), False)
+    if exomeInputPath is None:
         printError("Couldn't read %s, skipping.." % (exomePath), False)
-        exomeInputFile = None
-    if exomeInputFile:
-        for exomeLine in exomeInputFile:
+
+    if exomeInputPath is not None:
+        for exomeLine in open(exomeInputPath):
             if not exomeLine.startswith("#"):
                 exomeLineComponents = exomeLine.split("\t")
                 
@@ -572,7 +569,7 @@ def getESP6500ExomeChromosomeInfo(exomesPath, chromosome):
                         z = "%.4f" % (calculateExomeCoordinate(component))
                         
                 exomesChromosomeInfo[int(exomeLineComponents[1])] = ("%s,%s,%s" % (x, y, z))
-        exomeInputFile.close()
+
     return exomesChromosomeInfo
 
 def parsePPI(networkx, ppi, ppiHash, hashKey, gene_name, genes):
@@ -970,16 +967,10 @@ def main(programName, commandLineArguments):
             
     transcriptToProteinHash = getTranscriptToProteinHash(args.ensembl_table)
 
-    ##{'1':{'ENSP...':'PF...\t4-25\t(ENSP...)'}, '2':{...}, ...}
-    #proteinFeaturesList = list(getChromosomesPfamTable(chrs, args.protein_features, r"chr%s.prot-features-ens70.txt", ["PF", "SSF", "SM"]).items())
-    #phosphorylationTags = ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"]
-    #phosphorylationFeaturesList = list(getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", phosphorylationTags, 3).items())
-    #transmembraneFeaturesList = list(getChromosomesPfamTable(chrs, args.transmembrane, r"chr%s.tmsigpcoilslc.ens70.txt", ["Tmhmm", "Sigp"]).items())
-
-    proteinFeaturesList = list(getChromosomesPfamTable(chrs, args.protein_features, r"%s.ens73.alldomainfeatures.txt", ["PF", "SSF", "SM"]).items())
+    proteinFeaturesList = list(getChromosomesPfamTable(chrs, args.protein_features, "%s.*.txt", ["PF", "SSF", "SM"]).items())
+    transmembraneFeaturesList = list(getChromosomesPfamTable(chrs, args.protein_features, "%s.ens73.alldomainfeatures.txt", ["Tmhmm", "Sigp"]).items())
     phosphorylationTags = ["ACETYLATION", "DI-METHYLATION", "METHYLATION", "MONO-METHYLATION", "O-GlcNAc", "PHOSPHORYLATION", "SUMOYLATION", "TRI-METHYLATION", "UBIQUITINATION"]
-    phosphorylationFeaturesList = list(getChromosomesPfamTable(chrs, args.phosphorylation, r"ptm.phosphosite.chr%s.txt", phosphorylationTags, 3).items())
-    transmembraneFeaturesList = list(getChromosomesPfamTable(chrs, args.transmembrane, r"%s.ens73.alldomainfeatures.txt", ["Tmhmm", "Sigp"]).items())
+    phosphorylationFeaturesList = list(getChromosomesPfamTable(chrs, args.phosphorylation, "*.chr%s.txt", phosphorylationTags, 3).items())
 
     chromosomesPFam = dict(proteinFeaturesList + phosphorylationFeaturesList + transmembraneFeaturesList)
 
@@ -1094,9 +1085,11 @@ def main(programName, commandLineArguments):
             #This is where we get a chance to data that is unique to a chromosome
             if VERBOSE: print("Reading data from chromosome %s..." % (chr_num))
             ancestorData = getAncestorData(args.ancestor, chr_num)
-            exomesChromosomeInfo = getESP6500ExomeChromosomeInfo(args.exomes, chr_num) #Scan ESP6500 (exome) fields
+            exomesChromosomeInfo = getESPExomeChromosomeInfo(args.exomes, chr_num) #Scan ESP6500 (exome) fields
             genomeSequences = getGenomeSequences(args.genome, chr_num)
-            GERPelements = mergeElements(getGERPelements(open(os.path.join(args.elements, "hg19_chr%s_elems.txt" % (chr_num)))))
+
+            elementPath = getFilePathMatchingPattern(os.path.join(args.elements, "*chr%s_*.txt" % (chr_num)), True)
+            GERPelements = mergeElements(getGERPelements(open(elementPath)))
             currentLoadedChromosome = chr_num
         
         #Filter lines

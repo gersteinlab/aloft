@@ -5,6 +5,7 @@ import subprocess
 import sys
 from subprocess import Popen, PIPE
 import platform
+import glob
 
 def getScriptDirectory():
 	return os.path.dirname(os.path.realpath(__file__))
@@ -217,16 +218,25 @@ def getTranscriptToProteinHash(transcriptToProteinFilePath):
 	inputFile.close()
 	return transcriptToProteinHash
 
+def getFilePathMatchingPattern(filePathPattern, abortOnFatalError):
+	potentialPaths = glob.glob(filePathPattern)
+	if len(potentialPaths) == 0:
+		printError("Failed to find file matching %s" % filePathPattern, abortOnFatalError)
+	elif len(potentialPaths) > 1:
+		printError("Found more than 1 potential match for %s: %s" % (filePathPattern, str(potentialPaths)), False)
+	return None if len(potentialPaths) == 0 else potentialPaths[0]
+
 def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, domainTypeColumn=0):
 	# Get a mapping of Protein ID's -> Pfam information, for each chromosome
 	chromosomesPFam = {i:{} for i in domainTypeList}
 	for chromosome in chrs:
 		for domainType in domainTypeList:
 			chromosomesPFam[domainType][chromosome] = {}
-		path = os.path.join(pfamDirectory, strformat % (chromosome))
 
-		if not os.path.exists(path):
-			printError("Couldn't read %s, skipping %s" % (path, chromosome), False)
+		patternPath = os.path.join(pfamDirectory, strformat % (chromosome))
+		path = getFilePathMatchingPattern(patternPath, False)
+		if path is None:
+			printError("Couldn't find path matching %s, skipping %s" % (patternPath, chromosome), False)
 			continue
 
 		#Get rid of duplicate lines
