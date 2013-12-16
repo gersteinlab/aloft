@@ -6,6 +6,7 @@ import sys
 from subprocess import Popen, PIPE
 import platform
 import glob
+from collections import OrderedDict
 
 def getScriptDirectory():
 	return os.path.dirname(os.path.realpath(__file__))
@@ -239,38 +240,26 @@ def getChromosomesPfamTable(chrs, pfamDirectory, strformat, domainTypeList, doma
 			printError("Couldn't find path matching %s, skipping %s" % (patternPath, chromosome), False)
 			continue
 
-		#Get rid of duplicate lines
-		try:
-			pipe1 = Popen(['sort', path], stdout=PIPE)
-			pipe2 = Popen(['uniq'], stdin=pipe1.stdout, stdout=PIPE)
-			inputFile = pipe2.stdout
-		except:
-			printError("Couldn't read %s, skipping %s" % (path, chromosome), False)
-			continue
+		lines = [line for line in open(path)][2:] #skip first two lines
+		lines = list(OrderedDict.fromkeys(lines)) #get uniq set of lines
 
-		linesToSkip = 2
-		for lineBytes in inputFile:
-			line = lineBytes.decode()
-			if linesToSkip > 0:
-				linesToSkip -= 1
+		for line in lines:
+			if line.startswith("#"):
+				continue
+			components = line.split("\t")
+			digitmatch = re.search("\d", components[domainTypeColumn])
+			if not digitmatch:
+				domainType = components[domainTypeColumn].strip()
 			else:
-				if not line.startswith("#"):
-					components = line.split("\t")
-					digitmatch = re.search("\d", components[domainTypeColumn])
-					if not digitmatch:
-						domainType = components[domainTypeColumn].strip()
-					else:
-						domainType = components[domainTypeColumn][:digitmatch.start()]
-					if domainType not in domainTypeList:
-						continue
-					if len(components) >= 3:
-						translationID = components[2].replace('(', '').replace(')', '').strip()
-						if translationID in chromosomesPFam[domainType][chromosome]:
-							chromosomesPFam[domainType][chromosome][translationID].append(components)
-						else:
-							chromosomesPFam[domainType][chromosome][translationID] = [components]
-
-		inputFile.close()
+				domainType = components[domainTypeColumn][:digitmatch.start()]
+			if domainType not in domainTypeList:
+				continue
+			if len(components) >= 3:
+				translationID = components[2].replace('(', '').replace(')', '').strip()
+				if translationID in chromosomesPFam[domainType][chromosome]:
+					chromosomesPFam[domainType][chromosome][translationID].append(components)
+				else:
+					chromosomesPFam[domainType][chromosome][translationID] = [components]
 
 	return chromosomesPFam
 

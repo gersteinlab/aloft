@@ -141,10 +141,6 @@ def parseCommandLineArguments(programName, commandLineArguments):
     
     return parser, args
 
-def verifyUNIXUtility(utility):
-    if distutils.spawn.find_executable(utility) is None:
-        printError("Failed to find unix utility %s in PATH" % (utility))
-
 def getAncestorData(ancespath, chromosome):
     individualAncestorPattern = os.path.join(ancespath, "*_%s.fa" % (chromosome))
     individualAncestorPath = getFilePathMatchingPattern(individualAncestorPattern, True)
@@ -913,10 +909,6 @@ def calculateAbsolutePosition(lofPosition, codingExonIntervals, direction):
 
 def main(programName, commandLineArguments):
     startProgramExecutionTime = datetime.datetime.now()
-
-    #getChromosomesPfamTable() function relies on these two dependencies
-    verifyUNIXUtility('sort')
-    verifyUNIXUtility('uniq')
 
     parser, args = parseCommandLineArguments(programName, commandLineArguments)
 
