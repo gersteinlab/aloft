@@ -1,0 +1,88 @@
+#Paths can be relative to the data directory, or can be absolute paths
+
+#GENCODE genome annotation file
+annotation=gencode.v16.annotation.gtf
+
+#Genome annotation interval file.
+#The interval file is extracted for a Gencode file using the gencode2interval utility included in VAT.
+#The interval format is specified in VAT documentation: 
+#http://info.gersteinlab.org/VAT#Interval.
+annotation_interval=gencode.v16.pc.interval
+
+#Annotation sequence file in FASTA format.
+#The fasta file is extracted from the interval file by the VAT utility interval2sequences.
+annotation_sequence=gencode.v16.pc.fa
+
+#Directory containing chr*.fa files
+genome=genome
+
+#List of chromosomes that aloft will use
+chromosomes=chromosomes.txt
+
+#Table file that relates transcript ids to protein ids
+Obtained from ensembl biomart.
+ensembl_table=ensIDs.ens70.txt
+
+#Directory containing post translational modification information
+#Files are named *.chr*.txt files where 2nd * is chromosome
+#Eg: ptm.phosphosite.chr1.txt
+phosphorylation=ptm
+
+#Directory containing protein domain information.
+#Files must match *.*.txt (includes PF, SSF, SM, Tmhmm, Sigp), where first * is chromosome
+#Eg: 1.ens73.alldomainfeatures.txt
+protein_features=ens73_all_domain_features
+
+#1000 genomes VAT output file. Used for 1000G allele frequencies.
+thousandG=1000G.vat
+
+#protein-protein interaction network file
+ppi=BIOGRID-ORGANISM-Homo_sapiens-3.2.95.tab.txt
+
+#Text file containing list of dominant genes
+dominant_genes=dominantonly.list
+
+#Text file containing list of recessive genes
+recessive_genes=science_lofpaper_omim_recessive_filtered.list
+
+#Binary bw (bigwig) file containing GERP score information
+scores=All_hg19_RS.bw
+
+#Directory containing GERP element information
+#Files must match *chr*_*.txt where 2nd * is chromosome
+#Eg: hg19_chr1_elems.txt
+elements=elements
+
+#File containing dNdS data for macaque and mouse
+dNdS=dNdS_avgs.txt
+
+#File containing list of paralogs
+paralogs=within_species_geneparalogs.ens70
+
+#File containing LOF disease associated scores
+LOF_score=prob_recessive_disease_scores.txt
+
+#File containing netSNP data
+netSNP_score=Supplementary_Table8.20Jul2012.txt
+
+#Directory containing ancestral chromosome files
+#Files must match *_*.fa where 2nd * is chromosome
+#Eg: homo_sapiens_ancestor_1.fa
+ancestor=homo_sapiens_ancestor_GRCh37_e71
+
+#File containing genome segmental duplication regions
+segdup=hg19-segdup.txt
+
+#Directory containing ESP6500 SNP data
+#Files must match .chr*.*.vcf where 2nd * is chromosome
+#Eg: ESP6500.chr1.snps.vcf
+exomes=new_esp6500
+
+#File containing pseudogene listings.
+pseudogenes=gencode.v7.pgene.parents
+
+#Directory containing disordered regions separated by chromosome
+#This is for calculated disordered regions of loss of function variants
+#Files must match *.*.diso where first * is the transcript ID, and second is version
+#Eg: ENST00000334011.5.diso
+disopred_sequences=disopred_sequences

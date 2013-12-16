@@ -312,24 +312,11 @@ Will output the ALoFT version number.
 
 --vcf=""
 Specifies path to VCF input file.  Set to empty string by default.  If none 
-specified, NMD_predictor will try to skip VAT and run directly on the file 
+specified, ALoFT will try to skip VAT and run directly on the file 
 given to the --vat option. This or --vat option is needed for proper execution.
 
 --vat=aloft_output/vat_output.vcf
 Specifies path to VAT output file to run aloft on.
-
---annotation_interval=data/gencode.v16.pc.interval
-Specifies path to genome annotation interval file. The interval file is
-extracted for a Gencode file using the gencode2interval utility included in
-VAT. The interval format is specified in VAT documentation: 
-http://info.gersteinlab.org/VAT#Interval.
-
---annotation_sequence=data/gencode.v16.pc.fa
-Specifies path to annotation sequence file in FASTA format. The fasta file
-is extracted from the interval file by the VAT utility interval2sequences.
-
---output=aloft_output/
-Specifies path to tabbed output files and VCF file from ALOFT.
 
 --cache=cache/
 Specifies path to directory containing cache of GERP score information and 
@@ -340,77 +327,16 @@ Directory will be created if it doesn't already exist.
 Distance from premature stop to last exon-exon junction; used to predict
 NMD. Default distance is 50bp.
 
+--output=aloft_output/
+Specifies path to tabbed output files and VCF file from ALoFT.
+
+—data=data/
+Specifies path to data directory containing a data.txt file and other data dependencies.
+data.txt contains paths to all data files that ALoFT requires.
+See data/data.txt bundled with ALoFT for more information on these files.
+
 --verbose
 Will run ALoFT in verbose mode.
-
---ensembl_table=data/ensIDs.ens70.txt
-Specifies path to a table file that relates transcript ids to protein ids
-Obtained from ensembl biomart.
-
---protein_features=data/ens73_all_domain_features/
-Path to directory containing protein domain information.  Files must be named
-chr*.prot-features-ens70.txt, where * is 1-22/X/Y.
-
---phosphorylation=data/ptm/
-Path to directory containing post translational modification information.
-Files are named ptm.phosphosite.chr*.txt, where * is 1-22/X/Y
-
---transmembrane=data/ens73_all_domain_features/
-Path to directory containing transmembrane protein family database.
-
---thousandG=data/1000G.vat
-Path to 1000 genomes vat output file. Used for 1000G allele frequencies.
-
---ppi=data/BIOGRID-ORGANISM-Homo_sapiens-3.2.95.tab.txt
-Path to protein-protein interaction network file.
-
---dominant_genes=data/dominantonly.list
-Path to text file containing list of dominant genes.
-
---recessive_genes=data/data/science_lofpaper_omim_recessive_filtered.list
-Path to text file containing list of recessive genes.
-
---rates=data/bases/
-Specifies path to directory containing GERP score information.  Files must be 
-named chr*.maf.rates, where * is 1-22/X/Y.
-
---elements=data/elements/
-Specifies path to directory containing GERP element information.  Files must 
-be named hg19_chr*_elems.txt, where * is 1-22/X/Y.
-
---dNdS=data/dndS_avgs.txt
-Path to a file containing dNdS data for macaque and mouse.
-
---paralogs=data/within_species_geneparalogs.ens70
-Path to a file containing list of paralogs.
-
---LOF_score=data/prob_recessive_disease_scores.txt
-Path to a file containing LOF disease associated scores
-
---ancestor=data/homo_sapiens_ancestor_GRCh37_e71/
-Path to directory containing ancestral chromosome files.  Files must 
-be named homo_sapiens_ancestor_*.fa, where * is 1-22/X/Y.
-
---netSNP_score=data/Supplementary_Table8.20Jul2012.txt
-Path to file containing netSNP data.
-
---segdup=data/hg19-segdup.txt
-Path to file containing genome segmental duplication regions.
-
---annotation=data/gencode.v16.annotation.gtf
-Specifies path to GENCODE genome annotation file.
-
---exomes=data/new_esp6500/
-Path to directory containing ESP6500 SNP data.  Files must be named ESP6500.
-chr*.snps.vcf, where * is 1-22/X/Y.
-
---pseudogenes=data/gencode.v7.pgene.parents
-Path to file containing pseudogene listings.
-
---disopred_sequences=data/disopred_sequences/
-Path to directory containing disordered regions separated by chromosome.
-This is for calculated disordered regions of loss of funtion variants.
-
 
 J. Components
 aloft.py: Contains the main body of code and the main() function.

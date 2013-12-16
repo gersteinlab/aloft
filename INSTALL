@@ -23,11 +23,7 @@ To download the latest version of Python, visit www.python.org
 	$ wget [FTP SITE HERE]
 	$ gunzip aloft
 
-3. [Optional] Install networkx library for protein-protein interaction calculations
-    Install networkx - http://networkx.github.io
-    If installing locally, place 'networkx' installation directory into aloft folder
-
-4. Run aloft
+3. Run ALoFT
 To see the help screen:
 	$ ./aloft -h
 
