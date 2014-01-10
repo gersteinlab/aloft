@@ -1010,9 +1010,9 @@ def main(programName, commandLineArguments):
 
     ##list of output parameters for LOF and splice variants
     basicparams = ["gene", "gene_id", "partial/full", "transcript", "coding_transcript_length", "coding_transcript"]
-    LOFparams = ["is_single_coding_exon?",\
+    LOFparams = ["is_single_coding_exon",\
                 "variant_position_in_CDS", "stop_position_in_CDS",\
-                "causes_NMD?", "5'_flanking_splice_site",\
+                "causes_NMD", "5'_flanking_splice_site",\
                 "3'_flanking_splice_site", "potential_noncanonical_splice_flank",\
                 "ancestral_allele",\
                 "num_of_lof_flags", "lof_flags",\
@@ -1027,7 +1027,7 @@ def main(programName, commandLineArguments):
                 "shortest_path_to_recessive_gene", "recessive_neighbors",\
                 "shortest_path_to_dominant_gene", "dominant_neighbors"]
     spliceparams = ["donor", "acceptor",\
-                "SNP_in_canonical_site?", "other_splice_site_canonical?",\
+                "SNP_in_canonical_site", "other_splice_site_canonical",\
                 "SNP_location", "alt_donor", "alt_acceptor", "nagnag_positions",\
                 "intron_length", "num_of_lof_flags", "lof_flags",\
                 "GERP_score", "GERP_element", "percentage_gerp_elements_in_truncated_exons", "truncated_exons:total_exons",\
@@ -1281,8 +1281,8 @@ def main(programName, commandLineArguments):
                         elif new[0]==1:
                             isCanonical = 'YES' if (acceptor=='AG' or (acceptor == 'AC' and donor == 'AT')) else 'NO'
                             otherCanonical = 'YES' if (donor in ['GT', 'GC'] or (donor == 'AT' and acceptor == 'AC')) else 'NO'
-                        outdata["SNP_in_canonical_site?"] = isCanonical
-                        outdata["other_splice_site_canonical?"] = otherCanonical
+                        outdata["SNP_in_canonical_site"] = isCanonical
+                        outdata["other_splice_site_canonical"] = otherCanonical
                         
                         if new[0]==0:
                             outdata["SNP_location"] = "donor"
@@ -1401,10 +1401,10 @@ def main(programName, commandLineArguments):
                         if nmdData['NMD'] is None:
                             continue
 
-                        outdata['causes_NMD?'] = nmdData['NMD']
+                        outdata['causes_NMD'] = nmdData['NMD']
 
                         if nmdData['issinglecodingexon']:
-                            outdata["is_single_coding_exon?"] = nmdData['issinglecodingexon']
+                            outdata["is_single_coding_exon"] = nmdData['issinglecodingexon']
 
                         #NA for premature SNPs
                         if nmdData['newCDSpos'] and not ('prematureStop' in variant and (len(data[3])>1 or len(subst)>1)):
