@@ -1328,7 +1328,7 @@ def main(programName, commandLineArguments):
                             failed_filters.append('lof_anc')
                             isLofAnc = 'YES'
     
-                        outdata["num_of_lof_flags"] = str(len(failed_filters))
+                        outdata["num_of_lof_flags"] = str(len(failed_filters)) if len(failed_filters) > 0 else "none"
                         outdata["lof_flags"] = ','.join(failed_filters)
 
     ########################################################
@@ -1353,18 +1353,15 @@ def main(programName, commandLineArguments):
                         outdata["transcript"]=transcript
                        
     		  #calculation of filters
-                        filters_failed = 0
                         failed_filters = []
 
                         nearStart = 'NO'
                         nearEnd = 'NO'
                         try:	#since LOFposition may not be provided
                             if float(LOFposition)/float(tlength) <= 0.05:
-                                filters_failed = filters_failed+1
                                 failed_filters.append('near_start')
                                 nearStart = 'YES'
                             if float(LOFposition)/float(tlength) >= 0.95:
-                                filters_failed = filters_failed+1
                                 failed_filters.append('near_stop')
                                 nearEnd = 'YES'
                         except:
@@ -1372,17 +1369,15 @@ def main(programName, commandLineArguments):
                         
                         isLofAnc = 'NO'
                         if ancesdata==subst:
-                            filters_failed = filters_failed+1
                             failed_filters.append('lof_anc')
                             isLofAnc = 'YES'
                         
                         heavilyDuplicated = 'NO'
                         if segdupdata[counter].count('(') > 3:
-                            filters_failed = filters_failed+1
                             failed_filters.append('heavily_duplicated')
                             heavilyDuplicated = 'YES'
 
-                        outdata["num_of_lof_flags"] = str(filters_failed)
+                        outdata["num_of_lof_flags"] = str(len(failed_filters)) if len(failed_filters) > 0 else "none"
                         outdata["lof_flags"] = ','.join(failed_filters)
     
                         outdata["variant_position_in_CDS"] = "NA"
@@ -1424,6 +1419,11 @@ def main(programName, commandLineArguments):
                             outdata["canonical_splice_flank"] = 'YES'
                         else:
                             outdata["canonical_splice_flank"] = nmdData['canonical']
+                            if nmdData['canonical'] == 'NO':
+                                failed_filters.append("canonical_splice_flank")
+                                outdata["num_of_lof_flags"] = str(len(failed_filters)) if len(failed_filters) > 0 else "none"
+                                outdata["lof_flags"] = ','.join(failed_filters)
+                        
                         outdata["stop_position_in_CDS"] = str(lofPosition)
 
                         vcfPfamDescriptions = {}
