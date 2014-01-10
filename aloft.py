@@ -1009,35 +1009,36 @@ def main(programName, commandLineArguments):
     pfamParamsWithTruncations = sum([[param, param + "truncated"] for param in pfamParams + ptmParams], []) #using sum to flatten the list
 
     ##list of output parameters for LOF and splice variants
-    basicparams = ["gene", "gene_id", "partial/full", "transcript", "transcript_length", "longest_transcript?"]
-    LOFparams = ["shortest_path_to_recessive_gene", "recessive_neighbors",\
-                "shortest_path_to_dominant_gene", "dominant_neighbors",\
-                "is_single_coding_exon?",\
-                "indel_position_in_CDS", "stop_position_in_CDS",\
+    basicparams = ["gene", "gene_id", "partial/full", "transcript", "coding_transcript_length", "coding_transcript"]
+    LOFparams = ["is_single_coding_exon?",\
+                "variant_position_in_CDS", "stop_position_in_CDS",\
                 "causes_NMD?", "5'_flanking_splice_site",\
-                "3'_flanking_splice_site", "canonical?",\
-                "#_failed_filters", "filters_failed",\
-                "ancestral_allele", "GERP_score", "GERP_element", "percentage_gerp_elements_in_truncated_exons", "truncated_exons:total_exons",\
+                "3'_flanking_splice_site", "potential_noncanonical_splice_flank",\
+                "ancestral_allele",\
+                "num_of_lof_flags", "lof_flags",\
+                "GERP_score", "GERP_element", "percentage_gerp_elements_in_truncated_exons", "truncated_exons:total_exons",\
                 "segmental_duplications", "disorder_prediction"] + pfamParamsWithTruncations +\
                 ["1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
                 "#_pseudogenes_associated_to_transcript",\
                 "#_paralogs_associated_to_gene",\
-                "dN/dS_(macaque)", "dN/dS_(mouse)"]
-    spliceparams = ["shortest_path_to_recessive_gene", "recessive_neighbors",\
-                "shortest_path_to_dominant_gene", "dominant_neighbors",\
-                "donor", "acceptor",\
+                "dN/dS_(macaque)", "dN/dS_(mouse)",\
+                "shortest_path_to_recessive_gene", "recessive_neighbors",\
+                "shortest_path_to_dominant_gene", "dominant_neighbors"]
+    spliceparams = ["donor", "acceptor",\
                 "SNP_in_canonical_site?", "other_splice_site_canonical?",\
                 "SNP_location", "alt_donor", "alt_acceptor", "nagnag_positions",\
-                "intron_length", "#_failed_filters", "filters_failed",\
+                "intron_length", "num_of_lof_flags", "lof_flags",\
                 "GERP_score", "GERP_element", "percentage_gerp_elements_in_truncated_exons", "truncated_exons:total_exons",\
                 "segmental_duplications", "1000GPhase1", "1000GPhase1_AF", "1000GPhase1_ASN_AF",\
                 "1000GPhase1_AFR_AF", "1000GPhase1_EUR_AF",\
                 "ESP6500", "ESP6500_AAF",\
                 "#_pseudogenes_associated_to_transcript",\
                 "#_paralogs_associated_to_gene",\
-                "dN/dS_(macaque)", "dN/dS_(mouse)"]
+                "dN/dS_(macaque)", "dN/dS_(mouse)",\
+                "shortest_path_to_recessive_gene", "recessive_neighbors",\
+                "shortest_path_to_dominant_gene", "dominant_neighbors"]
     outdata = {i : "" for i in set(basicparams) | set(LOFparams) | set(spliceparams)}
 
     lofOutputFile.write('chr\tpos\trsID\tref\talt\tscore\tPASS?\tdetails\t')
@@ -1223,8 +1224,8 @@ def main(programName, commandLineArguments):
                         splicevariants[-1]+=':' + ':'.join(entry[0:1] + [pf] + entry[1:])
                         transcript = entry[1]
                         outdata["transcript"] = transcript
-                        outdata["transcript_length"] = entry[2]
-                        outdata["longest_transcript?"] = "YES" if int(outdata["transcript_length"])==longesttranscript else "NO"
+                        outdata["coding_transcript_length"] = entry[2]
+                        outdata["coding_transcript"] = "YES" if int(outdata["coding_transcript_length"])==longesttranscript else "NO"
                         ispositivestr = transcript_strand[transcript]=='+'
 
                         GERPelementdata, GERPrejectiondata, exonCountData = getGERPData(True, GERPelements, codingExonIntervals[chr_num][transcript] if transcript in codingExonIntervals[chr_num] else None, start, end, transcript_strand[transcript])
@@ -1327,8 +1328,8 @@ def main(programName, commandLineArguments):
                             failed_filters.append('lof_anc')
                             isLofAnc = 'YES'
     
-                        outdata["#_failed_filters"] = str(len(failed_filters))
-                        outdata["filters_failed"] = ','.join(failed_filters)
+                        outdata["num_of_lof_flags"] = str(len(failed_filters))
+                        outdata["lof_flags"] = ','.join(failed_filters)
 
     ########################################################
                         spliceOutputFile.write("\t"+"\t".join(outdata[i] for i in spliceparams)+"\n")
@@ -1342,12 +1343,12 @@ def main(programName, commandLineArguments):
                         LOFvariants[-1]+=':'+':'.join(entry[0:1] + [pf] + entry[1:])
                         
                         tlength = entry[2].split('_')[0]
-                        outdata["transcript_length"] = tlength
+                        outdata["coding_transcript_length"] = tlength
                         try:
                             LOFposition = entry[2].split('_')[1]
                         except:
                             LOFposition = '.'
-                        outdata["longest_transcript?"] = "YES" if int(tlength)==longesttranscript else "NO"
+                        outdata["coding_transcript"] = "YES" if int(tlength)==longesttranscript else "NO"
                         transcript = entry[1]
                         outdata["transcript"]=transcript
                        
@@ -1381,14 +1382,14 @@ def main(programName, commandLineArguments):
                             failed_filters.append('heavily_duplicated')
                             heavilyDuplicated = 'YES'
 
-                        outdata["#_failed_filters"] = str(filters_failed)
-                        outdata["filters_failed"] = ','.join(failed_filters)
+                        outdata["num_of_lof_flags"] = str(filters_failed)
+                        outdata["lof_flags"] = ','.join(failed_filters)
     
-                        outdata["indel_position_in_CDS"] = "NA"
+                        outdata["variant_position_in_CDS"] = "NA"
                         outdata["stop_position_in_CDS"] = "NA"
                         outdata["5'_flanking_splice_site"] = "NA"
                         outdata["3'_flanking_splice _site"] = "NA"
-                        outdata["canonical?"] = "NA"
+                        outdata["potential_noncanonical_splice_flank"] = "NA"
                         outdata["#_pseudogenes_associated_to_transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
                         outdata["dN/dS_(macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "NA"
                         outdata["dN/dS_(mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "NA"
@@ -1407,7 +1408,7 @@ def main(programName, commandLineArguments):
 
                         #NA for premature SNPs
                         if nmdData['newCDSpos'] and not ('prematureStop' in variant and (len(data[3])>1 or len(subst)>1)):
-                            outdata['indel_position_in_CDS'] = str(nmdData['newCDSpos'])
+                            outdata['variant_position_in_CDS'] = str(nmdData['newCDSpos'])
 
                         if nmdData['NMD'] not in ['YES', 'NO']:
                             lofOutputFile.write('\t'+'\t'.join(outdata[i] for i in LOFparams) + '\n')
@@ -1417,7 +1418,12 @@ def main(programName, commandLineArguments):
 
                         outdata["5'_flanking_splice_site"] = nmdData['splice1']
                         outdata["3'_flanking_splice_site"] = nmdData['splice2']
-                        outdata["canonical?"] = nmdData['canonical']
+                        if nmdData['splice1'] == '.' and nmdData['splice2'] == '.':
+                            outdata["potential_noncanonical_splice_flank"] = 'NA'
+                        elif nmdData['splice1'] == 'AG' and nmdData['splice2'] == 'GC':
+                            outdata["potential_noncanonical_splice_flank"] = 'YES'
+                        else:
+                            outdata["potential_noncanonical_splice_flank"] = nmdData['canonical']
                         outdata["stop_position_in_CDS"] = str(lofPosition)
 
                         vcfPfamDescriptions = {}
