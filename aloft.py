@@ -1013,7 +1013,7 @@ def main(programName, commandLineArguments):
     LOFparams = ["is_single_coding_exon",\
                 "variant_position_in_CDS", "stop_position_in_CDS",\
                 "causes_NMD", "5'_flanking_splice_site",\
-                "3'_flanking_splice_site", "potential_noncanonical_splice_flank",\
+                "3'_flanking_splice_site", "canonical_splice_flank",\
                 "ancestral_allele",\
                 "num_of_lof_flags", "lof_flags",\
                 "GERP_score", "GERP_element", "percentage_gerp_elements_in_truncated_exons", "truncated_exons:total_exons",\
@@ -1389,7 +1389,7 @@ def main(programName, commandLineArguments):
                         outdata["stop_position_in_CDS"] = "NA"
                         outdata["5'_flanking_splice_site"] = "NA"
                         outdata["3'_flanking_splice _site"] = "NA"
-                        outdata["potential_noncanonical_splice_flank"] = "NA"
+                        outdata["canonical_splice_flank"] = "NA"
                         outdata["#_pseudogenes_associated_to_transcript"] = str(numpseudogenes[transcript]) if transcript in numpseudogenes else "0"
                         outdata["dN/dS_(macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "NA"
                         outdata["dN/dS_(mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "NA"
@@ -1419,11 +1419,11 @@ def main(programName, commandLineArguments):
                         outdata["5'_flanking_splice_site"] = nmdData['splice1']
                         outdata["3'_flanking_splice_site"] = nmdData['splice2']
                         if nmdData['splice1'] == '.' and nmdData['splice2'] == '.':
-                            outdata["potential_noncanonical_splice_flank"] = 'NA'
+                            outdata["canonical_splice_flank"] = 'NA'
                         elif nmdData['splice1'] == 'AG' and nmdData['splice2'] == 'GC':
-                            outdata["potential_noncanonical_splice_flank"] = 'YES'
+                            outdata["canonical_splice_flank"] = 'YES'
                         else:
-                            outdata["potential_noncanonical_splice_flank"] = nmdData['canonical']
+                            outdata["canonical_splice_flank"] = nmdData['canonical']
                         outdata["stop_position_in_CDS"] = str(lofPosition)
 
                         vcfPfamDescriptions = {}
