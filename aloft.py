@@ -722,7 +722,7 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, data, chr_num, transcript, st
         stopCDS = 3*alt_aa.index('*')
         nmdHash['stopCDS'] = stopCDS
     except:
-        nmdHash['NMD'] = "No stop codon found in alt_aa"
+        nmdHash['NMD'] = "No_stop_codon_found_in_alt_aa"
         return nmdHash
     
     ## stopexon is # of exon nucleotides preceding first nucleotide of stop codon
