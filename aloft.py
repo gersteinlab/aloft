@@ -663,7 +663,7 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, data, chr_num, transcript, st
             flag2 = 1   ##indel is completely contained in exon
             break
     if CDSpos==-1 or exonpos==-1:   ##start position of indel was not in ANY intervals
-        nmdHash['NMD'] = "no exons or no CDS containing start of indel"
+        nmdHash['NMD'] = "no_exons_or_no_CDS_containing_start_of_indel"
         return nmdHash
     
     exonindex= exonpos if ispositivestr else len(numberOfExonsHash)-exonpos-1
@@ -692,11 +692,11 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, data, chr_num, transcript, st
     lastindex = -1 if ispositivestr else 0
     indeltoend = exonprec[-1]+numberOfExonsHash[lastindex][1]-numberOfExonsHash[lastindex][0]+1 + diff - (newexonpos-1) ##CHECK THIS EXTRA +1
     if flag1==0:
-        nmdHash['NMD'] = "no CDS regions completely containing variant"
+        nmdHash['NMD'] = "no_CDS_regions_completely_containing_variant"
         return nmdHash
 
     if flag2==0:
-        nmdHash['NMD'] = "no exon regions completely containing variant"
+        nmdHash['NMD'] = "no_exon_regions_completely_containing_variant"
         return nmdHash
         
     if ispositivestr:
