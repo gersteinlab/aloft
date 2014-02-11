@@ -250,77 +250,49 @@ def getSegDupData(vatFile, segdupPath, chrs):
 #The verbose description returned is a) a series of concatenated Pfam_ID:domain_length:percent_lost, and a series of concatenated domain_id_lost:domain_length 
 ##domain value=amino acid coordinate of premature stop
 def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domainValue, chromosomesPFam, domainType):
-    pfamsMatched = []
-    maxPercentageLostPfamIndex = -1
-    pfamDescription = ""
-    pfamVerboseDescription = None
+    domainsMatched = []
+    domainsLost = []
 
     chromosomesPFam = chromosomesPFam[domainType]
 
-    if transcriptID in transcriptToProteinHash and transcriptToProteinHash[transcriptID] in chromosomesPFam[chromosome]:
+    transcriptMatched = (transcriptID in transcriptToProteinHash and transcriptToProteinHash[transcriptID] in chromosomesPFam[chromosome])
+
+    if transcriptMatched:
         pfamComponentsList = chromosomesPFam[chromosome][transcriptToProteinHash[transcriptID]]
-        domainsLost = ""
-        numberOfDomainsLost = 0
+
         for pfamComponents in pfamComponentsList:
             domainComponents = pfamComponents[1].split("-")
             domainStart = int(domainComponents[0])
             domainEnd = int(domainComponents[1])
             domainLength = domainEnd - domainStart + 1
+
             if domainValue >= domainStart and domainValue <= domainEnd:
                 domainLengthLost = domainEnd - domainValue + 1
                 domainPercentLost = domainLengthLost * 100.0 / domainLength
-
-                if not pfamVerboseDescription:
-                    pfamVerboseDescription = ""
-
-                pfamVerboseDescription += ":%s:%d:%.2f" % (pfamComponents[0], domainLength, domainPercentLost)
-
-                #Find largest percentage lost pfam
-                if maxPercentageLostPfamIndex < 0 or domainPercentLost > float(pfamsMatched[maxPercentageLostPfamIndex].split(":")[3]):
-                    maxPercentageLostPfamIndex = len(pfamsMatched)
-
-                pfamsMatched.append(":%s:%d:%.2f" % (pfamComponents[0], domainLength, domainPercentLost))
-
+                domainsMatched.append([pfamComponents[0], domainLength, domainPercentLost])
             elif domainValue < domainStart:
-                domainsLost += ":" + pfamComponents[0] + ":" + str(domainLength)
-                numberOfDomainsLost += 1
+                domainsLost.append([pfamComponents[0], domainLength])
 
-        if maxPercentageLostPfamIndex >= 0:
-            pfamDescription = pfamsMatched[maxPercentageLostPfamIndex] + ":" + str(len(pfamsMatched))
+        convertToStrings = lambda elements: ["%.2f" % element if isinstance(element, float) else str(element) for element in elements]
+        joinDomainElements = lambda elements: [":".join(convertToStrings(element)) for element in elements]
 
-        if pfamDescription == "":
-            pfamDescription = ":NO_"+domainType+":NA:NA:0"
-            pfamVerboseDescription = "NO_"+domainType
+        verboseDomainsMatched = ("NO_%s" % domainType) if len(domainsMatched) == 0 else ":".join(joinDomainElements(domainsMatched))
+        verboseDomainsLost = ("NO_%s" % domainType) if len(domainsLost) == 0 else ":".join(joinDomainElements(domainsLost))
 
-        verboseDomainsLost = str(domainsLost)
-        if verboseDomainsLost.startswith(":"):
-            verboseDomainsLost = verboseDomainsLost[1:]
-
-        if verboseDomainsLost == "":
-            verboseDomainsLost = "NO_"+domainType
-
-        if pfamVerboseDescription.startswith(":"):
-            #Remove beginning colon
-            pfamVerboseDescription = pfamVerboseDescription[1:]
-
-        pfamVerboseDescription = [pfamVerboseDescription, verboseDomainsLost]
-
-        #Add number of domains lost
-        pfamDescription += ":" + str(numberOfDomainsLost)
-
-    #If no ENST or ENSP ID could be matched
-    if pfamDescription == "":
-        pfamDescription = ":NA_"+domainType+":NA:NA:0:0"
-    if pfamVerboseDescription is None:
-        pfamVerboseDescription = ["NA_"+domainType, "NA_"+domainType]
-
-    #pfamShortDescription = "NO" if pfamDescription.startswith(":NO") else "YES"
-    if pfamDescription.startswith(":NO"):
-        pfamShortDescription = 'NO'
-    elif pfamDescription.startswith(":NA"):
-        pfamShortDescription = 'NA'
+        if len(domainsMatched) > 0:
+            maxDomain = max(domainsMatched, key=lambda domain: domain[1])
+            pfamDescription = ":".join(convertToStrings(maxDomain) + convertToStrings([len(domainsMatched), len(domainsLost)]))
+            pfamShortDescription = "YES"
+        else:
+            pfamDescription = "NO_%s:NA:NA:0" % domainType
+            pfamShortDescription = "NO"
     else:
-        pfamShortDescription = 'YES'
+        verboseDomainsMatched = "NA_%s" % domainType
+        verboseDomainsLost = "NA_%s" % domainType
+        pfamDescription = "NA_%s:NA:NA:0:0" % domainType
+        pfamShortDescription = "NA"
+
+    pfamVerboseDescription = [verboseDomainsMatched, verboseDomainsLost]
 
     return pfamDescription, pfamShortDescription, pfamVerboseDescription
 
@@ -1352,12 +1324,12 @@ def main(programName, commandLineArguments):
                         transcript = entry[1]
                         outdata["transcript"]=transcript
                        
-    		  #calculation of filters
+              #calculation of filters
                         failed_filters = []
 
                         nearStart = 'NO'
                         nearEnd = 'NO'
-                        try:	#since LOFposition may not be provided
+                        try:    #since LOFposition may not be provided
                             if float(LOFposition)/float(tlength) <= 0.05:
                                 failed_filters.append('near_start')
                                 nearStart = 'YES'
