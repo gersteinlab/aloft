@@ -245,10 +245,9 @@ def getSegDupData(vatFile, segdupPath, chrs):
     segdupfile.close()
     return segdupdata
 
-#Returns a Pfam vcf-formatted description, and a verbose description
-#The vcf-formatted description is in format Pfam_ID:domain_length:max_domain_percent_lost:number_pfams_in_domain:number_pfams_in_truncation
-#The verbose description returned is a) a series of concatenated Pfam_ID:domain_length:percent_lost, and a series of concatenated domain_id_lost:domain_length 
 ##domain value=amino acid coordinate of premature stop
+#Returns a short description of YES, NO, or NA if the pfam domain is matched and not truncated,
+#and returns a verbose description of domains matched (domain, domain length, percent lost) and truncated (domain, domain length)
 def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domainValue, chromosomesPFam, domainType):
     domainsMatched = []
     domainsLost = []
@@ -281,20 +280,15 @@ def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domain
 
         if len(domainsMatched) > 0:
             maxDomain = max(domainsMatched, key=lambda domain: domain[1])
-            pfamDescription = ":".join(convertToStrings(maxDomain) + convertToStrings([len(domainsMatched), len(domainsLost)]))
             pfamShortDescription = "YES"
         else:
-            pfamDescription = "NO_%s:NA:NA:0" % domainType
             pfamShortDescription = "NO"
     else:
         verboseDomainsMatched = "NA_%s" % domainType
         verboseDomainsLost = "NA_%s" % domainType
-        pfamDescription = "NA_%s:NA:NA:0:0" % domainType
         pfamShortDescription = "NA"
 
-    pfamVerboseDescription = [verboseDomainsMatched, verboseDomainsLost]
-
-    return pfamDescription, pfamShortDescription, pfamVerboseDescription
+    return pfamShortDescription, verboseDomainsMatched, verboseDomainsLost
 
 def getGenomeSequences(genomePath, chromosome):
     individualSequencePath = os.path.join(genomePath, "chr%s.fa" % (chromosome))
@@ -1419,25 +1413,25 @@ def main(programName, commandLineArguments):
                         outdata['truncated_exons:total_exons'] = exonCountData
 
                         for paramKey in pfamParams + ptmParams:
-                            newDescriptions = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPositionInAminoSpace, chromosomesPFam, paramKey)
+                            shortDescription, verboseDescriptionMatched, verboseDescriptionLost = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPositionInAminoSpace, chromosomesPFam, paramKey)
                             #we just want a select few domain types for VCF output
                             if paramKey in pfamParams:
-                                vcfPfamDescriptions[paramKey] = ":%s=%s" % (paramKey, newDescriptions[1])
+                                vcfPfamDescriptions[paramKey] = ":%s=%s" % (paramKey, shortDescription)
                             elif paramKey in phosphorylationTags:
-                                if newDescriptions[1] == "YES":
-                                    phosphorylationResults[paramKey] = newDescriptions[1]
+                                if shortDescription == "YES":
+                                    phosphorylationResults[paramKey] = shortDescription
 
-                                if newDescriptions[1] == 'YES':
+                                if shortDescription == 'YES':
                                     oneYES = True
-                                elif newDescriptions[1] == 'NO':
+                                elif shortDescription == 'NO':
                                     oneNO = True
-                                elif newDescriptions[1] == 'NA':
+                                elif shortDescription == 'NA':
                                     oneNA = True
                             else:
                                 vcfPfamDescriptions[paramKey] = ''
 
-                            outdata[paramKey] = newDescriptions[2][0]
-                            outdata[pfamParamsWithTruncations[pfamParamsWithTruncations.index(paramKey)+1]] = newDescriptions[2][1]
+                            outdata[paramKey] = verboseDescriptionMatched
+                            outdata[pfamParamsWithTruncations[pfamParamsWithTruncations.index(paramKey)+1]] = verboseDescriptionLost
 
                         if len(phosphorylationResults) == 0:
                             if oneNA and oneNO:
