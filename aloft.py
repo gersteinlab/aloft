@@ -1416,7 +1416,7 @@ def main(programName, commandLineArguments):
                             shortDescription, verboseDescriptionMatched, verboseDescriptionLost = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPositionInAminoSpace, chromosomesPFam, paramKey)
                             #we just want a select few domain types for VCF output
                             if paramKey in pfamParams:
-                                vcfPfamDescriptions[paramKey] = ":%s=%s" % (paramKey, shortDescription)
+                                vcfPfamDescriptions[paramKey] = "%s=%s" % (paramKey, shortDescription)
                             elif paramKey in phosphorylationTags:
                                 if shortDescription == "YES":
                                     phosphorylationResults[paramKey] = shortDescription
@@ -1435,14 +1435,14 @@ def main(programName, commandLineArguments):
 
                         if len(phosphorylationResults) == 0:
                             if oneNA and oneNO:
-                                vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=NO/NA'
+                                vcfPfamDescriptions[phosphorylationTags[0]] = 'PTM=NO/NA'
                             elif oneNA:
-                                vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=NA'
+                                vcfPfamDescriptions[phosphorylationTags[0]] = 'PTM=NA'
                             else:
-                                vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=NO'
+                                vcfPfamDescriptions[phosphorylationTags[0]] = 'PTM=NO'
                             #outdata["PTM"] = "PTM=NO"
                         else:
-                            vcfPfamDescriptions[phosphorylationTags[0]] = ':PTM=' + '|'.join([key + "/" + value for key, value in phosphorylationResults.items()])
+                            vcfPfamDescriptions[phosphorylationTags[0]] = 'PTM=' + '|'.join([key + "/" + value for key, value in phosphorylationResults.items()])
                             #outdata["PTM"] = "PTM=" + ','.join([key + "/" + value for key, value in phosphorylationResults.items()])
 
                         disorderPredictionData = getDisopredData(args.disopred_sequences, transcript, stopPositionInAminoSpace)
@@ -1451,7 +1451,7 @@ def main(programName, commandLineArguments):
     #########################################################
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
     #########################################################
-                        LOFvariants[-1]+=':'+':'.join(['GERPelement='+("YES" if GERPelementdata != '.' else "NO"), 'exoncounts='+exonCountData, 'nearstart=' + nearStart, 'nearend=' + nearEnd, 'canonical='+nmdData['canonical'], nmdData['splice1']+'/'+nmdData['splice2'], str(nmdData['newCDSpos']), 'lofposition='+str(lofPosition), nmdData['nextATG'], 'nmd=' + nmdData['NMD'], nmdData['incrcodingpos'], 'lof_anc=' + isLofAnc, 'heavilyduplicated='+heavilyDuplicated, 'disorder_prediction='+disorderPredictionData]) + ''.join([vcfPfamDescriptions[param] for param in pfamParams + [phosphorylationTags[0]]])
+                        LOFvariants[-1]+=':'+':'.join(['GERPelement='+("YES" if GERPelementdata != '.' else "NO"), 'exoncounts='+exonCountData, 'nearstart=' + nearStart, 'nearend=' + nearEnd, 'canonical='+nmdData['canonical'], nmdData['splice1']+'/'+nmdData['splice2'], str(nmdData['newCDSpos']), 'lofposition='+str(lofPosition), nmdData['nextATG'], 'nmd=' + nmdData['NMD'], nmdData['incrcodingpos'], 'lof_anc=' + isLofAnc, 'heavilyduplicated='+heavilyDuplicated, 'disorder_prediction='+disorderPredictionData]) + ':' + ':'.join([vcfPfamDescriptions[param] for param in pfamParams + [phosphorylationTags[0]]])
 
             vcfOutputFile.write('\t'.join(data[k] for k in range(0,7))+'\t')
             allvariants = []
