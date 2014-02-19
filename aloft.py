@@ -1126,9 +1126,8 @@ def main(programName, commandLineArguments):
                 lineinfo['VA']='VA='
                 infotypes.append('VA')
 
-            def insertAncestralField(outfile):
-                ancestralInsertion = ";".join([lineinfo['Ancestral']] + data[7].split(";"))
-                outfile.write("\t".join(data[0:7] + [ancestralInsertion] + data[8:]))
+            def writeVCFUpToBasicParams(outfile):
+                outfile.write("\t".join(data))
                 outfile.write('\t'+ '\t'.join(outdata[i] for i in basicparams))
             
             LOFvariants = []
@@ -1216,7 +1215,7 @@ def main(programName, commandLineArguments):
 
                         outdata["dN/dS_(mouse)"] = mouse
                         
-                        insertAncestralField(spliceOutputFile)
+                        writeVCFUpToBasicParams(spliceOutputFile)
 
                         spliceSearchData = searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS, subst)
 
@@ -1355,7 +1354,7 @@ def main(programName, commandLineArguments):
                         outdata["dN/dS_(macaque)"] = dNdSmacaque[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmacaque else "NA"
                         outdata["dN/dS_(mouse)"] = dNdSmouse[transcript.split('.')[0]] if transcript.split('.')[0] in dNdSmouse else "NA"
                         
-                        insertAncestralField(lofOutputFile)
+                        writeVCFUpToBasicParams(lofOutputFile)
                         
                         nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, data, chr_num, transcript, start, end, exon, stop_codon, genomeSequences, CDS, subst, transcript_strand)
 
