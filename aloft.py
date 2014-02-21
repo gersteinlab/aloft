@@ -1222,11 +1222,11 @@ def main(programName, commandLineArguments):
                             spliceOutputFile.write("\t%s: pos=" % (failure) +str(start)+' transcript='+transcript+'\n')
 
                         if not spliceSearchData['found']:
-                            writeSpliceOutput("CDS match not found")
+                            writeSpliceOutput("CDS_match_not_found")
                             continue
 
                         if not spliceSearchData['new']:
-                            writeSpliceOutput("no donor/acceptor pair")
+                            writeSpliceOutput("no_donor_or_acceptor_pair")
                             continue
 
                         new = spliceSearchData['new']
