@@ -1354,7 +1354,11 @@ def main(programName, commandLineArguments):
                         
                         writeVCFUpToBasicParams(lofOutputFile)
                         
-                        nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, data, chr_num, transcript, start, end, exon, stop_codon, genomeSequences, CDS, subst, transcript_strand)
+                        try:
+                            nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, data, chr_num, transcript, start, end, exon, stop_codon, genomeSequences, CDS, subst, transcript_strand)
+                        except KeyError:
+                            printError("Failed to lookup indel data for transcript %s" % transcript, False)
+                            continue
 
                         if nmdData['NMD'] is None:
                             continue
