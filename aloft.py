@@ -780,8 +780,6 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, 
 
     newData['found'] = found
     if not found:
-        spliceOutputFile.write('\t'+'\t'.join(outdata[i] for i in ["shortest_path_to_recessive_gene", "recessive_neighbors"]))
-        spliceOutputFile.write("\tCDS match not found: pos="+str(start)+' transcript='+transcript+'\n')
         return newData
 
     if ispositivestr:
