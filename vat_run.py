@@ -42,15 +42,15 @@ def run_vat(arguments, forceVerbose=False):
 	TEMP_SNP_PATH = os.path.join(os.path.split(vatOutputPath)[0],"snpinput_temp")
 	TEMP_INDEL_PATH = os.path.join(os.path.split(vatOutputPath)[0],"indelinput_temp")
 	
-	snpInputFile = open(TEMP_SNP_PATH, "w")
-	indelInputFile = open(TEMP_INDEL_PATH, "w")
+	snpInputFile = open(TEMP_SNP_PATH, "wb")
+	indelInputFile = open(TEMP_INDEL_PATH, "wb")
 	
 	foundHeader = False
 	foundID = True
 	numberOfMissingComponents = 0
 	normalHeaderComponents = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO']
 	for lineBytes in inputFile:
-		line = lineBytes.decode("utf-8")
+		line = lineBytes.decode("latin-1")
 		lineComponents = line.rstrip("\n").rstrip("\t").split("\t")
 
 		if line.startswith("#"):
@@ -68,16 +68,16 @@ def run_vat(arguments, forceVerbose=False):
 				if numberOfMissingComponents > 0:
 					lineComponents += normalHeaderComponents[-numberOfMissingComponents:]
 
-				snpInputFile.write('\t'.join(lineComponents) + "\n")
-				indelInputFile.write('\t'.join(lineComponents) + "\n")
+				snpInputFile.write(('\t'.join(lineComponents) + "\n").encode("latin-1"))
+				indelInputFile.write(('\t'.join(lineComponents) + "\n").encode("latin-1"))
 
 				foundHeader = True
 			else:
 				snpInputFile.write(line)
 				indelInputFile.write(line)
 		elif not foundHeader:
-			snpInputFile.write("#" + "\t".join(normalHeaderComponents) + "\n")
-			indelInputFile.write("#" + "\t".join(normalHeaderComponents) + "\n")
+			snpInputFile.write(("#" + "\t".join(normalHeaderComponents) + "\n").encode("latin-1"))
+			indelInputFile.write(("#" + "\t".join(normalHeaderComponents) + "\n").encode("latin-1"))
 			foundHeader = True
 		if not line.startswith("#"):
 			if not foundID:
@@ -94,13 +94,13 @@ def run_vat(arguments, forceVerbose=False):
 				refComponent = refComponents[index]
 				altComponent = altComponents[index]
 				if len(refComponent) == 1 and len(altComponent) == 1 and not foundSnp:
-					snpInputFile.write("\t".join(lineComponents) + "\n")
+					snpInputFile.write(("\t".join(lineComponents) + "\n").encode("latin-1"))
 					foundSnp = True
 					if foundIndel:
 						break
 
 				if (len(refComponent) > 1 or len(altComponent) > 1) and not foundIndel:
-					indelInputFile.write("\t".join(lineComponents) + "\n")
+					indelInputFile.write(("\t".join(lineComponents) + "\n").encode("latin-1"))
 					foundIndel = True
 					if foundSnp:
 						break
@@ -122,11 +122,11 @@ def run_vat(arguments, forceVerbose=False):
 	
 	sortedLines = []
 	
-	vcfOutputFile = open(vatOutputPath, "w")
+	vcfOutputFile = open(vatOutputPath, "wb")
 	for lineBytes in snpMapperPipe.stdout:
-		line = lineBytes.decode("utf-8")
+		line = lineBytes.decode("latin-1")
 		if line.startswith("#"):
-			vcfOutputFile.write(line)
+			vcfOutputFile.write(lineBytes)
 		else:
 			numSnp += 1
 			sortedLines.append(line.rstrip("\n"))
@@ -142,7 +142,7 @@ def run_vat(arguments, forceVerbose=False):
 		printError("Failed to open indelMapper")
 	
 	for lineBytes in indelMapperPipe.stdout:
-		line = lineBytes.decode("utf-8")
+		line = lineBytes.decode("latin-1")
 		if not line.startswith("#"):
 			sortedLines.append(line.rstrip("\n"))
 			numIndel += 1
@@ -157,7 +157,7 @@ def run_vat(arguments, forceVerbose=False):
 	lastLine = None
 	for line in sortedLines:
 		if line != lastLine:
-			vcfOutputFile.write(line + "\n")
+			vcfOutputFile.write((line + "\n").encode("latin-1"))
 		lastLine = line
 	
 	vcfOutputFile.close()
