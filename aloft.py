@@ -251,6 +251,7 @@ def getSegDupData(vatFile, segdupPath, chrs):
 def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domainValue, chromosomesPFam, domainType):
     domainsMatched = []
     domainsLost = []
+    domainsUpstream = [] # upstream meaning to the left of the match
 
     chromosomesPFam = chromosomesPFam[domainType]
 
@@ -269,15 +270,18 @@ def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domain
             if domainValue >= domainStart and domainValue <= domainEnd:
                 domainLengthLost = domainEnd - domainValue + 1
                 domainPercentLost = domainLengthLost * 100.0 / domainLength
-                domainsMatched.append([domainName, domainLength, domainPercentLost])
+                domainsMatched.append([domainName, domainLength, domainPercentLost, "%d-%d" % (domainStart, domainEnd)])
+            elif domainValue < domainStart:
+                domainsLost.append([domainName, domainLength, "%d-%d" % (domainStart, domainEnd)])
             elif domainValue > domainEnd:
-                domainsLost.append([domainName, domainLength])
+                domainsUpstream.append([domainName, domainLength, "%d-%d" % (domainStart, domainEnd)])
 
         convertToStrings = lambda elements: ["%.2f" % element if isinstance(element, float) else str(element) for element in elements]
         joinDomainElements = lambda elements: [":".join(convertToStrings(element)) for element in elements]
 
         verboseDomainsMatched = ("NO_%s" % domainType) if len(domainsMatched) == 0 else ":".join(joinDomainElements(domainsMatched))
         verboseDomainsLost = ("NO_%s" % domainType) if len(domainsLost) == 0 else ":".join(joinDomainElements(domainsLost))
+        verboseDomainsUpstream = ("NO_%s" % domainType) if len(domainsUpstream) == 0 else ":".join(joinDomainElements(domainsUpstream))
 
         if len(domainsMatched) > 0:
             maxDomain = max(domainsMatched, key=lambda domain: domain[1])
@@ -287,9 +291,10 @@ def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domain
     else:
         verboseDomainsMatched = "NA_%s" % domainType
         verboseDomainsLost = "NA_%s" % domainType
+        verboseDomainsUpstream = "NA_%s" % domainType
         pfamShortDescription = "NA"
 
-    return pfamShortDescription, verboseDomainsMatched, verboseDomainsLost
+    return pfamShortDescription, verboseDomainsMatched, verboseDomainsLost, verboseDomainsUpstream
 
 def getGenomeSequences(genomePath, chromosome):
     individualSequencePath = os.path.join(genomePath, "chr%s.fa" % (chromosome))
@@ -971,7 +976,7 @@ def main(programName, commandLineArguments):
     #this variable could use a better name since it's not just PFAM, but not sure what to call it
     pfamParams = ["PF", "SSF", "SM", "Tmhmm", "Sigp"]
 
-    pfamParamsWithTruncations = sum([[param, param + "truncated"] for param in pfamParams + ptmParams], []) #using sum to flatten the list
+    pfamParamsWithTruncations = sum([[param, param + "truncated", param + "upstream"] for param in pfamParams + ptmParams], []) #using sum to flatten the list
 
     ##list of output parameters for LOF and splice variants
     basicparams = ["gene", "gene_id", "partial/full", "transcript", "coding_transcript_length", "coding_transcript"]
@@ -1415,7 +1420,7 @@ def main(programName, commandLineArguments):
                         outdata['truncated_exons:total_exons'] = exonCountData
 
                         for paramKey in pfamParams + ptmParams:
-                            shortDescription, verboseDescriptionMatched, verboseDescriptionLost = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPositionInAminoSpace, chromosomesPFam, paramKey)
+                            shortDescription, verboseDescriptionMatched, verboseDescriptionLost, verboseDescriptionUpstream = getPfamDescription(transcriptToProteinHash, chr_num, transcript.split(".")[0], stopPositionInAminoSpace, chromosomesPFam, paramKey)
                             
                             if paramKey in pfamParams:
                                 vcfPfamDescriptions[paramKey] = "%s=%s" % (paramKey, shortDescription)
@@ -1433,7 +1438,9 @@ def main(programName, commandLineArguments):
                                 vcfPfamDescriptions[paramKey] = ''
 
                             outdata[paramKey] = verboseDescriptionMatched
-                            outdata[pfamParamsWithTruncations[pfamParamsWithTruncations.index(paramKey)+1]] = verboseDescriptionLost
+                            pfamTruncationIndex = pfamParamsWithTruncations.index(paramKey)
+                            outdata[pfamParamsWithTruncations[pfamTruncationIndex+1]] = verboseDescriptionLost
+                            outdata[pfamParamsWithTruncations[pfamTruncationIndex+2]] = verboseDescriptionUpstream
 
                         if len(phosphorylationResults) == 0:
                             if oneNA and oneNO:
