@@ -260,6 +260,7 @@ def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domain
         pfamComponentsList = chromosomesPFam[chromosome][transcriptToProteinHash[transcriptID]]
 
         for pfamComponents in pfamComponentsList:
+            domainName = pfamComponents[0]
             domainComponents = pfamComponents[1].split("-")
             domainStart = int(domainComponents[0])
             domainEnd = int(domainComponents[1])
@@ -268,9 +269,9 @@ def getPfamDescription(transcriptToProteinHash, chromosome, transcriptID, domain
             if domainValue >= domainStart and domainValue <= domainEnd:
                 domainLengthLost = domainEnd - domainValue + 1
                 domainPercentLost = domainLengthLost * 100.0 / domainLength
-                domainsMatched.append([pfamComponents[0], domainLength, domainPercentLost])
-            elif domainValue < domainStart:
-                domainsLost.append([pfamComponents[0], domainLength])
+                domainsMatched.append([domainName, domainLength, domainPercentLost])
+            elif domainValue > domainEnd:
+                domainsLost.append([domainName, domainLength])
 
         convertToStrings = lambda elements: ["%.2f" % element if isinstance(element, float) else str(element) for element in elements]
         joinDomainElements = lambda elements: [":".join(convertToStrings(element)) for element in elements]
