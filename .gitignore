@@ -3,4 +3,5 @@ data
 networkx
 vcf_sort
 vat_run
+vat_bin
 aloft
