@@ -10,7 +10,7 @@ from common import printError, platformName, getScriptDirectory
 import platform
 
 def run_vat(arguments, forceVerbose=False):
-	VAT_BIN_PATH = os.path.join(getScriptDirectory(), os.path.join('vat-bin', platformName()))
+	VAT_BIN_PATH = os.path.join(getScriptDirectory(), 'vat-bin')
 	
 	snpMapperPath = os.path.join(VAT_BIN_PATH, 'snpMapper')
 	indelMapperPath = os.path.join(VAT_BIN_PATH, 'indelMapper')
