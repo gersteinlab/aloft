@@ -24,7 +24,6 @@ F. Output Files
 G. ALoFT Features in VCF Output
 H. ALoFT Features in Tabbed Delineated Output
 I. Command Line Options
-J. ALoFT Package Components
 
 
 A. Preface
@@ -337,20 +336,3 @@ See data/data.txt bundled with ALoFT for more information on these files.
 
 --verbose
 Will run ALoFT in verbose mode.
-
-J. Components
-aloft.py: Contains the main body of code and the main() function.
-
-common.py: Auxiliary file that contains common functions used by ALoFT.
-
-data: Directory for the default reference files used by ALoFT
-
-sequencing.py: Auxiliary file that contains methods used to translate 
-nucleotide sequence to amino acids.
-
-vat_run.py: Contains run_vat(), a function called by aloft.py to run 
-VAT automatically. 
-
-vcf_sort.py: Contains the functions to sort VAT output by increasing 
-chromosome and position number.
-
