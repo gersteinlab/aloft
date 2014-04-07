@@ -13,7 +13,7 @@
 
 import sys, os, re, string, array, datetime
 from optparse import OptionParser
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, CalledProcessError
 from vat_run import *
 from sequencing import *
 from common import *
@@ -394,12 +394,14 @@ def get1000GChromosomeInfo(thousandGPath):
 
     for thousandGLine in thousandGFile:
         if not thousandGLine.startswith("#"):
-            thousandGLineComponents = thousandGLine.rstrip("\n").split("\t")
-            thousandGChromosomeNumber = thousandGLineComponents[0].replace("chr", "")
+            thousandGLineComponents = thousandGLine.rstrip().split("\t")
+            refAltPosition = getRefAltPositionKey(thousandGLineComponents)
+            thousandGChromosomeNumber = thousandGLineComponents[0].split("chr")[-1]
             if not (thousandGChromosomeNumber in thousandGChromosomeInfo):
                 thousandGChromosomeInfo[thousandGChromosomeNumber] = {}
             
-            thousandGChromosomeInfo[thousandGChromosomeNumber][int(thousandGLineComponents[1])] = thousandGLineComponents[7]
+            assert(refAltPosition not in thousandGChromosomeInfo[thousandGChromosomeNumber])
+            thousandGChromosomeInfo[thousandGChromosomeNumber][refAltPosition] = thousandGLineComponents[7]
 
     return thousandGChromosomeInfo
 
@@ -417,19 +419,24 @@ def getGerpScores(vatPath, outputDirectory, scoresPath):
         with open(bigWigBedOutputPath) as bigWigFile:
             for line in bigWigFile:
                 data = line.strip().split("\t")
-                chromosome = data[0]
+                chromosome = data[0].split("chr")[-1]
                 if chromosome not in gerpScoresHash:
                     gerpScoresHash[chromosome] = {}
 
                 position = int(data[1])+1 #to 1 based coordinate
+                _, ref, alt = data[3].split("_")
+                refAlotPosition = getRefAltPositionKey([chromosome, str(position), '.', ref, alt])
                 score = float(data[4])
-                gerpScoresHash[chromosome][position] = score
+                assert(refAlotPosition not in gerpScoresHash[chromosome])
+                gerpScoresHash[chromosome][refAlotPosition] = score
 
         os.remove(bigWigBedInputPath)
         os.remove(bigWigTabOutputPath)
         os.remove(bigWigBedOutputPath)
-    except:
+    except CalledProcessError:
         printError("Failed to call bigWigAverageOverBed")
+    except IOError:
+        printError("Failed to call bigWigAverageOverBed with an IO error")
 
     return gerpScoresHash
 
@@ -513,7 +520,8 @@ def getESPExomeChromosomeInfo(exomesPath, chromosome):
     if exomeInputPath is not None:
         for exomeLine in open(exomeInputPath):
             if not exomeLine.startswith("#"):
-                exomeLineComponents = exomeLine.split("\t")
+                exomeLineComponents = exomeLine.strip().split("\t")
+                refAltPosition = getRefAltPositionKey(exomeLineComponents)
                 
                 x = "NA"
                 y = "NA"
@@ -525,8 +533,9 @@ def getESPExomeChromosomeInfo(exomesPath, chromosome):
                         y = "%.4f" % (calculateExomeCoordinate(component))
                     elif component.startswith('TAC='):
                         z = "%.4f" % (calculateExomeCoordinate(component))
-                        
-                exomesChromosomeInfo[int(exomeLineComponents[1])] = ("%s,%s,%s" % (x, y, z))
+                    
+                assert(refAltPosition not in exomesChromosomeInfo)
+                exomesChromosomeInfo[refAltPosition] = ("%s,%s,%s" % (x, y, z))
 
     return exomesChromosomeInfo
 
@@ -1034,6 +1043,8 @@ def main(programName, commandLineArguments):
             line = vatFile.readline()
             continue
 
+        refAltPosition = getRefAltPositionKey(data)
+
         if not currentLoadedChromosome or currentLoadedChromosome != chr_num:
             #This is where we get a chance to data that is unique to a chromosome
             if VERBOSE: print("Reading data from chromosome %s..." % (chr_num))
@@ -1055,7 +1066,7 @@ def main(programName, commandLineArguments):
             else:
                 ancestral = "Neither"
 
-            GERPscore = gerpScoresHash[data[0]][start]
+            GERPscore = gerpScoresHash[chr_num][refAltPosition]
             
             ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
             lineinfo = {'AA':'AA='+ancesdata,\
@@ -1074,8 +1085,8 @@ def main(programName, commandLineArguments):
             for thousandGTag in thousandGTags:
                 thousandGComponents.append(thousandGTag + "=NA")
             
-            if chr_num in thousandGChromosomeInfo and start in thousandGChromosomeInfo[chr_num]:
-                for info in thousandGChromosomeInfo[chr_num][start].split(";"):
+            if chr_num in thousandGChromosomeInfo and refAltPosition in thousandGChromosomeInfo[chr_num]:
+                for info in thousandGChromosomeInfo[chr_num][refAltPosition].split(";"):
                     infotype = info.split('=')[0]  
                     newComponent = "1000GPhase1_" + info
                     thousandGComponentIndex = -1
@@ -1088,7 +1099,7 @@ def main(programName, commandLineArguments):
                         thousandGComponents[thousandGComponentIndex] = newComponent
             
             infotypes += ['1000GPhase1'] + thousandGTags
-            if chr_num in thousandGChromosomeInfo and start in thousandGChromosomeInfo[chr_num]:
+            if chr_num in thousandGChromosomeInfo and refAltPosition in thousandGChromosomeInfo[chr_num]:
                 lineinfo['1000GPhase1'] = '1000GPhase1=Yes'
             else:
                 lineinfo['1000GPhase1'] = '1000GPhase1=No'
@@ -1099,9 +1110,9 @@ def main(programName, commandLineArguments):
             
             #Add exomes info to output
             infotypes += ['ESP6500', 'ESP6500_AAF']
-            if start in exomesChromosomeInfo:
+            if refAltPosition in exomesChromosomeInfo:
                 lineinfo['ESP6500'] = 'ESP6500=Yes'
-                lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=' + exomesChromosomeInfo[start]
+                lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=' + exomesChromosomeInfo[refAltPosition]
             else:
                 lineinfo['ESP6500'] = 'ESP6500=No'
                 lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=NA,NA,NA'

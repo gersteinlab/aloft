@@ -20,6 +20,12 @@ def printError(error, exit=True):
 		sys.stderr.write("Exiting..\n")
 		sys.exit(1)
 
+def getRefAltPositionKey(lineComponents):
+	position = int(lineComponents[1]) #convert to int since it'll raise an error if it's not really an integer, just for safety
+	ref = lineComponents[3]
+	alt = lineComponents[4]
+	return "_".join([str(position), ref, alt])
+
 def getTruncatedExons(exons, start, direction):
 	truncatedExons = None
 	stopExonIndex = 0

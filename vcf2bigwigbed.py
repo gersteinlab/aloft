@@ -21,18 +21,18 @@ def writeBed(vcfInputPath, outputPath):
 		for altIndex, alt in enumerate(alts):
 			if len(ref) > len(alt):
 				# deletion event
-				diff = ref[0:len(alt)]
+				diff = ref[len(alt):]
 				endPos = startPos + len(diff)
 				#indelCall = '-' + diff
 			elif len(alt) > len(ref):
-				diff = alt[0:len(ref)]
+				diff = alt[len(ref):]
 				endPos = startPos
 				#indelCall = '+' + diff
 			else:
 				endPos = startPos
 				#indelCall = "."
 
-			outputFile.write("\t".join([chromosome, str(startPos-1), str(endPos), str(counter)]) + "\n")
+			outputFile.write("\t".join([chromosome, str(startPos-1), str(endPos), "_".join([str(counter), ref, alt])]) + "\n")
 			counter += 1
 	inputFile.close()
 	outputFile.close()
