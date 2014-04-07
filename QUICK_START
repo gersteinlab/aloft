@@ -18,15 +18,12 @@ Contact: Dr. Suganthi Balasubramanian (suganthibala@gmail.com)
 	$ ./aloft --vcf=/path/to/vcf_file --output=/path/to/output/dir
 
 The input VCF file supplied by the --vcf option should have a header line
-starting with #CHR or #CHROM. For example:
-#CHR POS ID ALT REF ...  (precedes any variant data)
+starting with #CHROM or #CHR. For example:
+#CHROM POS ID ALT REF ...  (precedes any variant data)
 
 Only the first five columns are necessary to have, but the number of columns in 
 this header line must match with the number of lines in the VCF file. ALoFT 
 will replace missing columns with 'dummy' entries and compute as usual.
-
-Note that you must run aloft in the current working directory since it relies
-on a few relative paths.
 
 2. Example Workflow: annotating variants from 1000 Genomes variant calls.
 

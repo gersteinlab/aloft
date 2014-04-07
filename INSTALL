@@ -23,7 +23,11 @@ To download the latest version of Python, visit www.python.org
 	$ wget [FTP SITE HERE]
 	$ gunzip aloft
 
-3. Run ALoFT
+3. Install VAT Dependency
+      cd /path/to/aloft_directory
+      python install.py
+
+4. Run ALoFT
 To see the help screen:
 	$ ./aloft -h
 
