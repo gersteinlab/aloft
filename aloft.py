@@ -25,6 +25,8 @@ import vcf2bigwigbed
 
 VERBOSE = None
 
+ALOFT_VERSION = "1.0.0"
+
 def abortIfPathDoesNotExist(parser, path, shouldShowHelp=False):
     if path is not None and not os.path.exists(path):
         if shouldShowHelp:
@@ -48,9 +50,9 @@ def abortIfCannotWriteFile(parser, filepath):
     return newFile
 
 def parseCommandLineArguments(programName, commandLineArguments):
-    parser = argparse.ArgumentParser(prog=programName, description='Run aloft predictions. You must at least provide a VCF (via --vcf) or VAT (via --vat) input file. If you provide a VCF file, it will be ran through VAT and then through aloft. If you provide a VAT file instead, it must be sorted numerically (use vcf_sort included in aloft for this).', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(prog=programName, description='Run ALoFT predictions. You must provide a VCF or VAT file as input. See options below.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--version', action='version', version="aloft 1.0")
+    parser.add_argument('--version', action='version', version=ALOFT_VERSION)
 
     parser.add_argument('--vcf', help='Path to VCF input file. This can be a compressed .gz file. If not specified, then --vat must be specified.')
     parser.add_argument('--vat', help='Path to VAT input file. If not specified, then --vcf must be specified. This file must be sorted numerically.')
@@ -120,7 +122,7 @@ def parseCommandLineArguments(programName, commandLineArguments):
 
     if not args.vcf and not args.vat:
         parser.print_help()
-        printError("Neither a VCF or VAT file was specified. You must supply one of these as your input file")
+        sys.exit(1)
 
     if args.vcf and args.vat:
         parser.print_help()
