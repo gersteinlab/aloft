@@ -20,10 +20,12 @@ def printError(error, exit=True):
 		sys.stderr.write("Exiting..\n")
 		sys.exit(1)
 
-def getRefAltPositionKey(lineComponents):
+def getRefAltPositionKey(lineComponents, altIndex):
 	position = int(lineComponents[1]) #convert to int since it'll raise an error if it's not really an integer, just for safety
 	ref = lineComponents[3]
-	alt = lineComponents[4]
+	alts = lineComponents[4].split(",")
+	#alt = alts[altIndex] if altIndex < len(alts) else alts[0]
+	alt = alts[altIndex]
 	return "_".join([str(position), ref, alt])
 
 def getTruncatedExons(exons, start, direction):

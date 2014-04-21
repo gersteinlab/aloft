@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+#Modeled from https://gist.github.com/mlawson/790326
+
 import os, sys
 
 def writeBed(vcfInputPath, outputPath):

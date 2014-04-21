@@ -397,13 +397,15 @@ def get1000GChromosomeInfo(thousandGPath):
     for thousandGLine in thousandGFile:
         if not thousandGLine.startswith("#"):
             thousandGLineComponents = thousandGLine.rstrip().split("\t")
-            refAltPosition = getRefAltPositionKey(thousandGLineComponents)
-            thousandGChromosomeNumber = thousandGLineComponents[0].split("chr")[-1]
-            if not (thousandGChromosomeNumber in thousandGChromosomeInfo):
-                thousandGChromosomeInfo[thousandGChromosomeNumber] = {}
-            
-            assert(refAltPosition not in thousandGChromosomeInfo[thousandGChromosomeNumber])
-            thousandGChromosomeInfo[thousandGChromosomeNumber][refAltPosition] = thousandGLineComponents[7]
+            alts = thousandGLineComponents[4].split(",")
+            for altIndex in range(len(alts)):
+                refAltPosition = getRefAltPositionKey(thousandGLineComponents, altIndex)
+                thousandGChromosomeNumber = thousandGLineComponents[0].split("chr")[-1]
+                if not (thousandGChromosomeNumber in thousandGChromosomeInfo):
+                    thousandGChromosomeInfo[thousandGChromosomeNumber] = {}
+                
+                assert(refAltPosition not in thousandGChromosomeInfo[thousandGChromosomeNumber])
+                thousandGChromosomeInfo[thousandGChromosomeNumber][refAltPosition] = thousandGLineComponents[7]
 
     return thousandGChromosomeInfo
 
@@ -427,10 +429,10 @@ def getGerpScores(vatPath, outputDirectory, scoresPath):
 
                 position = int(data[1])+1 #to 1 based coordinate
                 _, ref, alt = data[3].split("_")
-                refAlotPosition = getRefAltPositionKey([chromosome, str(position), '.', ref, alt])
+                refAltPosition = getRefAltPositionKey([chromosome, str(position), '.', ref, alt], 0)
                 score = float(data[4])
-                assert(refAlotPosition not in gerpScoresHash[chromosome])
-                gerpScoresHash[chromosome][refAlotPosition] = score
+                assert(refAltPosition not in gerpScoresHash[chromosome] or gerpScoresHash[chromosome][refAltPosition] == score)
+                gerpScoresHash[chromosome][refAltPosition] = score
 
         os.remove(bigWigBedInputPath)
         os.remove(bigWigTabOutputPath)
@@ -523,21 +525,23 @@ def getESPExomeChromosomeInfo(exomesPath, chromosome):
         for exomeLine in open(exomeInputPath):
             if not exomeLine.startswith("#"):
                 exomeLineComponents = exomeLine.strip().split("\t")
-                refAltPosition = getRefAltPositionKey(exomeLineComponents)
-                
-                x = "NA"
-                y = "NA"
-                z = "NA"
-                for component in exomeLineComponents[7].split(";"):
-                    if component.startswith('EA_AC='):
-                        x = "%.4f" % (calculateExomeCoordinate(component))
-                    elif component.startswith('AA_AC='):
-                        y = "%.4f" % (calculateExomeCoordinate(component))
-                    elif component.startswith('TAC='):
-                        z = "%.4f" % (calculateExomeCoordinate(component))
+                alts = exomeLineComponents[4].split(",")
+                for altIndex in range(len(alts)):
+                    refAltPosition = getRefAltPositionKey(exomeLineComponents, altIndex)
                     
-                assert(refAltPosition not in exomesChromosomeInfo)
-                exomesChromosomeInfo[refAltPosition] = ("%s,%s,%s" % (x, y, z))
+                    x = "NA"
+                    y = "NA"
+                    z = "NA"
+                    for component in exomeLineComponents[7].split(";"):
+                        if component.startswith('EA_AC='):
+                            x = "%.4f" % (calculateExomeCoordinate(component))
+                        elif component.startswith('AA_AC='):
+                            y = "%.4f" % (calculateExomeCoordinate(component))
+                        elif component.startswith('TAC='):
+                            z = "%.4f" % (calculateExomeCoordinate(component))
+                    
+                    assert(refAltPosition not in exomesChromosomeInfo)
+                    exomesChromosomeInfo[refAltPosition] = ("%s,%s,%s" % (x, y, z))
 
     return exomesChromosomeInfo
 
@@ -1045,8 +1049,6 @@ def main(programName, commandLineArguments):
             line = vatFile.readline()
             continue
 
-        refAltPosition = getRefAltPositionKey(data)
-
         if not currentLoadedChromosome or currentLoadedChromosome != chr_num:
             #This is where we get a chance to data that is unique to a chromosome
             if VERBOSE: print("Reading data from chromosome %s..." % (chr_num))
@@ -1067,60 +1069,15 @@ def main(programName, commandLineArguments):
                 ancestral = "Alt"
             else:
                 ancestral = "Neither"
-
-            GERPscore = gerpScoresHash[chr_num][refAltPosition]
             
             ##screen for variant types here.  skip variant if it is not deletion(N)FS, insertion(N)FS, or premature SNP
             lineinfo = {'AA':'AA='+ancesdata,\
                         'Ancestral':'Ancestral='+ancestral,\
-                        'GERPscore':'GERPscore='+"%.2f" % GERPscore,\
                         'SegDup':'SegDup='+str(segdupdata[counter].count('('))}
             infotypes = ['AA', 'Ancestral', 'GERPscore', 'SegDup']
     
             outdata["ancestral_allele"] = ancesdata
-            outdata["GERP_score"] = "%.2f" % GERPscore
             outdata["segmental_duplications"] = '.' if segdupdata[counter].count('(') == '0' else segdupdata[counter]
-    
-            #Adding 1000G fields
-            thousandGTags = ['1000GPhase1_AF', '1000GPhase1_ASN_AF', '1000GPhase1_AFR_AF', '1000GPhase1_EUR_AF']
-            thousandGComponents = []
-            for thousandGTag in thousandGTags:
-                thousandGComponents.append(thousandGTag + "=NA")
-            
-            if chr_num in thousandGChromosomeInfo and refAltPosition in thousandGChromosomeInfo[chr_num]:
-                for info in thousandGChromosomeInfo[chr_num][refAltPosition].split(";"):
-                    infotype = info.split('=')[0]  
-                    newComponent = "1000GPhase1_" + info
-                    thousandGComponentIndex = -1
-                    for findIndex in range(len(thousandGTags)):
-                        if infotype == "_".join(thousandGTags[findIndex].split("_")[1:]):
-                            thousandGComponentIndex = findIndex
-                            break
-                    
-                    if thousandGComponentIndex >= 0:
-                        thousandGComponents[thousandGComponentIndex] = newComponent
-            
-            infotypes += ['1000GPhase1'] + thousandGTags
-            if chr_num in thousandGChromosomeInfo and refAltPosition in thousandGChromosomeInfo[chr_num]:
-                lineinfo['1000GPhase1'] = '1000GPhase1=Yes'
-            else:
-                lineinfo['1000GPhase1'] = '1000GPhase1=No'
-            
-            #Add 1000G entries to output
-            for tagIndex in range(len(thousandGTags)):
-                lineinfo[thousandGTags[tagIndex]] = thousandGComponents[tagIndex]
-            
-            #Add exomes info to output
-            infotypes += ['ESP6500', 'ESP6500_AAF']
-            if refAltPosition in exomesChromosomeInfo:
-                lineinfo['ESP6500'] = 'ESP6500=Yes'
-                lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=' + exomesChromosomeInfo[refAltPosition]
-            else:
-                lineinfo['ESP6500'] = 'ESP6500=No'
-                lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=NA,NA,NA'
-    
-            for tag in ['1000GPhase1'] + thousandGTags + ['ESP6500', 'ESP6500_AAF']:
-                outdata[tag] = lineinfo[tag]
             
             dataInfoComponents = data[7].split(';')
             found = 0
@@ -1145,6 +1102,55 @@ def main(programName, commandLineArguments):
             splicevariants = []
             othervariants = []
             for variant in variants:
+                details = variant.split(":")
+
+                refAltPosition = getRefAltPositionKey(data, int(details[0]) - 1)
+
+                GERPscore = gerpScoresHash[chr_num][refAltPosition]
+                lineinfo['GERPscore'] = 'GERPscore='+"%.2f" % GERPscore
+                outdata["GERP_score"] = "%.2f" % GERPscore
+
+                #Adding 1000G fields
+                thousandGTags = ['1000GPhase1_AF', '1000GPhase1_ASN_AF', '1000GPhase1_AFR_AF', '1000GPhase1_EUR_AF']
+                thousandGComponents = []
+                for thousandGTag in thousandGTags:
+                    thousandGComponents.append(thousandGTag + "=NA")
+                
+                if chr_num in thousandGChromosomeInfo and refAltPosition in thousandGChromosomeInfo[chr_num]:
+                    for info in thousandGChromosomeInfo[chr_num][refAltPosition].split(";"):
+                        infotype = info.split('=')[0]  
+                        newComponent = "1000GPhase1_" + info
+                        thousandGComponentIndex = -1
+                        for findIndex in range(len(thousandGTags)):
+                            if infotype == "_".join(thousandGTags[findIndex].split("_")[1:]):
+                                thousandGComponentIndex = findIndex
+                                break
+                        
+                        if thousandGComponentIndex >= 0:
+                            thousandGComponents[thousandGComponentIndex] = newComponent
+                
+                infotypes += ['1000GPhase1'] + thousandGTags
+                if chr_num in thousandGChromosomeInfo and refAltPosition in thousandGChromosomeInfo[chr_num]:
+                    lineinfo['1000GPhase1'] = '1000GPhase1=Yes'
+                else:
+                    lineinfo['1000GPhase1'] = '1000GPhase1=No'
+                
+                #Add 1000G entries to output
+                for tagIndex in range(len(thousandGTags)):
+                    lineinfo[thousandGTags[tagIndex]] = thousandGComponents[tagIndex]
+                
+                #Add exomes info to output
+                infotypes += ['ESP6500', 'ESP6500_AAF']
+                if refAltPosition in exomesChromosomeInfo:
+                    lineinfo['ESP6500'] = 'ESP6500=Yes'
+                    lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=' + exomesChromosomeInfo[refAltPosition]
+                else:
+                    lineinfo['ESP6500'] = 'ESP6500=No'
+                    lineinfo['ESP6500_AAF'] = 'ESP6500_AAF=NA,NA,NA'
+                
+                for tag in ['1000GPhase1'] + thousandGTags + ['ESP6500', 'ESP6500_AAF']:
+                    outdata[tag] = lineinfo[tag]
+
                 ##alternate allele corresponding to variant
                 subst = data[4].split(',')[int(variant.split(':')[0])-1]
                 
@@ -1152,7 +1158,6 @@ def main(programName, commandLineArguments):
                     if "premature" not in variant and "splice" not in variant:
                         othervariants.append(variant)
                         continue
-                details = variant.split(":")
     
                 outdata["gene"], outdata["gene_id"] = details[1], details[2]
     
