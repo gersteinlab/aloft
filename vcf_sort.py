@@ -2,39 +2,30 @@
 #Usage of running this script by itself is <input_vcf> <output_vcf>
 import os, sys, re
 
-def tryint(s):
-	try:
-		return int(s)
-	except:
-		return s
+def sortVCFLines(lines):
+	compiledRE = re.compile('([0-9]+)')
+	def compareFunc(line):
+		#find second tab index
+		tabIndex = line.find("\t")
+		tabIndex += line[tabIndex+1:].find("\t") + 1
+		return [int(c) if c.isdigit() else c for c in compiledRE.split(line[:tabIndex])]
+	lines.sort(key=compareFunc)
 
-def alphanum_key(s):
-	return [ tryint(c) for c in re.split('([0-9]+)', s) ]
-
-def sort_nicely(l):
-	l.sort(key=alphanum_key)
-
-def sort_file(inputPath, outputPath):
-	headerLines = []
+def sortVCF(inputPath, outputPath):
 	regularLines = []
+	outputFile = open(outputPath, "w")
 	inputFile = open(inputPath)
 	for line in inputFile:
 		if line.startswith("#"):
-			headerLines.append(line.rstrip("\n"))
+			outputFile.write(line)
 		else:
-			regularLines.append(line.rstrip("\n"))
-
+			regularLines.append(line.rstrip())
 	inputFile.close()
+
+	sortVCFLines(regularLines)
 	
-	outputFile = open(outputPath, "w")
-	
-	sort_nicely(regularLines)
-	
-	if len(headerLines) > 0:
-		outputFile.write("\n".join(headerLines) + "\n")
-	
-	if len(regularLines) > 0:
-		outputFile.write("\n".join(regularLines) + "\n")
+	for line in regularLines:
+		outputFile.write(line + "\n")
 	
 	outputFile.close()
 
@@ -43,7 +34,5 @@ if __name__ == "__main__":
 		print("Usage: <input_path> <output_path>\n")
 		print("Takes input_path and sorts it numerically to output_path. Input is a VCF file.")
 		sys.exit(1)
-	inputPath = sys.argv[1]
-	outputPath = sys.argv[2]
-	
-	sort_file(inputPath, outputPath)
+
+	sortVCF(sys.argv[1], sys.argv[2])

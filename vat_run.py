@@ -153,7 +153,7 @@ def run_vat(arguments, forceVerbose=False):
 	
 	if verbose: print("Writing out VAT file...")
 	#Sort and remove duplicate entries
-	sort_nicely(sortedLines)
+	sortVCFLines(sortedLines)
 	lastLine = None
 	for line in sortedLines:
 		if line != lastLine:
