@@ -797,24 +797,30 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, 
     if not found:
         return newData
 
+    new = None
+
     if ispositivestr:
         if (end==0 and i==0) or (end==1 and i==len(l)-1):
             return newData
         if end==0:
             acceptor = genomeSequences[l[i][0]-2:l[i][0]].upper()
             if start==l[i][0]-2:
-                new = (1, subst+acceptor[1])
+                if len(acceptor) > 1:
+                    new = (1, subst+acceptor[1])
             else:
-                new = (1, acceptor[0]+subst)
+                if len(acceptor) > 0:
+                    new = (1, acceptor[0]+subst)
             donor = genomeSequences[l[i-1][1]+1:l[i-1][1]+3].upper()
             intronlength = l[i][0]-l[i-1][1]-1
         elif end==1:
             acceptor = genomeSequences[l[i+1][0]-2:l[i+1][0]].upper()
             donor = genomeSequences[l[i][1]+1:l[i][1]+3].upper()
             if start==l[i][1]+1:
-                new = (0, subst+donor[1])
+                if len(donor) > 1:
+                    new = (0, subst+donor[1])
             else:
-                new = (0, donor[0]+subst)
+                if len(donor) > 0:
+                    new = (0, donor[0]+subst)
             intronlength = l[i+1][0]-l[i][1]-1
     else:   ##not ispositivestr
         if (end==1 and i==0) or (end==0 and i==len(l)-1):
@@ -823,21 +829,26 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, 
             donor = genomeSequences[l[i][0]-2:l[i][0]].upper()
             acceptor = genomeSequences[l[i+1][1]+1:l[i+1][1]+3].upper()
             if start==l[i][0]-2:
-                new = (0, subst+donor[1])
+                if len(donor) > 1:
+                    new = (0, subst+donor[1])
             else:
-                new = (0, donor[0]+subst)
+                if len(donor) > 0:
+                    new = (0, donor[0]+subst)
             intronlength = l[i][0]-l[i+1][1]-1
         elif end==1:
             donor = genomeSequences[l[i-1][0]-2:l[i-1][0]].upper()
             acceptor = genomeSequences[l[i][1]+1:l[i][1]+3].upper()
             if start==l[i][1]+1:
-                new = (1, subst+acceptor[1])
+                if len(acceptor) > 1:
+                    new = (1, subst+acceptor[1])
             else:
-                new = (1, acceptor[0]+subst)
+                if len(acceptor) > 0:
+                    new = (1, acceptor[0]+subst)
             intronlength = l[i-1][0]-l[i][1]-1
         donor = compstr(donor.upper())
         acceptor = compstr(acceptor.upper())
-        new = (new[0],compstr(new[1].upper()))
+        if new is not None:
+            new = (new[0],compstr(new[1].upper()))
 
     newData['donor'] = donor
     newData['acceptor'] = acceptor
@@ -1033,6 +1044,13 @@ def main(programName, commandLineArguments):
     vatFile.seek(0)
     line = vatFile.readline()
     while line=="\n" or line.startswith("#"):
+        if line.startswith("#CHR"):
+            #for variantTag in ['GERPelement', 'exoncounts', 'nearstart', 'nearend', 'canonical', 'other_noncanonical', 'lofposition', 'nmd', 'intron_length', 'small_intron', 'heavily_duplicated', 'disorder_prediction', 'PTM', 'lof_anc', 'alternate_acceptor_site']:
+            #for vcfTag in [['AA', '1', 'String'], ['Ancestral', '1', 'String'], ['SegDup', '1', 'Integer'], ['GERPscore', '1', 'Float'], ['1000GPhase1', '1', 'String'], ['1000GPhase1_AF', '1', 'Float'], ['1000GPhase1_ASN_AF', '1', 'Float'], ['1000GPhase1_AFR_AF', '1', 'Float'], ['1000GPhase1_EUR_AF', '1', 'Float'], ['ESP6500', '1', 'String'], ['ESP6500_AAF', '3', 'Float'], ['VA', '.', 'String']]:
+            for vcfTag in [['Ancestral', '1', 'String'], ['SegDup', '1', 'Integer'], ['GERPscore', '1', 'Float'], ['1000GPhase1', '1', 'String'], ['1000GPhase1_AF', '1', 'Float'], ['1000GPhase1_ASN_AF', '1', 'Float'], ['1000GPhase1_AFR_AF', '1', 'Float'], ['1000GPhase1_EUR_AF', '1', 'Float'], ['ESP6500', '1', 'String'], ['ESP6500_AAF', '3', 'Float']]:
+                tag, number, datatype = vcfTag
+                vcfOutputFile.write("##INFO=<ID=%s,Number=%s,Type=%s,Description=\"%s\">\n" % (tag, number, datatype, tag))
+
         vcfOutputFile.write(line)
         counter+=1
         line = vatFile.readline()
@@ -1468,7 +1486,7 @@ def main(programName, commandLineArguments):
     #########################################################
                         lofOutputFile.write('\t' + '\t'.join(outdata[i] for i in LOFparams)+'\n')
     #########################################################
-                        LOFvariants[-1]+=':'+':'.join(['GERPelement='+("YES" if GERPelementdata != '.' else "NO"), 'exoncounts='+exonCountData, 'nearstart=' + nearStart, 'nearend=' + nearEnd, 'canonical='+nmdData['canonical'], nmdData['splice1']+'/'+nmdData['splice2'], str(nmdData['newCDSpos']), 'lofposition='+str(lofPosition), nmdData['nextATG'], 'nmd=' + nmdData['NMD'], nmdData['incrcodingpos'], 'lof_anc=' + isLofAnc, 'heavilyduplicated='+heavilyDuplicated, 'disorder_prediction='+disorderPredictionData]) + ':' + ':'.join([vcfPfamDescriptions[param] for param in pfamParams + ['PTM']])
+                        LOFvariants[-1]+=':'+':'.join(['GERPelement='+("YES" if GERPelementdata != '.' else "NO"), 'exoncounts='+exonCountData, 'nearstart=' + nearStart, 'nearend=' + nearEnd, 'canonical='+nmdData['canonical'], nmdData['splice1']+'/'+nmdData['splice2'], str(nmdData['newCDSpos']), 'lofposition='+str(lofPosition), nmdData['nextATG'], 'nmd=' + nmdData['NMD'], nmdData['incrcodingpos'], 'lof_anc=' + isLofAnc, 'heavily_duplicated='+heavilyDuplicated, 'disorder_prediction='+disorderPredictionData]) + ':' + ':'.join([vcfPfamDescriptions[param] for param in pfamParams + ['PTM']])
 
             vcfOutputFile.write('\t'.join(data[k] for k in range(0,7))+'\t')
             allvariants = []
