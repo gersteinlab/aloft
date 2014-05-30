@@ -367,7 +367,6 @@ def getCDSAndExonDictionaries(annotationPath, chrs):
             else:  ##stop codon
                 stop_codon[chr_num][transcript] = (begin,end)
 
-    #this is really just copy of code above, todo: clean this up
     if len(tlines)>0 and oldtr != '':
         if transcript_strand[oldtr]=='+':
             oldsort = sorted(tlines, key=lambda s: int(s[3]))
@@ -409,6 +408,7 @@ def get1000GChromosomeInfo(thousandGPath):
 
     return thousandGChromosomeInfo
 
+#returns a hash (with chromosome and ref_alt_position as keys) for gerp scores
 def getGerpScores(vatPath, outputDirectory, scoresPath):
     gerpScoresHash = {}
     bigWigAverageOverBedPath = os.path.join(getScriptDirectory(), os.path.join(os.path.join('bigwig-bin', platformName()), 'bigWigAverageOverBed'))
@@ -444,6 +444,7 @@ def getGerpScores(vatPath, outputDirectory, scoresPath):
 
     return gerpScoresHash
 
+#Returns graph using edges from ppiPath file
 def getPPINetwork(networkx, ppiPath):
     ppi = networkx.Graph()
     ppifile = open(ppiPath)
@@ -465,6 +466,7 @@ def getScores(filepath, scoreColumnIndex):
     scorefile.close()
     return scores
 
+#Returns hash with key being transcript and value being # of associated pseudogenes
 def getPseudogeneData(pseudogenesPath):
     numpseudogenes = {}     ##{parent transcript: # of assoc. pseudogenes}
     pseudogenesfile = open(pseudogenesPath)
@@ -478,6 +480,7 @@ def getPseudogeneData(pseudogenesPath):
     pseudogenesfile.close()
     return numpseudogenes
 
+#Returns hash with key being ENSG ID and value being set of associated paralogs
 def getParalogData(paralogsPath):
     paralogs = {}     ##{ENSG ID (without . subclassifier): set(assoc. paralogs)}
     paralogsfile = open(paralogsPath)
@@ -494,6 +497,7 @@ def getParalogData(paralogsPath):
     paralogsfile.close()
     return paralogs
 
+#Returns two hashes for macaque and mouse, with key being ENST ID and value being dN/dS string
 def getdNdSData(dNdSPath):
     dNdSmacaque = {}      ##{ENST ID (without . subclassifier): dN/dS (STRING)}
     dNdSmouse = {}
@@ -545,6 +549,7 @@ def getESPExomeChromosomeInfo(exomesPath, chromosome):
 
     return exomesChromosomeInfo
 
+#Finds shortest distance and # of neighbors for gene_name in genes, in the ppi graph
 def parsePPI(networkx, ppi, ppiHash, hashKey, gene_name, genes):
     dist = None
     if gene_name in ppiHash[hashKey]:
@@ -562,8 +567,9 @@ def parsePPI(networkx, ppi, ppiHash, hashKey, gene_name, genes):
     numberOfNeighbors = sum(1 for gene in genes if gene != gene_name and gene in ppi.neighbors(gene_name))
     return dist, numberOfNeighbors
 
+#Returns a hash for NMD info for indels and premature stops
 def findNMDForIndelsAndPrematureStop(nmdThreshold, data, chr_num, transcript, start, end, exon, stop_codon, genomeSequences, CDS, subst, transcript_strand):
-    nmdHash = {"NMD" : None, 'splice1' : None, 'splice2' : None, 'canonical' : None, 'newCDSpos' : None, 'stopCDS' : None, 'nextATG' : None, 'incrcodingpos' : None, 'issinglecodingexon' : None}
+    nmdHash = {"NMD" : None, 'splice1' : None, 'splice2' : None, 'canonical' : None, 'newCDSpos' : None, 'stopCDS' : None, 'nextATG' : None, 'incrcodingpos' : None, 'issinglecodingexon' : None} # what will be returned from the function
 
     l = sorted(CDS[chr_num][transcript])
     if len(l)==0:
@@ -776,7 +782,7 @@ def findNMDForIndelsAndPrematureStop(nmdThreshold, data, chr_num, transcript, st
 
     return nmdHash
 
-#not exactly sure what this function does so not exactly sure what to call it
+#Returns a hash for splice info for splice overlaps
 def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, CDS, subst):
     newData = {'found' : None, 'new' : None, 'acceptor' : None, 'donor' : None, 'intronlength' : None}
     l = sorted(CDS[chr_num][transcript], reverse= not ispositivestr)
@@ -857,6 +863,7 @@ def searchInSplices(chr_num, transcript, genomeSequences, ispositivestr, start, 
 
     return newData
 
+#Returns list of postitions matching NAG - this checks in two places: before and after start
 def getMatchingNagnagnagPositions(genomeSequences, start, ispositivestr):
     #NAGN <snp>AG NAG
     nagnagSequence = genomeSequences[start-4:start+5].upper()
