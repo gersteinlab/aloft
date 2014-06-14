@@ -72,7 +72,7 @@ def parseCommandLineArguments(programName, commandLineArguments):
     dataListPath = os.path.join(args.data, 'data.txt')
     abortIfPathDoesNotExist(parser, dataListPath)
 
-    requiredDataFiles = ['annotation', 'annotation_interval', 'annotation_sequence', 'genome', 'chromosomes', 'ensembl_table', 'phosphorylation', 'protein_features', 'thousandG', 'ppi', 'dominant_genes', 'recessive_genes', 'scores', 'elements', 'dNdS', 'paralogs', 'LOF_score', 'netSNP_score', 'ancestor', 'segdup', 'exomes', 'pseudogenes', 'disopred_sequences']
+    requiredDataFiles = ['annotation', 'annotation_interval', 'annotation_sequence', 'genome', 'chromosomes', 'ensembl_table', 'phosphorylation', 'protein_features', 'thousandG', 'ppi', 'dominant_genes', 'recessive_genes', 'scores', 'elements', 'dNdS', 'paralogs', 'ancestor', 'segdup', 'exomes', 'pseudogenes', 'disopred_sequences']
 
     dataFiles = {}
     for line in open(dataListPath):
@@ -454,17 +454,6 @@ def getPPINetwork(networkx, ppiPath):
         ppi.add_edge(data[2], data[3])
     ppifile.close()
     return ppi
-
-#This function assumes the key is the 0'th column
-def getScores(filepath, scoreColumnIndex):
-    scores = {}
-    scorefile = open(filepath)
-    scorefile.readline()
-    for line in scorefile:
-        data = line.strip().split("\t")
-        scores[data[0].upper()] = data[scoreColumnIndex]
-    scorefile.close()
-    return scores
 
 #Returns hash with key being transcript and value being # of associated pseudogenes
 def getPseudogeneData(pseudogenesPath):

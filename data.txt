@@ -20,7 +20,7 @@ genome=genome
 chromosomes=chromosomes.txt
 
 #Table file that relates transcript ids to protein ids
-Obtained from ensembl biomart.
+#Obtained from ensembl biomart.
 ensembl_table=ensIDs.ens70.txt
 
 #Directory containing post translational modification information
@@ -60,10 +60,10 @@ dNdS=dNdS_avgs.txt
 paralogs=within_species_geneparalogs.ens70
 
 #File containing LOF disease associated scores
-LOF_score=prob_recessive_disease_scores.txt
+#LOF_score=prob_recessive_disease_scores.txt
 
 #File containing netSNP data
-netSNP_score=Supplementary_Table8.20Jul2012.txt
+#netSNP_score=Supplementary_Table8.20Jul2012.txt
 
 #Directory containing ancestral chromosome files
 #Files must match *_*.fa where 2nd * is chromosome
