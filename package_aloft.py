@@ -1,7 +1,7 @@
 import shutil, os, subprocess
 
 #Make relevant scripts executable
-scripts = ['aloft.py', 'vcf_sort.py', 'vat_run.py']
+scripts = ['aloft.py']
 for script in scripts:
 	executableName = script.rstrip(".py")
 	shutil.copy2(script, executableName)
