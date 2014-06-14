@@ -15,7 +15,7 @@ Contact: Dr. Suganthi Balasubramanian (suganthibala@gmail.com)
 
 1. After installing, ALoFT can be run as follows.
 	$ cd /path/to/aloft_directory 
-	$ ./aloft --vcf=/path/to/vcf_file --output=/path/to/output/dir
+	$ ./aloft --vcf=/path/to/vcf_file --data=/path/to/data/dir/ --output=/path/to/output/dir/
 
 The input VCF file supplied by the --vcf option should have a header line
 starting with #CHROM or #CHR. For example:

@@ -90,7 +90,7 @@ Variants in the input file that intersect splice sites are included.
 F. Usage
 ALoFT can be invoked as follows:
  $ cd aloft
- $ ./aloft --vcf=/path/to/file --output=path/to/dir [--option3=arg1]...
+ $ ./aloft --vcf=/path/to/file --data=path/to/data/dir --output=path/to/dir [--option4=arg1]...
 
 Example:
  $ ./aloft --vcf=vcf_file.vcf	(unannotated vcf file)
