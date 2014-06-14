@@ -70,7 +70,7 @@ def parseCommandLineArguments(programName, commandLineArguments):
     args = parser.parse_args(commandLineArguments)
 
     dataListPath = os.path.join(args.data, 'data.txt')
-    abortIfPathDoesNotExist(parser, dataListPath)
+    abortIfPathDoesNotExist(parser, dataListPath, True)
 
     requiredDataFiles = ['annotation', 'annotation_interval', 'annotation_sequence', 'genome', 'chromosomes', 'ensembl_table', 'phosphorylation', 'protein_features', 'thousandG', 'ppi', 'dominant_genes', 'recessive_genes', 'scores', 'elements', 'dNdS', 'paralogs', 'ancestor', 'segdup', 'exomes', 'pseudogenes', 'disopred_sequences']
 
