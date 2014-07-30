@@ -43,7 +43,7 @@ ppi=BIOGRID-ORGANISM-Homo_sapiens-3.2.95.tab.txt
 dominant_genes=dominantonly.list
 
 #Text file containing list of recessive genes
-recessive_genes=science_lofpaper_omim_recessive_filtered.list
+recessive_genes=omim.recessive.txt
 
 #Binary bw (bigwig) file containing GERP score information
 scores=All_hg19_RS.bw
