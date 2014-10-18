@@ -58,7 +58,7 @@ E. Output Files:
 An output directory may be specified with the --output option.
 Otherwise the output files will be written in the ./aloft_output directory.
 
-Four files (may|will) be created in this output directory:
+The following files will be created in this output directory:
 
 1) A vcf file that VAT generates if --vcf is supplied called vat_output.vcf.
 This intermediate file is then run through aloft to produce the following 
@@ -187,8 +187,8 @@ column in the tabbed delineated output and the first part of the details
 section of each transcript in the vcf output.
 - partial/full: full if all transcripts of the affected gene are affected, 
 partial otherwise
-- transcript length: length of affected transcript in nucleotides
-- longest transcript?: YES if transcript is the longest transcript affected by 
+- transcript_length: length of affected transcript in nucleotides
+- longest_transcript: YES if transcript is the longest transcript affected by 
 variant, NO otherwise
 - shortest path to recessive gene: minimum length of a shortest path to a 
 recessive gene in protein interaction network
