@@ -21,8 +21,8 @@ The input VCF file supplied by the --vcf option should have a header line
 starting with #CHROM. For example:
 #CHROM POS ID ALT REF ...  (precedes any variant data)
 
-A file containing just the first five columns can also be used as input. ALoFT 
-will replace the missing columns with 'dummy' entries and compute as usual.
+A file containing just the first five columns can also be used as input. Please ensure that the columns are tab-delimited.
+ALoFT will replace the missing columns with 'dummy' entries and compute as usual.
 
 2. Example Workflow: annotating variants from 1000 Genomes variant calls.
 
