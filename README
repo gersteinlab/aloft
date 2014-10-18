@@ -131,8 +131,8 @@ of exons truncated by the premature stop, inclusive. For splice site variants
 the number of exons truncated is replaced with the string "NA".
 
 2) These features are listed for lof variants, in addition to those in 1):
-- nearstart: YES if variant in first coding exon, NO otherwise.
-- nearend: YES if variant in last coding exon, NO otherwise.
+- nearstart: YES if variant is within the first 5% of the coding sequence (i.e beginning of the coding sequence), NO otherwise.
+- nearend: YES if variant in the last 5% of the coding sequence (i.e. towards the end of the coding sequence), NO otherwise.
 - canonical: YES if the 5' flanking splice site and the 3' flanking splice 
 site are both canonical, NO otherwise.
 - XX/XX: <5' flanking splice site>:<3' flanking splice site of the exon that
