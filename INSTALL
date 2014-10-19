@@ -19,7 +19,10 @@ To check your python version:
 
 To download the latest version of Python, visit www.python.org
 
-2. Download the ALoFT data package from http://archive.gersteinlab.org/aloft_data/data.tar.gz
+2. Download the ALoFT software and data package
+        $ Download the master.zip file form this repo
+        $ gunzip aloft-master
+        $ Download the input data package from http://archive.gersteinlab.org/aloft_data/data.tar.gz
 	$ wget http://archive.gersteinlab.org/aloft_data/data.tar.gz
 	$ tar -zxvf data.tar.gz 
 
