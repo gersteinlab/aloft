@@ -19,9 +19,9 @@ To check your python version:
 
 To download the latest version of Python, visit www.python.org
 
-2. Download the ALoFT package from http://archive.gersteinlab.org/aloft_data/data.tar.gz
-	$ wget [FTP SITE HERE]
-	$ gunzip aloft
+2. Download the ALoFT data package from http://archive.gersteinlab.org/aloft_data/data.tar.gz
+	$ wget http://archive.gersteinlab.org/aloft_data/data.tar.gz
+	$ tar -zxvf data.tar.gz 
 
 3. Install VAT Dependency
       cd /path/to/aloft_directory
