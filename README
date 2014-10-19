@@ -111,7 +111,6 @@ into vcf form.
 AN AVGPOST, ERATE, LDAF, RSQ, THETA, VA are annotations from VAT.
 These should be listed and described in the first portion of the VCF metadata.
 - Ancestral: Determines whether ancestral allele is the same as reference
-[VERIFY THIS]
 - GERPscore: Gives the GERP score associated with the variant position
 - SegDup: Gives the number of segmental duplications associated with the 
 variant position.
@@ -192,12 +191,12 @@ partial otherwise
 variant, NO otherwise
 - shortest path to recessive gene: minimum length of a shortest path to a 
 recessive gene in protein interaction network
-- recessive neighbors: gives the gene id of the closest recessive gene
-[THIS NEEDS VERIFICATION]
+- recessive neighbors: gives the number of recessive genes that are directly
+connected to the LOF-containing gene in a protein-protein interaction network
 - shortest path to dominant gene: minimum of length of a shortest path to a 
 dominant gene in the protein interaction network
-- dominant neighbors: gives the gene id of the closest dominant gene
-[THIS NEEDS VERIFICATION]
+- dominant neighbors: gives the number of dominant genes that are directly
+connected to the LOF-contianing gene in a protein-protein interaction network
 - GERP score: associated GERP score of the variant position
 - GERP element: associated GERP element of the variant position
 - GERP rejection: associated GERP rejection score of the variant position
