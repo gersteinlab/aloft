@@ -1,3 +1,6 @@
+
+*#Please check aloft.gersteinlab.org for updates#*
+
 This software is freely licensed under the Creative Commons license 
 (Attribution-NonCommerical). The main aspects of this license are that: The 
 work can be made available for non-commercial use. Derivatives can be made of 
@@ -5,17 +8,19 @@ the work. Derivatives do not have to be made available under the same terms
 that they were first used, and we should be cited.
 
 ###############################################################################
- 
-                 ALoFT Annotation of Loss-of-Function Transcripts
-                               README DOCUMENTATION
- 
-               Version 1.0                           Gerstein Lab
-              Released 2013                Molecular Biophysics & Biochemistry
-                                                    Yale University
-Citation: 
-Contact: Dr. Suganthi Balasubramanian (suganthi.bala@yale.edu)
-         Mayur Pawashe (mpawashe@gmail.com)
-         Jeremy Liu (jeremy.liu@yale.edu)
+
+ALoFT Annotation of Loss-of-Function Transcripts
+
+README DOCUMENTATION
+
+Gerstein Lab
+Molecular Biophysics & Biochemistry
+
+Version 1.0                           
+Released 2013               
+Yale University
+
+Contact: Dr. Suganthi Balasubramanian (suganthi.bala@yale.edu), Mayur Pawashe (mpawashe@gmail.com), Jeremy Liu (jeremy.liu@yale.edu)
 
 ###############################################################################
 
@@ -30,11 +35,9 @@ G. ALoFT Features in VCF Output
 H. ALoFT Features in Tabbed Delineated Output
 I. Command Line Options
 
-
 A. Preface
 Installation instructions can be found in INSTALL.
 Quick Start instructions can be found in QUICK START.
-
 
 B. Description
 ALoFT takes as input an VCF (variant call format) file, runs it through the 
@@ -44,8 +47,6 @@ specific features that give functional, evolutionary, mismapping, and other
 information. ALoFT only calculates these parameters for frameshift indels, 
 loss-of-function (LoF) SNPs, and for SNPs located in splice sites. ALoFT 
 is split into separate modules based on features.
-
-*Please check aloft.gersteinlab.org for updates*
 
 C. System Requirements
 Python 2.7.x or Python 3.x
