@@ -219,9 +219,9 @@ bracketed list, or a period if none exist.
 - ESP6500(|_AAF): ESP6500 allele frequences
 	blank: Yes or No if associated ESP6500 allele frequencies
 	AAF: ancestral allele frequencies
-- # pseudogenes associated to transcript: 
+- Number of pseudogenes associated to transcript: 
 number of pseudogenes or a period if none.
-- # paralogs associated to gene: number of paralogs or a period if needed
+- Number of paralogs associated to gene: number of paralogs or a period if needed
 - dN/dS (macaque): Evolutionary score in comparison to macaque species
 - dN/dS (mouse): Evolutionary score in comparison to mouse species
 
@@ -242,7 +242,7 @@ that the variant intersects
 - canonical?: YES if the 5' flanking splice site is 'AG' and the 3' flanking 
 splice site is 'GT', NO otherwise if neither of the splice sites matches 
 'AG' and 'GT', respectively.
-- # of failed filters: number of call filters failed associated with the 
+- Number of failed filters: number of call filters failed associated with the 
 loss of function variant
 - filters failed: list of the call filters failed associated with the variant
 	heavily_duplicated: if many segmental duplications exist
@@ -293,7 +293,7 @@ after the SNP change has been made
 splice sites to the SNP location. Alternative splice sites.
 - Intron length: Gives the length of the intron bracked by the donor and
 acceptor splice site.
-- # filters failed: number of call filters failed associated with the splice
+- Number filters failed: number of call filters failed associated with the splice
 site variant
 - Filters failed: list of the call filters failed associated with the variant
 	ref_noncanonical: reference splice site, that the variant intersects, 
