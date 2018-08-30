@@ -19,7 +19,6 @@ Contact: Dr. Suganthi Balasubramanian (suganthi.bala@yale.edu)
 
 ###############################################################################
 
-
 Table of Contents
 A. Preface
 B. Description
@@ -46,6 +45,7 @@ information. ALoFT only calculates these parameters for frameshift indels,
 loss-of-function (LoF) SNPs, and for SNPs located in splice sites. ALoFT 
 is split into separate modules based on features.
 
+*Please check aloft.gersteinlab.org for updates*
 
 C. System Requirements
 Python 2.7.x or Python 3.x
