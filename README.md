@@ -253,7 +253,7 @@ the ancestral reference genome
 - Disorder prediction: Gives the percentage of disordered residues in the 
 translated nucleotide sequence. Also gives the percentage of disordered
 residues in the translated nucleotide sequence after the truncation caused 
-by a premature stop. Or a . if variant does not have disorder regions.
+by a premature stop. Or if a variant does not have disorder regions.
 
 ** Protein Families & Post Translational Modifications **
 For the following features, 
