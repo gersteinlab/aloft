@@ -7,7 +7,7 @@
               Released 2013                Molecular Biophysics & Biochemistry
                                                     Yale University
 Citation: 
-Contact: Dr. Suganthi Balasubramanian (suganthi.bala@yale.edu)
+Contact: Dr. Suganthi Balasubramanian (suganthibala@gmail.com)
          Mayur Pawashe (mpawashe@gmail.com)
          Jeremy Liu (jeremy.liu@yale.edu)
 
@@ -18,17 +18,19 @@ Contact: Dr. Suganthi Balasubramanian (suganthi.bala@yale.edu)
 	$ ./aloft --vcf=/path/to/vcf_file --data=/path/to/data/dir/ --output=/path/to/output/dir/
 
 The input VCF file supplied by the --vcf option should have a header line
-starting with #CHROM. For example:
+starting with #CHROM or #CHR. For example:
 #CHROM POS ID ALT REF ...  (precedes any variant data)
 
-A file containing just the first five columns can also be used as input. Please ensure that the columns are tab-delimited.
-ALoFT will replace the missing columns with 'dummy' entries and compute as usual.
+Only the first five columns are necessary to have, but the number of columns in 
+this header line must match with the number of lines in the VCF file. ALoFT 
+will replace missing columns with 'dummy' entries and compute as usual.
 
 2. Example Workflow: annotating variants from 1000 Genomes variant calls.
 
 Obtain variant calls and vcf files from 1000 Genomes ftp site.
 Download to home directory and uncompress.
-	$ wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
+	$ wget [URL NEEDED]
+	$ [gunzip FILE]
 
 Run the vcf file through aloft, which is installed in the directory aloft
 in the home directory and output this to the default directory aloft_output/
@@ -38,10 +40,16 @@ in the home directory and output this to the default directory aloft_output/
 To see the aloft output, enter the output directory.
 	$ cd aloft_output
 	$ ls
-	[FILE NAME].aloft.lof     (tab delineated output for lof variants, specifically premature Stop and frameshift variants)
+	[FILE NAME].aloft.lof     (tab delineated output for lof variants)
 	[FILE NAME].aloft.splice  (tab delineated output for splice variants)
 	[FILE NAME].aloft.vcf     (vcf formatted ouptut for all variants)
 
+Run a second time. This time, store the output files in the directory
+1000g_aloft_output in the home directory and specify 100bp for the nonsense
+mediated decay detection threshold.
+	$ cd aloft
+	$ ./aloft --vcf=../[FILE NAME] --output=../1000g_aloft_output/ 
+	  --nmd_threshold=100
 
 For more information on command line options and output interpretation,
 please visit the README.

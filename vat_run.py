@@ -51,7 +51,8 @@ def run_vat(arguments, forceVerbose=False):
 	normalHeaderComponents = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO']
 	for lineBytes in inputFile:
 		line = lineBytes.decode("utf-8")
-		lineComponents = line.rstrip("\n").rstrip("\t").split("\t")
+		lineComponents = line.rstrip("\n").rstrip("\t").split()
+		#~ print(lineComponents)
 
 		if line.startswith("#"):
 			if line.startswith("#CHR"):
