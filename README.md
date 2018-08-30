@@ -1,5 +1,5 @@
 
-# Please check aloft.gersteinlab.org for updates
+# *Please check aloft.gersteinlab.org for updates*
 
 This software is freely licensed under the Creative Commons license 
 (Attribution-NonCommerical). The main aspects of this license are that: The 
