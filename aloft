@@ -1395,7 +1395,7 @@ def main(programName, commandLineArguments):
                             nmdData = findNMDForIndelsAndPrematureStop(args.nmd_threshold, data, chr_num, transcript, start, end, exon, stop_codon, genomeSequences, CDS, subst, transcript_strand)
                         except KeyError:
                             printError("Failed to lookup indel data for transcript %s" % transcript, False)
-			    continue
+                            continue
                         if nmdData['NMD'] is None:
                             continue
 
